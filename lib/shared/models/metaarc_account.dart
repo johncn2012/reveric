@@ -38,6 +38,12 @@ class MetaArcAccount {
   final DateTime? updatedAt;
   final DateTime? expiresAt;
 
+  /// `sk-mock-` 前缀是服务端在算力通道未开通时写入的占位值。
+  bool get hasProvisionedApiKey {
+    final key = newApiKey.trim();
+    return key.isNotEmpty && !key.startsWith('sk-mock-');
+  }
+
   /// 计算剩余额度百分比 (0.0 ~ 1.0)
   double get quotaPercent {
     if (totalQuota <= 0) return 0.0;
@@ -72,8 +78,9 @@ class MetaArcAccount {
       case 'studio':
         return '工作室版 (STUDIO)';
       case 'free':
-      default:
         return '基础体验版';
+      default:
+        return plan;
     }
   }
 

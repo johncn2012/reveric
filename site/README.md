@@ -1,6 +1,14 @@
-# 官网（reveric.app）
+# 上游静态站构建（不是 MetaArc 门户）
 
-纯静态页面，部署在 Cloudflare Pages。
+本目录沿用上游 Reveric 的静态站脚本。`site/build.mjs` 会把 `designs/website/` 复制到 `site/dist/`，并把下载链接写成上游仓库的 Release。这不是 MetaArc 门户，也不能当作 MetaArc 已发布的安装包。
+
+MetaArc 门户在 `server/metaarc/public/`。那里的下载区写明尚未发布，不链向上游 Release。
+
+下面保留这套脚本的原有用法，便于对照代码。其中的 `reveric.app`、Cloudflare Pages 和安装包链接都不是 MetaArc 已交付的下载渠道。
+
+## 脚本说明
+
+纯静态页面，部署目标写成了 Cloudflare Pages。
 
 ## 目录
 
@@ -41,7 +49,7 @@ python3 -m http.server 4312 --directory site/dist
 - **改文案或补打平台后**：在 Actions 页面手动运行 `Website` workflow，版本号取最新正式 tag。推送代码不会触发部署。
 - **本地上传**：`make site-deploy`，依次裁剪字体、构建、上传。只构建不上传用 `make site-build`。
 
-下载链接按 `distribute_options.yaml` 与 `build-android.sh` 的产物命名拼出，两边改名时要同步修改 `build.mjs` 的 `assetUrls`。
+`build.mjs` 的 `assetUrls` 仍拼向上游仓库的 Release，命名对应 `distribute_options.yaml` 与 `build-android.sh`。这些链接不是 MetaArc 发布物。
 
 ### 首次配置
 

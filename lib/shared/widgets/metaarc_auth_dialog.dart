@@ -25,7 +25,6 @@ import '../components/reveric_button.dart';
 import '../components/reveric_dialog.dart';
 import '../localization/app_localization.dart';
 import '../localization/locale_keys.dart';
-import '../models/metaarc_account.dart';
 import '../providers/metaarc_providers.dart';
 import '../theme/theme.dart';
 
@@ -153,7 +152,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
             const SizedBox(width: RevericSpacing.md),
             Text(
               context.t(LocaleKeys.accountHubTitle),
-              style: typo.titleMedium.copyWith(color: colors.textPrimary),
+              style: typo.uiSemibold.copyWith(color: colors.textPrimary),
             ),
           ],
         ),
@@ -265,7 +264,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
                                   LocaleKeys.accountPointsUnit,
                                   args: [account.quota.toStringAsFixed(1)],
                                 ),
-                                style: typo.uiMediumSemibold.copyWith(
+                                style: typo.uiSemibold.copyWith(
                                   color: colors.accent,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -293,14 +292,22 @@ class MetaArcAuthDialog extends HookConsumerWidget {
                       Row(
                         children: [
                           RevericIcon(
-                            RevericIcons.check,
+                            account.hasProvisionedApiKey
+                                ? RevericIcons.check
+                                : RevericIcons.info_outline,
                             size: 14,
-                            color: colors.accent,
+                            color: account.hasProvisionedApiKey
+                                ? colors.accent
+                                : colors.textMuted,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              context.t(LocaleKeys.accountAutoProvisionHint),
+                              context.t(
+                                account.hasProvisionedApiKey
+                                    ? LocaleKeys.accountAutoProvisionHint
+                                    : LocaleKeys.accountChannelUnavailable,
+                              ),
                               style: typo.uiTiny.copyWith(color: colors.textMuted),
                             ),
                           ),
@@ -311,8 +318,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
                 ),
                 const SizedBox(height: RevericSpacing.lg),
 
-                // 专属 API Key 快捷复制
-                if (account.newApiKey.isNotEmpty) ...[
+                if (account.hasProvisionedApiKey) ...[
                   Text(
                     context.t(LocaleKeys.accountSecretKeyTitle),
                     style: typo.uiSmallSemibold.copyWith(color: colors.textPrimary),
@@ -343,7 +349,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
                         ),
                         IconButton(
                           icon: RevericIcon(
-                            RevericIcons.file_copy,
+                            RevericIcons.copy,
                             size: 16,
                             color: colors.textMuted,
                           ),
@@ -408,7 +414,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
             isRegisterMode.value
                 ? context.t(LocaleKeys.accountRegisterTitle)
                 : context.t(LocaleKeys.accountLoginTitle),
-            style: typo.titleMedium.copyWith(color: colors.textPrimary),
+            style: typo.uiSemibold.copyWith(color: colors.textPrimary),
           ),
         ],
       ),
@@ -637,7 +643,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '登录后将自动装配 New-API 统一算力池与云端对象存储，支持全平台多端同步。',
+                        context.t(LocaleKeys.accountLoginScopeHint),
                         style: typo.uiTiny.copyWith(color: colors.textMuted),
                       ),
                     ),

@@ -15,7 +15,9 @@
   "account.cloud_gateway": "Cloud Gateway",
   "account.available_quota": "Available AI Quota",
   "account.points_unit": "{points} pts",
-  "account.auto_provision_hint": "Auto-provisioned New-API channel, all models ready",
+  "account.auto_provision_hint": "The returned compute credential is saved on this device.",
+  "account.channel_unavailable": "Compute access is not available.",
+  "account.login_scope_hint": "Sign-in stores the account on this client. Mobile sync is not available.",
   "account.secret_key_title": "Exclusive API Key (New-API Token)",
   "account.copy_key": "Copy Key",
   "account.copy_key_success": "API Key copied to clipboard",
@@ -23,7 +25,7 @@
   "account.upgrade_plan": "Recharge / Upgrade",
   "account.logout": "Logout",
   "account.login_button": "Sign In",
-  "account.register_button": "Register & Connect",
+  "account.register_button": "Register",
   "account.connect_hub": "Connect Account",
   "account.cloud_badge": "Cloud AI"
 }

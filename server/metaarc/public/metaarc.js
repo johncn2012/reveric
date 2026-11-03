@@ -1,14 +1,14 @@
 /**
  * MetaArc (元弧) 商业化运营门户核心交互脚本
  * 品牌域名: MetaArc.COM.CN
- * 职责: 协调真实用户认证态 (注册/登录/退出)、配额与专属Key展示、在线收银台支付充值、交付物画廊与超级管理员运营后台。
+ * 职责: 协调登录注册、按接口渲染套餐、展示账号返回的余额。支付渠道未接入，不发起支付。
  */
 
 class MetaArcPortal {
   constructor() {
     this.token = localStorage.getItem('metaarc_token') || null;
     this.user = this.loadLocalUser();
-    this.currentPayPlan = null;
+    this.plans = [];
     this.init();
   }
 
@@ -23,6 +23,7 @@ class MetaArcPortal {
 
   async init() {
     this.bindEvents();
+    this.loadPlans();
     if (this.token) {
       await this.fetchUserProfile();
     } else {
@@ -117,25 +118,15 @@ class MetaArcPortal {
     const btnAdjustQuota = document.getElementById('btn-adjust-quota');
     if (btnAdjustQuota) btnAdjustQuota.onclick = () => this.handleAdminAdjustQuota();
 
-    // 6. 收银台弹窗开关与套餐购买
-    const cashierClose = document.getElementById('cashier-close');
-    if (cashierClose) cashierClose.onclick = () => this.closeModal('cashier-modal');
-
-    document.querySelectorAll('[data-plan-buy]').forEach((btn) => {
-      btn.onclick = (e) => {
-        const planKey = e.currentTarget.getAttribute('data-plan-buy');
-        this.openCashier(planKey);
+    const btnCopyKey = document.getElementById('btn-copy-api-key');
+    if (btnCopyKey) {
+      btnCopyKey.onclick = () => {
+        const value = document.getElementById('drawer-api-key')?.value || '';
+        if (!value) return;
+        navigator.clipboard.writeText(value).then(() => {
+          alert('已复制。');
+        });
       };
-    });
-
-    const btnQuickRecharge = document.getElementById('btn-quick-recharge');
-    if (btnQuickRecharge) {
-      btnQuickRecharge.onclick = () => this.openCashier('pro');
-    }
-
-    const btnConfirmPay = document.getElementById('btn-confirm-pay');
-    if (btnConfirmPay) {
-      btnConfirmPay.onclick = () => this.simulatePaymentSuccess();
     }
   }
 
@@ -308,13 +299,13 @@ class MetaArcPortal {
       this.closeModal('auth-modal');
       this.renderUserState();
 
-      alert(`🎉 注册成功！欢迎加入 MetaArc！\n已为您自动分配专属 Key 并赠送 500 点新人算力。`);
+      alert(this.registerSuccessMessage(data.user));
     } catch (err) {
       this.showAuthError('register', '网络连接异常，请稍后重试');
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '免费注册并领取新人 500 点算力';
+        btn.textContent = '注册';
       }
     }
   }
@@ -355,8 +346,8 @@ class MetaArcPortal {
     // 顶栏配额显示
     const chip = document.getElementById('nav-user-quota');
     if (chip) {
-      const q = Number(this.user.quota || 0);
-      chip.textContent = q >= 1000000 ? `${(q / 1000000).toFixed(2)}M 点数` : `${q.toLocaleString()} 点数`;
+      const q = this.readNumber(this.user.quota);
+      chip.textContent = q === null ? '—' : `${q.toLocaleString('zh-CN')} 点`;
     }
 
     // 抽屉详情
@@ -368,25 +359,59 @@ class MetaArcPortal {
     const drawerBar = document.getElementById('drawer-quota-bar');
     const drawerKey = document.getElementById('drawer-api-key');
 
-    const planNames = {
-      free: '基础体验版',
-      creator: '创作者版',
-      pro: '专业版 (PRO)',
-      studio: '工作室版 (STUDIO)',
-    };
+    const matchedPlan = this.plans.find((plan) => plan.slug === this.user.plan);
 
     if (drawerNick) drawerNick.textContent = this.user.nickname || '创作者';
     if (drawerAccount) drawerAccount.textContent = this.user.email || this.user.phone || '';
-    if (drawerPlan) drawerPlan.textContent = planNames[this.user.plan] || this.user.plan || '体验版';
-    if (drawerQuota) drawerQuota.textContent = Number(this.user.quota || 0).toLocaleString();
-    if (drawerTotal) drawerTotal.textContent = `/ ${Number(this.user.total_quota || 0).toLocaleString()}`;
-    if (drawerKey) drawerKey.value = this.user.new_api_key || '正在分配中...';
+    if (drawerPlan) drawerPlan.textContent = matchedPlan?.name || this.user.plan || '—';
+
+    const quota = this.readNumber(this.user.quota);
+    const total = this.readNumber(this.user.total_quota);
+    if (drawerQuota) {
+      drawerQuota.textContent = quota === null ? '—' : quota.toLocaleString('zh-CN');
+    }
+    if (drawerTotal) {
+      drawerTotal.textContent = total === null ? '' : `/ ${total.toLocaleString('zh-CN')}`;
+    }
     if (drawerBar) {
-      const t = Number(this.user.total_quota || 1);
-      const q = Number(this.user.quota || 0);
-      const pct = Math.min(100, Math.max(0, (q / t) * 100));
+      const pct = quota !== null && total !== null && total > 0
+        ? Math.min(100, Math.max(0, (quota / total) * 100))
+        : 0;
       drawerBar.style.width = `${pct}%`;
     }
+    this.renderApiKey(drawerKey);
+  }
+
+  registerSuccessMessage(user) {
+    const quota = this.readNumber(user?.quota);
+    const parts = ['注册成功。'];
+    if (quota !== null) {
+      parts.push(`当前余额 ${quota.toLocaleString('zh-CN')} 点。`);
+    }
+    if (this.isProvisionedKey(user?.new_api_key)) {
+      parts.push('算力通道已返回凭据。');
+    } else {
+      parts.push('算力通道尚未开通。');
+    }
+    return parts.join('');
+  }
+
+  isProvisionedKey(key) {
+    const value = String(key || '').trim();
+    return value.length > 0 && !value.startsWith('sk-mock-');
+  }
+
+  renderApiKey(drawerKey) {
+    const status = document.getElementById('drawer-key-status');
+    const row = document.getElementById('drawer-key-row');
+    const key = this.user?.new_api_key || '';
+    const provisioned = this.isProvisionedKey(key);
+    if (drawerKey) drawerKey.value = provisioned ? key : '';
+    if (status) {
+      status.style.display = provisioned ? 'none' : 'block';
+      status.textContent = provisioned ? '' : '算力通道尚未开通';
+    }
+    if (row) row.style.display = provisioned ? 'flex' : 'none';
   }
 
   // ==============================================================================
@@ -584,95 +609,131 @@ class MetaArcPortal {
     }
   }
 
-  // ==============================================================================
-  // 收银台与订单支付模块
-  // ==============================================================================
-  openCashier(planSlug) {
-    if (!this.token) {
-      alert('请先登录 MetaArc 账号后再选购套餐。');
-      this.openModal('auth-modal');
+  async loadPlans() {
+    const grid = document.getElementById('pricing-grid');
+    const status = document.getElementById('pricing-status');
+    try {
+      const res = await fetch('/api/plans');
+      const data = await res.json();
+      const plans = Array.isArray(data?.data) ? data.data : null;
+      if (!res.ok || !data?.success || !plans) {
+        this.renderPlansUnavailable(grid, status, '套餐暂时无法获取，此处不展示价格。');
+        return;
+      }
+      if (plans.length === 0) {
+        this.renderPlansUnavailable(grid, status, '当前没有可展示的套餐。');
+        return;
+      }
+      this.plans = plans;
+      this.renderPlans(grid, status, plans);
+      if (this.user) this.renderUserState();
+    } catch (e) {
+      console.warn('[Plans fetch failed]', e);
+      this.renderPlansUnavailable(grid, status, '套餐暂时无法获取，此处不展示价格。');
+    }
+  }
+
+  renderPlansUnavailable(grid, status, message) {
+    if (grid) {
+      grid.hidden = true;
+      grid.innerHTML = '';
+    }
+    if (status) {
+      status.hidden = false;
+      status.textContent = message;
+    }
+  }
+
+  renderPlans(grid, status, plans) {
+    if (status) status.hidden = true;
+    if (!grid) return;
+    const cards = plans.map((plan) => this.renderPlanCard(plan)).filter(Boolean);
+    if (cards.length === 0) {
+      this.renderPlansUnavailable(grid, status, '套餐暂时无法获取，此处不展示价格。');
       return;
     }
-
-    const plans = {
-      free: { slug: 'free', name: '体验版 (Free)', price: '¥0.00', quota: '500 算力点数' },
-      creator: { slug: 'creator', name: '创作者版 · 月付', price: '¥29.00', quota: '3,000 算力点数' },
-      pro: { slug: 'pro', name: '专业版 (PRO) · 月付', price: '¥99.00', quota: '12,000 算力点数' },
-      studio: { slug: 'studio', name: '工作室版 (STUDIO) · 月付', price: '¥299.00', quota: '45,000 算力点数' },
-    };
-
-    const plan = plans[planSlug] || plans.pro;
-    this.currentPayPlan = plan;
-
-    const titleEl = document.getElementById('cashier-plan-title');
-    const priceEl = document.getElementById('cashier-plan-price');
-    const quotaEl = document.getElementById('cashier-plan-quota');
-
-    if (titleEl) titleEl.textContent = plan.name;
-    if (priceEl) priceEl.textContent = plan.price;
-    if (quotaEl) quotaEl.textContent = `包含 ${plan.quota}`;
-
-    this.openModal('cashier-modal');
+    grid.hidden = false;
+    grid.innerHTML = cards.join('');
   }
 
-  async simulatePaymentSuccess() {
-    if (!this.currentPayPlan) return;
-    const btn = document.getElementById('btn-confirm-pay');
+  renderPlanCard(plan) {
+    const name = typeof plan?.name === 'string' ? plan.name.trim() : '';
+    if (!name) return '';
+    const slug = typeof plan.slug === 'string' ? plan.slug : '';
+    const price = this.formatPlanPrice(plan.price_cents);
+    const points = this.formatPlanPoints(plan.quota_points);
+    const period = this.formatBillingCycle(plan.billing_cycle);
+    const features = this.planFeatures(plan.features);
+    const featureHtml = features.length
+      ? `<ul class="plan-features">${features.map((item) => `<li>${this.checkIcon()}${this.escapeHtml(item)}</li>`).join('')}</ul>`
+      : '';
+    const priceHtml = price
+      ? `<div class="plan-price"><span class="plan-amount">${this.escapeHtml(price)}</span>${period ? `<span class="plan-period">${this.escapeHtml(period)}</span>` : ''}</div>`
+      : '';
+    const pointsHtml = points
+      ? `<p class="plan-desc">${this.escapeHtml(points)} 点</p>`
+      : '';
+    return `
+      <div class="plan-card" data-plan-slug="${this.escapeHtml(slug)}">
+        <div class="plan-name">${this.escapeHtml(name)}</div>
+        ${priceHtml}
+        ${pointsHtml}
+        ${featureHtml}
+        <button class="btn-plan" type="button" disabled>支付尚未开通</button>
+      </div>
+    `;
+  }
 
-    try {
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '订单支付确认中...';
-      }
+  readNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const amount = Number(value);
+    return Number.isFinite(amount) ? amount : null;
+  }
 
-      // 1. 创建订单
-      const createRes = await fetch('/api/orders/create', {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({
-          planSlug: this.currentPayPlan.slug,
-          payChannel: 'wechat',
-        }),
-      });
-      const orderData = await createRes.json();
-      if (!createRes.ok || !orderData.success) {
-        alert(`创建订单失败: ${orderData.message || '未知错误'}`);
-        return;
-      }
+  formatPlanPrice(cents) {
+    const amount = this.readNumber(cents);
+    if (amount === null) return '';
+    const yuan = amount / 100;
+    const text = Number.isInteger(yuan) ? String(yuan) : yuan.toFixed(2);
+    return `¥${text}`;
+  }
 
-      // 2. 模拟支付回调完成充值
-      const tradeNo = `SIM_${Date.now()}`;
-      const payRes = await fetch(`/api/orders/${orderData.order.id}/pay-callback`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ payTradeNo: tradeNo }),
-      });
-      const payData = await payRes.json();
+  formatPlanPoints(points) {
+    const amount = this.readNumber(points);
+    if (amount === null) return '';
+    return amount.toLocaleString('zh-CN');
+  }
 
-      if (!payRes.ok || !payData.success) {
-        alert(`支付处理异常: ${payData.message || '未知错误'}`);
-        return;
-      }
+  formatBillingCycle(cycle) {
+    if (cycle === 'monthly') return '/ 月';
+    if (cycle === 'yearly') return '/ 年';
+    if (typeof cycle === 'string' && cycle.trim()) return `/ ${cycle.trim()}`;
+    return '';
+  }
 
-      // 3. 刷新最新用户信息与配额
-      await this.fetchUserProfile();
-      this.closeModal('cashier-modal');
-
-      alert(`🎉 恭喜！订单支付成功！\n\n已成功开通【${this.currentPayPlan.name}】！\n算力点数已实时到账并同步至您的专属 New-API Key。`);
-    } catch (e) {
-      alert('网络异常，无法完成支付确认');
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = '模拟支付成功 (触发自动加点)';
+  planFeatures(features) {
+    let list = features;
+    if (typeof list === 'string') {
+      try {
+        list = JSON.parse(list);
+      } catch (_) {
+        return [];
       }
     }
+    if (!Array.isArray(list)) return [];
+    return list.filter((item) => typeof item === 'string' && item.trim());
   }
 
-  copyCdnUrl(url) {
-    navigator.clipboard.writeText(url).then(() => {
-      alert(`已复制 S3/CDN 永久直链到剪贴板：\n${url}`);
-    });
+  checkIcon() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+  }
+
+  escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 }
 

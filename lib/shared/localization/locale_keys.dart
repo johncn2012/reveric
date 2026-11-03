@@ -763,6 +763,8 @@ abstract final class LocaleKeys {
   static const accountAvailableQuota = 'account.available_quota';
   static const accountPointsUnit = 'account.points_unit';
   static const accountAutoProvisionHint = 'account.auto_provision_hint';
+  static const accountChannelUnavailable = 'account.channel_unavailable';
+  static const accountLoginScopeHint = 'account.login_scope_hint';
   static const accountSecretKeyTitle = 'account.secret_key_title';
   static const accountCopyKey = 'account.copy_key';
   static const accountCopyKeySuccess = 'account.copy_key_success';
@@ -4988,6 +4990,8 @@ abstract final class LocaleKeys {
   static const settingsAboutRestartToUpdate =
       'settings.about_restart_to_update';
   static const settingsAboutCheckFailed = 'settings.about_check_failed';
+  static const settingsAboutUpdateUnconfigured =
+      'settings.about_update_unconfigured';
   static const settingsAboutUpdateApplyFailed =
       'settings.about_update_apply_failed';
   static const settingsAboutUpdateAppBundleMissing =

@@ -118,7 +118,7 @@
 
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: calc(30 * var(--u));
   max-width: calc(1300 * var(--u));
   margin: 0 auto;
@@ -227,6 +227,29 @@
 .btn-plan:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: #fff;
+}
+.btn-plan:disabled,
+.btn-plan:disabled:hover {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-mute);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+.pricing-status {
+  text-align: center;
+  color: var(--ink-mute);
+  font-size: calc(16 * var(--u));
+  margin: 0 auto;
+  max-width: calc(720 * var(--u));
+}
+.dl.is-unreleased,
+.dl.is-unreleased:hover {
+  cursor: default;
+  border-color: var(--line);
+  background: var(--surface);
 }
 .plan-card.featured .btn-plan {
   background: linear-gradient(135deg, #E5B574, #C68E48);
@@ -478,7 +501,7 @@
 .quota-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--ma-brand-gold), var(--ma-brand-cyan));
-  width: 85%;
+  width: 0;
 }
 .quota-actions {
   display: flex;
