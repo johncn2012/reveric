@@ -33,8 +33,10 @@
   "account.quota_without_total": "资料没有返回配额总量。",
   "account.credentials_required": "请输入手机号/邮箱及密码",
   "account.register_invalid": "账号不能为空，密码长度至少 6 位",
-  "account.mobile_hint": "在浏览器打开账号中心。此页不提供支付或管理。",
+  "account.mobile_hint": "在此登录、注册并刷新资料。支付和管理仍在网页账号中心。",
   "account.mobile_signed_in_hint": "余额来自已保存的账号资料。管理仍在网页账号中心。",
   "account.open_center_failed": "无法打开账号中心。",
-  "account.status_unavailable": "无法读取已保存的账号状态。"
+  "account.status_unavailable": "无法读取已保存的账号状态。",
+  "account.request_failed": "无法完成账号请求，请稍后再试。",
+  "account.refresh_failed": "无法刷新账号资料。"
 }

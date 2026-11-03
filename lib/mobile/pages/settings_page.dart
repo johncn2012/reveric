@@ -1,7 +1,7 @@
-// 职责: 移动端设置页面 — 本地资料卡、账号状态位（跳转网页账号中心）和分组列表，路由到共享 section；含 10 次点击关于解锁调试。
+// 职责: 移动端设置页面 — 本地资料卡、账号状态位（进入应用内账号页）和分组列表，路由到共享 section；含 10 次点击关于解锁调试。
 // 关联文件:
 //   lib/shared/components/reveric_dialog.dart
-//   lib/shared/models/metaarc_account.dart
+//   lib/mobile/pages/account_page.dart
 //   lib/shared/providers/metaarc_providers.dart
 //   lib/shared/widgets/user_profile_edit_dialog.dart
 //   lib/shared/utils/storage_paths.dart
@@ -34,18 +34,18 @@
 import '../../shared/widgets/settings/mcp/section.dart';
 import '../../shared/widgets/settings/plugins/section.dart';
 import '../../shared/widgets/user_profile_edit_dialog.dart';
+import 'account_page.dart';
+
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../shared/app_config.dart' show appVersion;
 import '../../shared/localization/app_localization.dart';
 import '../../shared/localization/locale_keys.dart';
-import '../../shared/models/metaarc_account.dart';
 import '../../shared/providers/metaarc_providers.dart';
 import '../../shared/providers/settings_providers.dart';
 import '../../shared/providers/update_providers.dart';
@@ -422,7 +422,7 @@ class SettingsPage extends HookConsumerWidget {
     );
   }
 
-  /// 账号状态位。只展示已保存的登录态和余额，点击后打开网页账号中心。
+  /// 账号状态位。只展示已保存的登录态和余额，点击后进入应用内账号页。
   Widget _buildAccountStatus(
     BuildContext context,
     RevericColors colors,
@@ -451,48 +451,19 @@ class SettingsPage extends HookConsumerWidget {
           '${account.planName} · ${context.t(LocaleKeys.accountMobileSignedInHint)}';
     }
 
-    return _buildGroup(
-      context,
-      colors,
-      typo,
-      LocaleKeys.accountStatusBadge,
-      [
-        _valueRow(
-          context,
-          colors,
-          typo,
-          icon: RevericIcons.cloud,
-          tint: account == null ? colors.textMuted : colors.accent,
-          label: context.t(LocaleKeys.accountStatusBadge),
-          value: value,
-          subtitle: subtitle,
-          onTap: () => _openAccountCenter(context, account?.serverUrl),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _openAccountCenter(
-    BuildContext context,
-    String? serverUrl,
-  ) async {
-    final uri = Uri.parse(MetaArcAccount.accountCenterUrl(serverUrl));
-    try {
-      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (opened) {
-        return;
-      }
-    } catch (_) {
-      // 打不开时落到下面的说明，不把异常原文给用户。
-    }
-    if (!context.mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.t(LocaleKeys.accountOpenCenterFailed)),
+    return _buildGroup(context, colors, typo, LocaleKeys.accountStatusBadge, [
+      _valueRow(
+        context,
+        colors,
+        typo,
+        icon: RevericIcons.cloud,
+        tint: account == null ? colors.textMuted : colors.accent,
+        label: context.t(LocaleKeys.accountStatusBadge),
+        value: value,
+        subtitle: subtitle,
+        onTap: () => openMobileAccountPage(context),
       ),
-    );
+    ]);
   }
 
   /// 顶部用户资料卡：头像 + 用户名 + 副标题，点击打开共享的资料编辑对话框。

@@ -33,8 +33,10 @@
   "account.quota_without_total": "The profile did not include a quota total.",
   "account.credentials_required": "Enter a phone number or email and a password",
   "account.register_invalid": "Account is required and the password must be at least 6 characters",
-  "account.mobile_hint": "Open the account center in the browser. This page does not offer payment or administration.",
+  "account.mobile_hint": "Sign in, register, and refresh your profile here. Payment and administration stay on the web account center.",
   "account.mobile_signed_in_hint": "Balance comes from the saved account. Management stays on the web account center.",
   "account.open_center_failed": "Could not open the account center.",
-  "account.status_unavailable": "Could not read the saved account state."
+  "account.status_unavailable": "Could not read the saved account state.",
+  "account.request_failed": "The account request could not be completed. Try again later.",
+  "account.refresh_failed": "Could not refresh the account profile."
 }

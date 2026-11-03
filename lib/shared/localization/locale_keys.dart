@@ -784,6 +784,8 @@ abstract final class LocaleKeys {
   static const accountMobileSignedInHint = 'account.mobile_signed_in_hint';
   static const accountOpenCenterFailed = 'account.open_center_failed';
   static const accountStatusUnavailable = 'account.status_unavailable';
+  static const accountRequestFailed = 'account.request_failed';
+  static const accountRefreshFailed = 'account.refresh_failed';
   // ── agent ────────────────────────────────────────
   static const agentBasics = 'agent.basics';
   static const agentDeleteConfirm = 'agent.delete_confirm';

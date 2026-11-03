@@ -10,10 +10,13 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../logger/app_logger.dart';
 import '../models/metaarc_account.dart';
 import '../services/remote/metaarc_auth_service.dart';
 import '../services/remote/metaarc_sync_service.dart';
 import 'novel_providers.dart';
+
+final _log = AppLogger.forModule('MetaArcAccount');
 
 /// MetaArc 认证与通信底层服务 Provider
 final metaarcAuthServiceProvider = Provider<MetaArcAuthService>((ref) {
@@ -81,17 +84,25 @@ class MetaArcAccountNotifier extends AsyncNotifier<MetaArcAccount?> {
     }
   }
 
-  /// 刷新算力与资料
-  Future<void> refreshProfile() async {
+  /// 刷新算力与资料。失败时保留已保存的账号，并返回 false。
+  Future<bool> refreshProfile() async {
     final current = state.asData?.value;
-    if (current == null) return;
+    if (current == null) {
+      return false;
+    }
     try {
       final service = ref.read(metaarcAuthServiceProvider);
       final updated = await service.fetchProfile(current);
       state = AsyncValue.data(updated);
+      return true;
     } catch (e, stack) {
-      // 刷新失败时保留原有本地状态，同时可记录日志
+      _log.error(
+        'Failed to refresh MetaArc profile',
+        error: e,
+        stackTrace: stack,
+      );
       state = AsyncValue.data(current);
+      return false;
     }
   }
 
@@ -109,5 +120,5 @@ class MetaArcAccountNotifier extends AsyncNotifier<MetaArcAccount?> {
 /// MetaArc 用户状态 Provider
 final metaarcAccountProvider =
     AsyncNotifierProvider<MetaArcAccountNotifier, MetaArcAccount?>(
-  MetaArcAccountNotifier.new,
-);
+      MetaArcAccountNotifier.new,
+    );
