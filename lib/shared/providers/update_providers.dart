@@ -1,6 +1,7 @@
-// 职责: 管理更新检查、下载进度、更新状态和提醒。默认更新源不访问外部仓库。
+// 职责: 管理更新检查、下载进度、更新状态和提醒。默认查询 MetaArc 更新清单。
 // 关联文件:
 //   lib/shared/services/update/update_service.dart
+//   lib/shared/services/update/sources/custom_api_source.dart
 //   lib/shared/services/update/sources/unavailable_update_source.dart
 //   lib/shared/widgets/settings/about_settings_section.dart
 //   lib/shared/app_config.dart
@@ -21,11 +22,68 @@ part 'update_providers.g.dart';
 
 final _log = AppLogger.forModule('UpdateProvider');
 
+/// `METAARC_UPDATE_SOURCE=unavailable` 时关闭清单查询，不访问任何更新地址。
+const metaArcUpdateSourceKind = String.fromEnvironment(
+  'METAARC_UPDATE_SOURCE',
+  defaultValue: 'custom',
+);
+
+/// 清单源的域名。路径由 [metaArcUpdateApiPath] 拼接。
+const metaArcUpdateApiBase = String.fromEnvironment(
+  'METAARC_UPDATE_API_BASE',
+  defaultValue: 'https://metaarc.com.cn',
+);
+
+/// 清单路径。与服务端 `GET /api/updates/latest` 对齐。
+const metaArcUpdateApiPath = String.fromEnvironment(
+  'METAARC_UPDATE_API_PATH',
+  defaultValue: '/api/updates/latest',
+);
+
+/// 非空时覆盖基址和路径，直接作为清单 URL。
+const metaArcUpdateApiOverride = String.fromEnvironment('METAARC_UPDATE_API');
+
+/// 拼出清单 URL。显式覆盖优先于基址加路径。
+String resolveMetaArcUpdateEndpoint({
+  String override = metaArcUpdateApiOverride,
+  String base = metaArcUpdateApiBase,
+  String path = metaArcUpdateApiPath,
+}) {
+  final explicit = override.trim();
+  if (explicit.isNotEmpty) {
+    return explicit;
+  }
+  final trimmedBase = base.trim().replaceAll(RegExp(r'/+$'), '');
+  var trimmedPath = path.trim();
+  if (trimmedPath.isEmpty) {
+    trimmedPath = '/api/updates/latest';
+  }
+  if (!trimmedPath.startsWith('/')) {
+    trimmedPath = '/$trimmedPath';
+  }
+  return '$trimmedBase$trimmedPath';
+}
+
+/// `custom` 使用清单 API。其它取值，包括 `unavailable`，都不发网络请求。
+UpdateSource createUpdateSource({
+  String kind = metaArcUpdateSourceKind,
+  String? endpoint,
+}) {
+  if (kind.trim().toLowerCase() != 'custom') {
+    return const UnavailableUpdateSource();
+  }
+  final resolved = (endpoint ?? resolveMetaArcUpdateEndpoint()).trim();
+  if (resolved.isEmpty) {
+    return const UnavailableUpdateSource();
+  }
+  return CustomApiSource(resolved);
+}
+
 /// UpdateSource 单例
 @Riverpod(keepAlive: true)
 UpdateSource updateSource(Ref ref) {
-  // 保留 Ref 形参以匹配 Riverpod 生成代码。未配置时不读取其它 Provider。
-  return const UnavailableUpdateSource();
+  // 保留 Ref 形参以匹配 Riverpod 生成代码。编译期常量不读取其它 Provider。
+  return createUpdateSource();
 }
 
 /// UpdateService 单例

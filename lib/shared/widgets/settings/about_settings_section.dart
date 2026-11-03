@@ -582,7 +582,14 @@ class AboutSettingsSection extends HookConsumerWidget {
     String error,
   ) {
     if (error == LocaleKeys.settingsAboutUpdateUnconfigured) {
-      return _buildUnreleasedNotice(context, colors, typo);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildUnreleasedNotice(context, colors, typo),
+          const SizedBox(height: RevericSpacing.md),
+          _buildCheckButton(ref),
+        ],
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

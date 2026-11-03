@@ -20,7 +20,7 @@ MetaArc 是基于 Reveric（幻界）修改的创作客户端，另外带有仍�
 
 ## 下载
 
-MetaArc 还没有自己的安装包。门户下载区写明尚未发布，不提供上游 Release 链接。
+门户静态页默认写明尚未发布，不提供上游 Release 链接。Windows 卡片只在同域更新清单返回真实的 `*setup.exe` 时变成下载链接。清单和安装包的放置方式见 `server/metaarc/README.md`。当前安装包没有 Authenticode 签名，按内测包使用。
 
 ## 本地运行
 

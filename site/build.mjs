@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // 构建官网静态产物：复制 designs/website 的页面与资源到 site/dist，并给样式和脚本加内容哈希。
-// 下载区是尚未发布的占位，不注入安装包地址。
+// 静态下载区保持尚未发布。页面脚本只在同域更新清单返回允许的 Windows setup 时改成链接。
 //
 // 用法：
 //   node site/build.mjs
 //
-// --version 会被忽略。MetaArc 客户端尚未发布，构建不会改写下载链接。
+// --version 会被忽略。构建不把版本号写成安装包地址。
 // 无第三方依赖，Node 18+ 即可运行。
 
 import { createHash } from 'node:crypto';
@@ -34,7 +34,7 @@ const FORBIDDEN = [
 
 function noteIgnoredVersion() {
   if (process.argv.includes('--version')) {
-    console.log('已忽略 --version：客户端尚未发布，不写入安装包链接');
+    console.log('已忽略 --version：构建不写入安装包链接');
   }
 }
 
@@ -57,8 +57,11 @@ function assertHonest(html, script) {
   if (!html.includes('尚未发布')) throw new Error('下载区缺少「尚未发布」占位');
   if (!html.includes('href="/account"')) throw new Error('顶栏缺少 /account 入口');
   if (!script.includes("fetch('/api/plans')")) throw new Error('套餐脚本未请求 /api/plans');
+  if (!script.includes("/api/updates/latest?platform=windows&arch=x64")) {
+    throw new Error('下载脚本未查询 Windows 更新清单');
+  }
   const downloadLinks = html.match(/<a\b[^>]*\bdata-os=/g);
-  if (downloadLinks) throw new Error('下载区仍是可点击的安装包链接');
+  if (downloadLinks) throw new Error('下载区静态 HTML 仍是可点击的安装包链接');
 }
 
 // 页面新增了字体子集里没有的字时提醒重新裁剪，否则这些字会回退到系统字体
@@ -90,4 +93,4 @@ const rendered = cacheBust(html);
 assertHonest(rendered, script);
 writeFileSync(join(DIST, 'index.html'), rendered);
 
-console.log('site/dist 已生成。下载区为尚未发布占位，未写入安装包链接。');
+console.log('site/dist 已生成。静态下载区未写入安装包链接。');

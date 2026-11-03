@@ -466,7 +466,7 @@
   "settings.about": "关于",
   "settings.about_version": "应用版本",
   "settings.about_updates": "更新",
-  "settings.about_updates_description": "客户端安装包尚未发布。不会查询上游 Release，也没有可下载的更新。",
+  "settings.about_updates_description": "检查 MetaArc 自己的更新清单。没有可下载的安装包，或更新源被关闭时，显示尚未发布。不会查询上游 Release。",
   "settings.about_check_for_updates": "检查更新",
   "settings.about_checking_updates": "正在检查更新...",
   "settings.about_up_to_date": "已是最新版本",

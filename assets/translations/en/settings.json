@@ -466,7 +466,7 @@
   "settings.about": "About",
   "settings.about_version": "App Version",
   "settings.about_updates": "Updates",
-  "settings.about_updates_description": "Client builds are not published yet. This app does not query upstream releases and has no downloadable update.",
+  "settings.about_updates_description": "Checks MetaArc's own update manifest. If no installer is published, or the update source is turned off, this page says it is not published yet. Upstream releases are not queried.",
   "settings.about_check_for_updates": "Check for Updates",
   "settings.about_checking_updates": "Checking for updates...",
   "settings.about_up_to_date": "You're up to date",

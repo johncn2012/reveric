@@ -1,13 +1,15 @@
 /**
  * MetaArc (元弧) 门户交互脚本
  * 品牌域名: MetaArc.COM.CN
- * 职责: 按 /api/plans 渲染套餐。不请求账号或后台接口，也不发起支付。
+ * 职责: 按 /api/plans 渲染套餐，并在 Windows 清单给出本域安装包时替换下载卡片。
+ * 不请求账号或后台接口，也不发起支付。没有清单时下载区保持尚未发布。
  */
 
 class MetaArcPortal {
   constructor() {
     this.plans = [];
     this.loadPlans();
+    this.loadWindowsDownload();
   }
 
   async loadPlans() {
@@ -134,6 +136,67 @@ class MetaArcPortal {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  async loadWindowsDownload() {
+    const card = document.getElementById('download-windows');
+    if (!card) return;
+    try {
+      const res = await fetch('/api/updates/latest?platform=windows&arch=x64');
+      if (!res.ok) return;
+      const data = await res.json();
+      const url = this.windowsDownloadUrl(data);
+      if (!url) return;
+      const link = document.createElement('a');
+      link.className = 'dl';
+      link.dataset.os = 'win';
+      link.href = url;
+      link.rel = 'noopener';
+      const unsigned = data.signed !== true;
+      const meta = unsigned ? '64 位 · 未签名' : '64 位';
+      const action = unsigned ? '下载内测包' : '下载';
+      link.innerHTML = `<span class="dl-os">Windows</span><span class="dl-meta mono">${meta}</span><span class="dl-go">${action}</span>`;
+      card.replaceWith(link);
+      const lead = document.getElementById('download-lead');
+      if (lead) {
+        lead.textContent = data.channel === 'stable'
+          ? 'Windows 安装包可以下载。macOS 与 Android 尚未发布。'
+          : 'Windows 内测包可以下载。macOS 与 Android 尚未发布。';
+      }
+    } catch (e) {
+      console.warn('[Windows download manifest failed]', e);
+    }
+  }
+
+  windowsDownloadUrl(data) {
+    if (!data || data.has_update !== true) return '';
+    const raw = typeof data.download_url === 'string' ? data.download_url.trim() : '';
+    return this.isWindowsSetupUrl(raw) ? raw : '';
+  }
+
+  isWindowsSetupUrl(raw) {
+    let url;
+    try {
+      url = new URL(raw);
+    } catch (_) {
+      return false;
+    }
+    if (url.username || url.password || url.hash) return false;
+    let pathname = url.pathname;
+    try {
+      pathname = decodeURIComponent(url.pathname);
+    } catch (_) {
+      return false;
+    }
+    const path = pathname.toLowerCase();
+    if (!path.endsWith('.exe') || !path.includes('setup') || path.includes('..')) return false;
+    const host = url.hostname.toLowerCase();
+    if (host === 'github.com' || host.endsWith('.github.com') || host.endsWith('.githubusercontent.com') || host.includes('looplj')) {
+      return false;
+    }
+    const metaArcHost = host === 'metaarc.com.cn' || host.endsWith('.metaarc.com.cn');
+    if (url.protocol === 'https:' && metaArcHost) return true;
+    return url.origin === window.location.origin && (url.protocol === 'https:' || url.protocol === 'http:');
   }
 }
 

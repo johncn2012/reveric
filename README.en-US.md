@@ -20,7 +20,7 @@ The admin configuration pane does not probe integrations and does not show an "i
 
 ## Downloads
 
-MetaArc does not publish its own installers. The portal download section says the clients are not released yet and does not link to upstream release files.
+The static portal says the clients are not published yet and does not link to upstream release files. The Windows card becomes a download only when the same-origin update manifest returns a real `*setup.exe`. See `server/metaarc/README.md` for where to place the manifest and installer. Installers are unsigned internal builds until an Authenticode certificate is available.
 
 ## Run locally
 

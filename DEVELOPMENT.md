@@ -84,15 +84,15 @@ make build-macos-release
 
 构建结果位于：
 
-- Debug：`build/macos/Build/Products/Debug/Reveric.app`
-- Release：`build/macos/Build/Products/Release/Reveric.app`
+- Debug：`build/macos/Build/Products/Debug/MetaArc.app`
+- Release：`build/macos/Build/Products/Release/MetaArc.app`
 
 排查 FJS 产物时，可单独执行：
 
 ```sh
 bash third/fjs/tool/build_runtime.sh
 bash third/fjs/tool/build_runtime.sh --verify
-bash third/fjs/tool/build_runtime.sh --verify-app build/macos/Build/Products/Debug/Reveric.app
+bash third/fjs/tool/build_runtime.sh --verify-app build/macos/Build/Products/Debug/MetaArc.app
 ```
 
 项目禁用了上游 FJS 预编译包下载，归档从当前源码生成，并校验源码、工具链和校验和。原生构建失败时应处理实际错误，不要换用上游二进制绕过。

@@ -228,7 +228,7 @@ void main() {
   }
 
   for (final compact in [false, true]) {
-    testWidgets('unreleased update source stays quiet with compact=$compact', (
+    testWidgets('unreleased notice can be checked again with compact=$compact', (
       tester,
     ) async {
       tester.view.physicalSize = Size(compact ? 390 : 1000, 1200);
@@ -236,14 +236,25 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final source = _Source()
-        ..response = () async => const UpdateCheckFailed(
-          LocaleKeys.settingsAboutUpdateUnconfigured,
-        );
+        ..response = () async =>
+            const UpdateCheckFailed(LocaleKeys.settingsAboutUpdateUnconfigured);
       await tester.pumpWidget(_wrap(source, compact));
       await tester.pumpAndSettle();
       expect(find.text('Not published yet'), findsOneWidget);
-      expect(find.text('Check for Updates'), findsNothing);
       expect(find.text('Update source is not configured'), findsNothing);
+      final check = find.text('Check for Updates');
+      expect(check, findsOneWidget);
+      source.response = () async => const UpdateAvailable(
+        UpdateInfo(
+          version: '0.7.0',
+          downloadUrl:
+              'https://metaarc.com.cn/downloads/MetaArc-0.7.0-windows-setup.exe',
+        ),
+      );
+      await tester.tap(check);
+      await tester.pumpAndSettle();
+      expect(find.text('v0.7.0'), findsOneWidget);
+      expect(find.text('Not published yet'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

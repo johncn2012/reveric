@@ -51,8 +51,14 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      DOWNLOADS_DIR: /app/downloads
+      UPDATE_MANIFEST_PATH: /app/updates/latest.json
     ports:
       - "8080:8080"
+    volumes:
+      - ./downloads:/app/downloads
+      - ./updates:/app/updates
 
 volumes:
   postgres_data:

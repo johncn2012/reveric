@@ -17,7 +17,7 @@ class SwiftPmArtifactTest(unittest.TestCase):
             other.parent.mkdir(); other.write_text('keep')
             product = root / 'build/macos/Build/Products/Profile/fjs.framework'
             product.mkdir(parents=True)
-            app = root / 'build/macos/Build/Products/Profile/Reveric.app/Contents/Frameworks/fjs.framework'
+            app = root / 'build/macos/Build/Products/Profile/MetaArc.app/Contents/Frameworks/fjs.framework'
             app.mkdir(parents=True)
             with patch.object(artifact, 'ROOT', root), patch.object(artifact, 'binary_uuids', return_value={('OLD', '(arm64)')}):
                 artifact.prepare_swiftpm({('NEW', '(arm64)')})
@@ -40,7 +40,7 @@ class SwiftPmArtifactTest(unittest.TestCase):
             root = Path(directory)
             binary = root / 'build/macos/SourcePackages/artifacts/fjs/FjsBinary/fjs.xcframework/macos-arm64/fjs.framework/Versions/A/fjs'
             binary.parent.mkdir(parents=True); binary.write_text('new')
-            app = root / 'build/macos/Build/Products/Profile/Reveric.app'
+            app = root / 'build/macos/Build/Products/Profile/MetaArc.app'
             embedded = app / 'Contents/Frameworks/fjs.framework/fjs'
             embedded.parent.mkdir(parents=True); embedded.write_text('old')
             marker = app / 'Contents/keep'; marker.write_text('keep')

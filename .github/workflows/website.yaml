@@ -1,7 +1,8 @@
 name: Website
 
 # 在 Actions 页面手动运行，用于改文案后重新上传 site/dist。
-# 构建不写入安装包链接。发版时的上传由 Package workflow 的 deploy-website job 完成。
+# 构建不写入安装包链接。Windows 卡片只在页面和更新清单同域时由脚本替换。
+# 发版时的上传由 Package workflow 的 deploy-website job 完成。
 on:
   workflow_dispatch:
 

@@ -1,0 +1,13 @@
+{
+  "channel": "internal",
+  "signed": false,
+  "releases": [
+    {
+      "platform": "windows",
+      "arch": "x64",
+      "version": "0.0.0",
+      "file": "MetaArc-0.0.0-windows-setup.exe",
+      "release_notes": "内测包。未做 Authenticode 签名。把 file 改成 downloads/ 里的真实文件名后再复制为 latest.json。"
+    }
+  ]
+}

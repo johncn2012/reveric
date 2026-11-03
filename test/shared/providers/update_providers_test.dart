@@ -3,6 +3,7 @@
 //   lib/shared/providers/update_providers.dart
 //   lib/shared/services/update.dart
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -38,12 +39,76 @@ void main() {
     overrides: [updateSourceProvider.overrideWithValue(source)],
   );
 
-  test('default update source is unconfigured and does not call GitHub', () async {
+  test(
+    'default update source queries the MetaArc manifest, not GitHub',
+    () async {
+      final requests = <Uri>[];
+      final result = await http.runWithClient(
+        () async {
+          final container = ProviderContainer.test();
+          final source = container.read(updateSourceProvider);
+          expect(source, isA<CustomApiSource>());
+          expect(
+            (source as CustomApiSource).apiEndpoint,
+            'https://metaarc.com.cn/api/updates/latest',
+          );
+          return source.checkForUpdate('0.6.2');
+        },
+        () => MockClient((request) async {
+          requests.add(request.url);
+          return http.Response.bytes(
+            utf8.encode(
+              '{"has_update":false,"status":"unreleased","message":"尚未发布"}',
+            ),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      );
+      expect(requests, hasLength(1));
+      final uri = requests.single;
+      expect(uri.host, 'metaarc.com.cn');
+      expect(uri.path, '/api/updates/latest');
+      expect(uri.queryParameters['platform'], isNotEmpty);
+      expect(uri.queryParameters['arch'], anyOf('x64', 'arm64', 'ia32'));
+      expect(uri.queryParameters['current'], '0.6.2');
+      expect(uri.queryParameters['arch'], isNot(contains(' ')));
+      expect(uri.host, isNot('api.github.com'));
+      expect(result, isA<UpdateCheckFailed>());
+      expect(
+        (result as UpdateCheckFailed).error,
+        LocaleKeys.settingsAboutUpdateUnconfigured,
+      );
+    },
+  );
+
+  test(
+    'update endpoint joins base and path, and a blank endpoint stays offline',
+    () {
+      expect(
+        resolveMetaArcUpdateEndpoint(
+          override: '',
+          base: 'https://metaarc.com.cn/',
+          path: 'api/updates/latest',
+        ),
+        'https://metaarc.com.cn/api/updates/latest',
+      );
+      expect(
+        resolveMetaArcUpdateEndpoint(override: 'https://metaarc.com.cn/custom'),
+        'https://metaarc.com.cn/custom',
+      );
+      expect(
+        createUpdateSource(kind: 'custom', endpoint: '   '),
+        isA<UnavailableUpdateSource>(),
+      );
+    },
+  );
+
+  test('unavailable update source is an explicit offline fallback', () async {
     final requests = <Uri>[];
     final result = await http.runWithClient(
       () async {
-        final container = ProviderContainer.test();
-        final source = container.read(updateSourceProvider);
+        final source = createUpdateSource(kind: 'unavailable');
         expect(source, isA<UnavailableUpdateSource>());
         return source.checkForUpdate('0.6.2');
       },
@@ -53,7 +118,6 @@ void main() {
       }),
     );
     expect(requests, isEmpty);
-    expect(result, isA<UpdateCheckFailed>());
     expect(
       (result as UpdateCheckFailed).error,
       LocaleKeys.settingsAboutUpdateUnconfigured,

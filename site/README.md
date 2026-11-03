@@ -1,6 +1,6 @@
 # 静态站构建（不是已发布的安装包）
 
-`site/build.mjs` 把 `designs/website/` 复制到 `site/dist/`，并给样式和脚本加内容哈希。下载区保持「尚未发布」占位，不写入安装包地址。`--version` 会被忽略。
+`site/build.mjs` 把 `designs/website/` 复制到 `site/dist/`，并给样式和脚本加内容哈希。静态下载区保持「尚未发布」，不写入安装包地址。`--version` 会被忽略。页面脚本会请求 `GET /api/updates/latest?platform=windows&arch=x64`；只有响应里的 `download_url` 是 MetaArc 域名（或与页面同源）上的 `*setup.exe` 时，才把 Windows 卡片换成链接。macOS 与 Android 保持尚未发布。
 
 线上门户在 `server/metaarc/public/`。本构建不修改那份文件。首页顶栏链到 `/account`，套餐只请求 `/api/plans`。账号登录、注册和余额在账号中心，走 `/api/auth/*`。
 
@@ -15,7 +15,7 @@
 | 路径 | 内容 |
 |---|---|
 | `designs/website/` | 页面真源：`index.html`、`landing.css`、`landing.js`、截图、字体子集和本地化的 [cineview](https://www.npmjs.com/package/cineview) |
-| `site/build.mjs` | 复制页面到 `site/dist/`。不注入版本号，也不写入安装包链接 |
+| `site/build.mjs` | 复制页面到 `site/dist/`。不注入版本号，也不写入安装包链接；要求脚本查询 Windows 更新清单 |
 | `site/static/` | `robots.txt`、`sitemap.xml`、`_headers`，原样复制到产物根目录 |
 | `site/scripts/subset_fonts.py` | 按页面用字裁剪 Noto Serif SC |
 | `site/screenshots/` | 原始截图和打码脚本，已加入 `.gitignore`，只在本地保留 |

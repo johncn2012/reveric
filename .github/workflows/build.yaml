@@ -226,11 +226,27 @@ jobs:
         run: |
           ./third/depth-native/prepare-product-windows.ps1
           fastforge release --name release --jobs windows-exe --skip-clean
+      # 产物必须是 MetaArc-<version>-windows-setup.exe。这一步不签名，也不写入更新清单。
+      # 把该 exe 拷到服务端 downloads/，再写 updates/latest.json，客户端才会看到更新。
+      - name: Check Windows setup name
+        shell: bash
+        run: |
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            echo "Windows setup (unsigned internal build): $file"
+          done < <(find dist -type f -name 'MetaArc-*-windows-setup.exe' -print0)
+          if [[ "$found" -eq 0 ]]; then
+            echo "Expected dist/**/MetaArc-<version>-windows-setup.exe"
+            find dist -type f -name '*.exe' || true
+            exit 1
+          fi
+          echo "CI does not publish this file to https://metaarc.com.cn/api/updates/latest."
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: |
-            dist/**/*-setup.exe
+            dist/**/MetaArc-*-windows-setup.exe
 
   package-android:
     if: |
@@ -305,7 +321,7 @@ jobs:
             dist/**/*.apk
 
   # 三个平台都打包成功后，构建官网并上传到 Cloudflare Pages。
-  # 构建忽略 --version，不写入安装包链接。
+  # 构建忽略 --version，不把安装包地址写进静态页。Windows 卡片只在同域清单返回时由页面脚本替换。
   # 手动只打单个平台时，其余打包 job 被跳过，这里也随之跳过；需要时手动运行 Website workflow。
   deploy-website:
     needs: [package-macos, package-windows, package-android]

@@ -1,5 +1,7 @@
 output: dist/
-artifact_name: '{{name}}-{{build_name}}{{#is_profile}}-{{build_mode}}{{/is_profile}}-{{platform}}{{#channel}}-{{channel}}{{/channel}}{{#is_installer}}-setup{{/is_installer}}.{{ext}}'
+# 产物文件名用 MetaArc，不跟随 pubspec 的包名。Windows 安装器为
+# MetaArc-<version>-windows-setup.exe，与更新清单里的 file 名一致。
+artifact_name: 'MetaArc-{{build_name}}{{#is_profile}}-{{build_mode}}{{/is_profile}}-{{platform}}{{#channel}}-{{channel}}{{/channel}}{{#is_installer}}-setup{{/is_installer}}.{{ext}}'
 releases:
   - name: release
     jobs:
@@ -8,7 +10,7 @@ releases:
           platform: macos
           channel: arm64
           hooks:
-            pre: 'python3 macos/architectures.py "$BUILD_OUTPUT_DIRECTORY/Reveric.app"'
+            pre: 'python3 macos/architectures.py "$BUILD_OUTPUT_DIRECTORY/MetaArc.app"'
           target: dmg
           build_args:
             release: true
@@ -17,7 +19,7 @@ releases:
           platform: macos
           channel: arm64
           hooks:
-            pre: 'python3 macos/architectures.py "$BUILD_OUTPUT_DIRECTORY/Reveric.app"'
+            pre: 'python3 macos/architectures.py "$BUILD_OUTPUT_DIRECTORY/MetaArc.app"'
           target: zip
           build_args:
             release: true

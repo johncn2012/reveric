@@ -12,6 +12,7 @@ import { ordersRouter } from './routes/orders.js';
 import { mediaRouter } from './routes/media.js';
 import { tasksRouter } from './routes/tasks.js';
 import { adminRouter } from './routes/admin.js';
+import { createUpdatesRouter, mountDownloads, updateServiceOptionsFromEnv } from './routes/updates.js';
 
 dotenv.config();
 
@@ -27,6 +28,10 @@ export function createApp() {
   // 中间件
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.json());
+
+  // 安装包目录。清单不在这里，避免把 latest.json 当成可下载文件。
+  const updateOptions = updateServiceOptionsFromEnv();
+  mountDownloads(app, updateOptions.downloadsDir);
 
   // 静态托管门户页面。线上用 public/；没有 public 时回退到 designs/website。
   const websiteDist = fs.existsSync(localPublic) ? localPublic : devWebsite;
@@ -54,6 +59,8 @@ export function createApp() {
   });
 
   // API 路由挂载。账号规范路径在各路由文件注释里。
+  // 更新清单是公开只读接口，必须排在管理路由之前，否则会被管理员鉴权拦住。
+  app.use('/api', createUpdatesRouter());
   app.use('/api', authRouter);
   app.use('/api', plansRouter);
   app.use('/api', ordersRouter);

@@ -256,12 +256,12 @@
   <cv-scene id="download" class="sc ending">
     <div class="ending-body">
       <cv-animate fx="rise(soft)" duration="700"><h2 class="ending-title">客户端下载</h2></cv-animate>
-      <p class="lead">尚未发布。下面是各平台占位，没有可下载的安装包。</p>
+      <p class="lead" id="download-lead">尚未发布。下面是各平台占位，没有可下载的安装包。</p>
       <div class="dl-cards">
         <div class="dl is-unreleased" data-os="mac">
           <span class="dl-os">macOS</span><span class="dl-meta mono">Apple Silicon</span><span class="dl-go">尚未发布</span>
         </div>
-        <div class="dl is-unreleased" data-os="win">
+        <div class="dl is-unreleased" id="download-windows" data-os="win">
           <span class="dl-os">Windows</span><span class="dl-meta mono">64 位</span><span class="dl-go">尚未发布</span>
         </div>
         <div class="dl is-unreleased" data-os="android">
