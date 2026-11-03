@@ -14,7 +14,7 @@ The desktop and mobile clients keep the upstream local-first workspace. Novels, 
 
 No payment channel is connected. Purchase and top-up controls stay disabled, and the page does not report a successful payment.
 
-Registration creates a portal account only. The mobile client has no account entry, so a successful registration does not turn on mobile sync. When the compute channel does not return a usable credential, the interface does not present one as issued.
+Registration creates a portal account only. The mobile client now has in-app account pages (login/register/profile refresh) against the main-domain /api/auth/* routes; a successful registration still does not turn on mobile sync by itself. When the compute channel does not return a usable credential, the interface does not present one as issued.
 
 The admin configuration pane does not probe integrations and does not show an "integrated" status.
 
@@ -36,6 +36,6 @@ On Windows, use `make run-windows`. See `server/metaarc/README.md` for the accou
 
 ## Attribution and license
 
-This repository is a modified version of Reveric. The author attribution is looplj. The client About page keeps the sentence “Based on Reveric by looplj.”
+This repository is a modified version of Reveric. The author attribution is looplj. The client About page keeps the sentence “Based on Reveric by looplj.�?
 
 The license is [GNU AGPLv3](./LICENSE). Additional terms and third-party notices are in [NOTICES](./NOTICES).
