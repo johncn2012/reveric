@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 8080;
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-// 静态托管 Web 官网与管理面板
+// 静态托管门户页面。线上用 public/；没有 public 时回退到 designs/website。
 const localPublic = path.resolve(__dirname, '../public');
 const devWebsite = path.resolve(__dirname, '../../../designs/website');
 const websiteDist = fs.existsSync(localPublic) ? localPublic : devWebsite;
