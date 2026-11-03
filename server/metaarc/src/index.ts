@@ -48,8 +48,9 @@ export function createApp() {
   app.get('/account/', sendAccountPage);
   app.use(express.static(websiteDist));
 
-  // 健康检查
-  app.get('/health', async (_req, res) => {
+  // 健康检查。/api/health 与 /health 共用同一探针。
+  // 必须写在下方 /api 路由之前：未命中的 /api/* 会落到管理路由的鉴权中间件并返回 401。
+  app.get(['/health', '/api/health'], async (_req, res) => {
     try {
       await pool.query('SELECT 1');
       res.json({ status: 'ok', brand: 'MetaArc', db: 'connected', timestamp: new Date() });

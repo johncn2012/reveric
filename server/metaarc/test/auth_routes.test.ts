@@ -81,6 +81,43 @@ test('profile, orders and quota logs share auth failures across aliases', async 
   }
 });
 
+test('GET /api/health matches /health and stays public', async () => {
+  const { server, base } = await listen();
+  try {
+    const [rootRes, aliasRes] = await Promise.all([
+      fetch(`${base}/health`),
+      fetch(`${base}/api/health`),
+    ]);
+    assert.notEqual(aliasRes.status, 401);
+    assert.equal(aliasRes.status, rootRes.status);
+
+    const rootBody = await rootRes.json();
+    const aliasBody = await aliasRes.json();
+    assert.deepEqual(Object.keys(aliasBody).sort(), Object.keys(rootBody).sort());
+
+    if (rootRes.status === 200) {
+      assert.equal(rootBody.status, 'ok');
+      assert.equal(rootBody.brand, 'MetaArc');
+      assert.equal(rootBody.db, 'connected');
+      assert.equal(aliasBody.status, rootBody.status);
+      assert.equal(aliasBody.brand, rootBody.brand);
+      assert.equal(aliasBody.db, rootBody.db);
+      assert.equal(typeof aliasBody.timestamp, 'string');
+      return;
+    }
+
+    assert.equal(rootRes.status, 500);
+    assert.equal(rootBody.status, 'error');
+    assert.equal(typeof rootBody.db, 'string');
+    assert.equal(aliasBody.status, rootBody.status);
+    assert.equal(typeof aliasBody.db, 'string');
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+  }
+});
+
 test('account page is same-origin and has no demo quota', async () => {
   const { server, base } = await listen();
   try {
