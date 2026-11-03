@@ -1,4 +1,4 @@
-// 职责: 展示本地用户名和头像，点击后编辑本地资料；联动展示 MetaArc 云端算力中枢状态。
+// 职责: 展示本地资料，并用账号状态位打开已有的 MetaArc 账号流程。
 // 关联文件:
 //   lib/shared/providers/settings_providers.dart
 //   lib/shared/providers/metaarc_providers.dart
@@ -18,6 +18,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../shared/components/reveric_dialog.dart';
 import '../../shared/localization/app_localization.dart';
 import '../../shared/localization/locale_keys.dart';
+import '../../shared/models/metaarc_account.dart';
 import '../../shared/providers/metaarc_providers.dart';
 import '../../shared/providers/settings_providers.dart';
 import '../../shared/theme/theme.dart';
@@ -56,7 +57,8 @@ class UserProfileBar extends ConsumerWidget {
       data: (settings) {
         final username = settings.username.isNotEmpty
             ? settings.username
-            : 'Reveric';
+            : context.t(LocaleKeys.accountLocalNameEmpty);
+        final accountStatus = _accountStatusLabel(context, metaArcAccount);
         final resolvedAvatar = RevericPaths.resolveStored(settings.avatarPath);
 
         final avatarSize = switch (mode) {
@@ -114,63 +116,57 @@ class UserProfileBar extends ConsumerWidget {
         );
 
         if (mode == UserProfileBarMode.iconOnly) {
-          return InkWell(
-            onTap: openAccount,
-            hoverColor: colors.hover,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: RevericSpacing.md),
-              child: Center(child: avatar),
+          return Tooltip(
+            message: accountStatus,
+            child: InkWell(
+              onTap: openAccount,
+              hoverColor: colors.hover,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: RevericSpacing.md),
+                child: Center(child: avatar),
+              ),
             ),
           );
         }
 
         if (mode == UserProfileBarMode.dense) {
-          return InkWell(
-            onTap: openAccount,
-            hoverColor: colors.hover,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: RevericSpacing.sm,
-                vertical: RevericSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  avatar,
-                  const SizedBox(width: RevericSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                username,
-                                style: typo.uiSmall.copyWith(
-                                  color: colors.textPrimary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                            if (metaArcAccount != null) ...[
-                              const SizedBox(width: 4),
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: colors.accent,
-                                ),
-                              ),
-                            ],
-                          ],
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: RevericSpacing.sm,
+              vertical: RevericSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                InkWell(onTap: openAccount, child: avatar),
+                const SizedBox(width: RevericSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        onTap: openAccount,
+                        child: Text(
+                          username,
+                          style: typo.uiSmall.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
-                      ],
-                    ),
+                      ),
+                      InkWell(
+                        onTap: openMetaArcAuth,
+                        child: Text(
+                          accountStatus,
+                          style: typo.uiTiny.copyWith(color: colors.textMuted),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         }
@@ -216,7 +212,6 @@ class UserProfileBar extends ConsumerWidget {
                         onTap: openMetaArcAuth,
                         borderRadius: BorderRadius.circular(4),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
@@ -225,22 +220,22 @@ class UserProfileBar extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(3),
                               ),
                               child: Text(
-                                metaArcAccount != null ? 'METAARC' : context.t(LocaleKeys.accountCloudBadge),
+                                context.t(LocaleKeys.accountStatusBadge),
                                 style: typo.uiTiny.copyWith(
                                   color: colors.accent,
-                                  fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              metaArcAccount != null
-                                  ? '${metaArcAccount.quota.toStringAsFixed(0)}点 · ${metaArcAccount.plan.toUpperCase()}'
-                                  : context.t(LocaleKeys.accountConnectHub),
-                              style: typo.uiTiny.copyWith(
-                                color: colors.textMuted,
-                                fontSize: 10,
+                            Expanded(
+                              child: Text(
+                                accountStatus,
+                                style: typo.uiTiny.copyWith(
+                                  color: colors.textMuted,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -257,8 +252,8 @@ class UserProfileBar extends ConsumerWidget {
                     color: metaArcAccount != null ? colors.accent : colors.textSubtle,
                   ),
                   tooltip: metaArcAccount != null
-                      ? 'MetaArc 算力中枢 (${metaArcAccount.quota.toStringAsFixed(1)}点)'
-                      : '连接 MetaArc 云端会员算力',
+                      ? accountStatus
+                      : context.t(LocaleKeys.accountOpenFlow),
                   onPressed: openMetaArcAuth,
                 ),
               ],
@@ -268,4 +263,15 @@ class UserProfileBar extends ConsumerWidget {
       },
     );
   }
+}
+
+String _accountStatusLabel(BuildContext context, MetaArcAccount? account) {
+  if (account == null) {
+    return context.t(LocaleKeys.accountSignedOut);
+  }
+  final points = context.t(
+    LocaleKeys.accountPointsUnit,
+    namedArgs: {'points': account.quota.toStringAsFixed(1)},
+  );
+  return '$points · ${account.planName}';
 }

@@ -773,8 +773,17 @@ abstract final class LocaleKeys {
   static const accountLogout = 'account.logout';
   static const accountLoginButton = 'account.login_button';
   static const accountRegisterButton = 'account.register_button';
-  static const accountConnectHub = 'account.connect_hub';
-  static const accountCloudBadge = 'account.cloud_badge';
+  static const accountSignedOut = 'account.signed_out';
+  static const accountStatusBadge = 'account.status_badge';
+  static const accountOpenFlow = 'account.open_flow';
+  static const accountLocalNameEmpty = 'account.local_name_empty';
+  static const accountQuotaWithoutTotal = 'account.quota_without_total';
+  static const accountCredentialsRequired = 'account.credentials_required';
+  static const accountRegisterInvalid = 'account.register_invalid';
+  static const accountMobileHint = 'account.mobile_hint';
+  static const accountMobileSignedInHint = 'account.mobile_signed_in_hint';
+  static const accountOpenCenterFailed = 'account.open_center_failed';
+  static const accountStatusUnavailable = 'account.status_unavailable';
   // ── agent ────────────────────────────────────────
   static const agentBasics = 'agent.basics';
   static const agentDeleteConfirm = 'agent.delete_confirm';

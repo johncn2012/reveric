@@ -17,7 +17,7 @@
   "account.points_unit": "{points} 点",
   "account.auto_provision_hint": "已将返回的算力凭据保存到本机供应商。",
   "account.channel_unavailable": "算力通道尚未开通。",
-  "account.login_scope_hint": "登录后只在当前客户端保存账号状态。移动端还没有账号入口。",
+  "account.login_scope_hint": "登录后只在当前客户端保存账号状态。支付和管理在网页账号中心，不在创作端。",
   "account.secret_key_title": "专属 API 密钥 (New-API Token)",
   "account.copy_key": "复制密钥",
   "account.copy_key_success": "API Key 已复制到剪贴板",
@@ -26,6 +26,15 @@
   "account.logout": "退出登录",
   "account.login_button": "登 录",
   "account.register_button": "注册",
-  "account.connect_hub": "连接会员",
-  "account.cloud_badge": "云端算力"
+  "account.signed_out": "未登录",
+  "account.status_badge": "账号",
+  "account.open_flow": "打开账号",
+  "account.local_name_empty": "未设置名称",
+  "account.quota_without_total": "资料没有返回配额总量。",
+  "account.credentials_required": "请输入手机号/邮箱及密码",
+  "account.register_invalid": "账号不能为空，密码长度至少 6 位",
+  "account.mobile_hint": "在浏览器打开账号中心。此页不提供支付或管理。",
+  "account.mobile_signed_in_hint": "余额来自已保存的账号资料。管理仍在网页账号中心。",
+  "account.open_center_failed": "无法打开账号中心。",
+  "account.status_unavailable": "无法读取已保存的账号状态。"
 }

@@ -581,6 +581,9 @@ class AboutSettingsSection extends HookConsumerWidget {
     WidgetRef ref,
     String error,
   ) {
+    if (error == LocaleKeys.settingsAboutUpdateUnconfigured) {
+      return _buildUnreleasedNotice(context, colors, typo);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -614,6 +617,33 @@ class AboutSettingsSection extends HookConsumerWidget {
         const SizedBox(height: RevericSpacing.md),
         _buildCheckButton(ref),
       ],
+    );
+  }
+
+  Widget _buildUnreleasedNotice(
+    BuildContext context,
+    RevericColors colors,
+    RevericTypography typo,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(RevericSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceDim,
+        borderRadius: BorderRadius.circular(RevericRadius.medium),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          RevericIcon(RevericIcons.info, size: 18, color: colors.textSecondary),
+          const SizedBox(width: RevericSpacing.sm),
+          Expanded(
+            child: Text(
+              context.t(LocaleKeys.settingsAboutUpdateUnconfigured),
+              style: typo.uiSmall.copyWith(color: colors.textSecondary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

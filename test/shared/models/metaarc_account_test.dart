@@ -32,4 +32,38 @@ void main() {
       'http://127.0.0.1:8080',
     );
   });
+
+  test('auth requests use the apex domain and /api/auth paths', () {
+    expect(
+      MetaArcAccount.loginUri('https://api.metaarc.com.cn/').toString(),
+      'https://metaarc.com.cn/api/auth/login',
+    );
+    expect(
+      MetaArcAccount.registerUri(null).toString(),
+      'https://metaarc.com.cn/api/auth/register',
+    );
+    expect(
+      MetaArcAccount.profileUri('https://metaarc.com.cn').toString(),
+      'https://metaarc.com.cn/api/auth/profile',
+    );
+    expect(
+      MetaArcAccount.accountCenterUrl('https://api.metaarc.com.cn'),
+      'https://metaarc.com.cn/account',
+    );
+  });
+
+  test('missing quota total is not treated as a full meter', () {
+    const empty = MetaArcAccount(userId: 'user', token: 'token');
+    const partial = MetaArcAccount(
+      userId: 'user',
+      token: 'token',
+      quota: 20,
+      totalQuota: 100,
+    );
+
+    expect(empty.hasQuotaTotal, isFalse);
+    expect(empty.quotaPercent, 0);
+    expect(partial.hasQuotaTotal, isTrue);
+    expect(partial.quotaPercent, 0.2);
+  });
 }

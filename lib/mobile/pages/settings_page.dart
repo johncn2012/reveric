@@ -1,6 +1,8 @@
-// 职责: 移动端设置页面 — 顶部用户资料卡 + 分组列表（偏好/AI/数据/系统，行右侧显示当前值），路由到共享 section；含 10 次点击关于解锁调试。
+// 职责: 移动端设置页面 — 本地资料卡、账号状态位（跳转网页账号中心）和分组列表，路由到共享 section；含 10 次点击关于解锁调试。
 // 关联文件:
 //   lib/shared/components/reveric_dialog.dart
+//   lib/shared/models/metaarc_account.dart
+//   lib/shared/providers/metaarc_providers.dart
 //   lib/shared/widgets/user_profile_edit_dialog.dart
 //   lib/shared/utils/storage_paths.dart
 //   lib/shared/widgets/settings/general_settings_section.dart
@@ -22,6 +24,8 @@
 //   assets/translations/zh-CN/settings.json
 //   assets/translations/en/mobile.json
 //   assets/translations/zh-CN/mobile.json
+//   assets/translations/en/account.json
+//   assets/translations/zh-CN/account.json
 // 遵循的 Rules:
 //   .agents/rules/state-management.md
 //   .agents/rules/hooks.md
@@ -34,12 +38,15 @@ import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../shared/app_config.dart' show appVersion;
 import '../../shared/localization/app_localization.dart';
 import '../../shared/localization/locale_keys.dart';
+import '../../shared/models/metaarc_account.dart';
+import '../../shared/providers/metaarc_providers.dart';
 import '../../shared/providers/settings_providers.dart';
 import '../../shared/providers/update_providers.dart';
 import '../../shared/theme/theme.dart';
@@ -267,6 +274,8 @@ class SettingsPage extends HookConsumerWidget {
               ),
             ),
             const SizedBox(height: RevericSpacing.x2l),
+            _buildAccountStatus(context, colors, typo, ref),
+            const SizedBox(height: RevericSpacing.x2l),
             _buildGroup(
               context,
               colors,
@@ -413,6 +422,79 @@ class SettingsPage extends HookConsumerWidget {
     );
   }
 
+  /// 账号状态位。只展示已保存的登录态和余额，点击后打开网页账号中心。
+  Widget _buildAccountStatus(
+    BuildContext context,
+    RevericColors colors,
+    RevericTypography typo,
+    WidgetRef ref,
+  ) {
+    final accountAsync = ref.watch(metaarcAccountProvider);
+    final account = accountAsync.asData?.value;
+    final String? value;
+    final String subtitle;
+    if (accountAsync.hasError) {
+      value = null;
+      subtitle = context.t(LocaleKeys.accountStatusUnavailable);
+    } else if (accountAsync.isLoading && !accountAsync.hasValue) {
+      value = null;
+      subtitle = context.t(LocaleKeys.accountMobileHint);
+    } else if (account == null) {
+      value = context.t(LocaleKeys.accountSignedOut);
+      subtitle = context.t(LocaleKeys.accountMobileHint);
+    } else {
+      value = context.t(
+        LocaleKeys.accountPointsUnit,
+        namedArgs: {'points': account.quota.toStringAsFixed(1)},
+      );
+      subtitle =
+          '${account.planName} · ${context.t(LocaleKeys.accountMobileSignedInHint)}';
+    }
+
+    return _buildGroup(
+      context,
+      colors,
+      typo,
+      LocaleKeys.accountStatusBadge,
+      [
+        _valueRow(
+          context,
+          colors,
+          typo,
+          icon: RevericIcons.cloud,
+          tint: account == null ? colors.textMuted : colors.accent,
+          label: context.t(LocaleKeys.accountStatusBadge),
+          value: value,
+          subtitle: subtitle,
+          onTap: () => _openAccountCenter(context, account?.serverUrl),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openAccountCenter(
+    BuildContext context,
+    String? serverUrl,
+  ) async {
+    final uri = Uri.parse(MetaArcAccount.accountCenterUrl(serverUrl));
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (opened) {
+        return;
+      }
+    } catch (_) {
+      // 打不开时落到下面的说明，不把异常原文给用户。
+    }
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.t(LocaleKeys.accountOpenCenterFailed)),
+      ),
+    );
+  }
+
   /// 顶部用户资料卡：头像 + 用户名 + 副标题，点击打开共享的资料编辑对话框。
   Widget _buildProfileCard(
     BuildContext context,
@@ -422,7 +504,9 @@ class SettingsPage extends HookConsumerWidget {
     String avatarPath, {
     VoidCallback? onTap,
   }) {
-    final displayName = username.isNotEmpty ? username : 'Reveric';
+    final displayName = username.isNotEmpty
+        ? username
+        : context.t(LocaleKeys.accountLocalNameEmpty);
     final resolvedAvatar = RevericPaths.resolveStored(avatarPath);
     const avatarSize = 52.0;
 

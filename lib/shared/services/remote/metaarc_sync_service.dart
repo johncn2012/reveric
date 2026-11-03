@@ -43,14 +43,14 @@ class MetaArcSyncService {
   }) async {
     final file = File(localFilePath);
     if (!await file.exists()) {
-      _log.warn('Upload aborted: Local file does not exist: $localFilePath');
+      _log.warning('Upload aborted: Local file does not exist: $localFilePath');
       return null;
     }
 
     final fileName = file.uri.pathSegments.last;
     final mimeType = lookupMimeType(localFilePath) ?? 'application/octet-stream';
     final byteSize = await file.length();
-    final cleanServerUrl = account.serverUrl.replaceAll(RegExp(r'/+$'), '');
+    final cleanServerUrl = MetaArcAccount.normalizeServerUrl(account.serverUrl);
 
     try {
       // 1. 向 MetaArc BaaS 申请租户隔离的 Presigned PUT 上传凭据
@@ -146,7 +146,7 @@ class MetaArcSyncService {
     String? novelId,
     Map<String, dynamic>? meta,
   }) async {
-    final cleanServerUrl = account.serverUrl.replaceAll(RegExp(r'/+$'), '');
+    final cleanServerUrl = MetaArcAccount.normalizeServerUrl(account.serverUrl);
     try {
       // 1. 创建即时任务记录
       final createUri = Uri.parse('$cleanServerUrl/api/tasks/create');
@@ -185,7 +185,11 @@ class MetaArcSyncService {
         }),
       );
     } catch (e, stack) {
-      _log.warn('Failed to report task consumption to MetaArc cloud', error: e, stackTrace: stack);
+      _log.error(
+        'Failed to report task consumption to MetaArc cloud',
+        error: e,
+        stackTrace: stack,
+      );
     }
   }
 }

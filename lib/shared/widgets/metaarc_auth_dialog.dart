@@ -59,7 +59,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
       final pwd = passwordController.text;
 
       if (act.isEmpty || pwd.isEmpty) {
-        errorMessage.value = '请输入手机号/邮箱及密码';
+        errorMessage.value = context.t(LocaleKeys.accountCredentialsRequired);
         return;
       }
 
@@ -87,7 +87,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
       final nick = nicknameController.text.trim();
 
       if (act.isEmpty || pwd.length < 6) {
-        errorMessage.value = '账号不能为空，密码长度至少 6 位';
+        errorMessage.value = context.t(LocaleKeys.accountRegisterInvalid);
         return;
       }
 
@@ -261,14 +261,16 @@ class MetaArcAuthDialog extends HookConsumerWidget {
                               Text(
                                 context.t(
                                   LocaleKeys.accountPointsUnit,
-                                  args: [account.quota.toStringAsFixed(1)],
+                                  namedArgs: {
+                                    'points': account.quota.toStringAsFixed(1),
+                                  },
                                 ),
                                 style: typo.uiSemibold.copyWith(
                                   color: colors.accent,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (account.totalQuota > 0)
+                              if (account.hasQuotaTotal)
                                 Text(
                                   ' / ${account.totalQuota.toStringAsFixed(0)}',
                                   style: typo.uiSmall.copyWith(color: colors.textMuted),
@@ -278,15 +280,21 @@ class MetaArcAuthDialog extends HookConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: RevericSpacing.sm),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: account.totalQuota > 0 ? account.quotaPercent : 1.0,
-                          backgroundColor: colors.surfaceContainer,
-                          valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
-                          minHeight: 8,
+                      if (account.hasQuotaTotal)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: account.quotaPercent,
+                            backgroundColor: colors.surfaceContainer,
+                            valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
+                            minHeight: 8,
+                          ),
+                        )
+                      else
+                        Text(
+                          context.t(LocaleKeys.accountQuotaWithoutTotal),
+                          style: typo.uiTiny.copyWith(color: colors.textMuted),
                         ),
-                      ),
                       const SizedBox(height: RevericSpacing.md),
                       Row(
                         children: [

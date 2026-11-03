@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:reveric/shared/app_config.dart';
+import 'package:reveric/shared/localization/locale_keys.dart';
 import 'package:reveric/shared/localization/merging_asset_loader.dart';
 import 'package:reveric/shared/providers/update_providers.dart';
 import 'package:reveric/shared/services/update.dart';
@@ -220,6 +221,29 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('v9.1.0'), findsOneWidget);
       expect(check, findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+  }
+
+  for (final compact in [false, true]) {
+    testWidgets('unreleased update source stays quiet with compact=$compact', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(compact ? 390 : 1000, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final source = _Source()
+        ..response = () async => const UpdateCheckFailed(
+          LocaleKeys.settingsAboutUpdateUnconfigured,
+        );
+      await tester.pumpWidget(_wrap(source, compact));
+      await tester.pumpAndSettle();
+      expect(find.text('Not published yet'), findsOneWidget);
+      expect(find.text('Check for Updates'), findsNothing);
+      expect(find.text('Update source is not configured'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

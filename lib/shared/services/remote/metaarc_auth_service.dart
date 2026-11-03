@@ -15,7 +15,6 @@ import 'package:http/http.dart' as http;
 
 import '../../database/app_database.dart';
 import '../../logger/app_logger.dart';
-import '../../models/ai_provider.dart';
 import '../../models/metaarc_account.dart';
 
 final _log = AppLogger.forModule('MetaArcAuthService');
@@ -62,7 +61,7 @@ class MetaArcAuthService {
     required String password,
   }) async {
     final cleanUrl = MetaArcAccount.normalizeServerUrl(serverUrl);
-    final uri = Uri.parse('$cleanUrl/api/auth/login');
+    final uri = MetaArcAccount.loginUri(cleanUrl);
 
     final res = await _client.post(
       uri,
@@ -119,7 +118,7 @@ class MetaArcAuthService {
     String? nickname,
   }) async {
     final cleanUrl = MetaArcAccount.normalizeServerUrl(serverUrl);
-    final uri = Uri.parse('$cleanUrl/api/auth/register');
+    final uri = MetaArcAccount.registerUri(cleanUrl);
 
     final isEmail = phoneOrEmail.contains('@');
     final payload = <String, dynamic>{
@@ -160,7 +159,7 @@ class MetaArcAuthService {
   /// 刷新云端资料与配额
   Future<MetaArcAccount> fetchProfile(MetaArcAccount current) async {
     final cleanUrl = MetaArcAccount.normalizeServerUrl(current.serverUrl);
-    final uri = Uri.parse('$cleanUrl/api/auth/profile');
+    final uri = MetaArcAccount.profileUri(cleanUrl);
 
     final res = await _client.get(
       uri,

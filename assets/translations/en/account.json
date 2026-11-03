@@ -17,7 +17,7 @@
   "account.points_unit": "{points} pts",
   "account.auto_provision_hint": "The returned compute credential is saved on this device.",
   "account.channel_unavailable": "Compute access is not available.",
-  "account.login_scope_hint": "Sign-in stores the account on this client. The mobile app has no account screen yet.",
+  "account.login_scope_hint": "Sign-in stores the account on this client. Payment and administration stay on the web account center.",
   "account.secret_key_title": "Exclusive API Key (New-API Token)",
   "account.copy_key": "Copy Key",
   "account.copy_key_success": "API Key copied to clipboard",
@@ -26,6 +26,15 @@
   "account.logout": "Logout",
   "account.login_button": "Sign In",
   "account.register_button": "Register",
-  "account.connect_hub": "Connect Account",
-  "account.cloud_badge": "Cloud AI"
+  "account.signed_out": "Not signed in",
+  "account.status_badge": "Account",
+  "account.open_flow": "Open account",
+  "account.local_name_empty": "Unnamed",
+  "account.quota_without_total": "The profile did not include a quota total.",
+  "account.credentials_required": "Enter a phone number or email and a password",
+  "account.register_invalid": "Account is required and the password must be at least 6 characters",
+  "account.mobile_hint": "Open the account center in the browser. This page does not offer payment or administration.",
+  "account.mobile_signed_in_hint": "Balance comes from the saved account. Management stays on the web account center.",
+  "account.open_center_failed": "Could not open the account center.",
+  "account.status_unavailable": "Could not read the saved account state."
 }

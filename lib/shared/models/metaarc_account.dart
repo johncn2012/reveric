@@ -1,4 +1,4 @@
-// 职责: MetaArc 会员账号与算力配额数据模型定义、JSON 序列化与解析。
+// 职责: MetaArc 会员账号与算力配额数据模型、JSON 序列化，以及主域上的规范账号地址。
 // 关联文件:
 //   lib/shared/services/remote/metaarc_auth_service.dart
 //   lib/shared/providers/metaarc_providers.dart
@@ -48,6 +48,19 @@ class MetaArcAccount {
     return '${normalizeServerUrl(serverUrl)}/account';
   }
 
+  /// 规范登录地址。旧 api 子域收成主域后再接 /api/auth/login。
+  static Uri loginUri(String? serverUrl) => _authUri(serverUrl, 'login');
+
+  /// 规范注册地址。旧 api 子域收成主域后再接 /api/auth/register。
+  static Uri registerUri(String? serverUrl) => _authUri(serverUrl, 'register');
+
+  /// 规范资料地址。余额只来自这里返回的 quota。
+  static Uri profileUri(String? serverUrl) => _authUri(serverUrl, 'profile');
+
+  static Uri _authUri(String? serverUrl, String action) {
+    return Uri.parse('${normalizeServerUrl(serverUrl)}/api/auth/$action');
+  }
+
   final String userId;
   final String token;
   final String? email;
@@ -68,9 +81,14 @@ class MetaArcAccount {
     return key.isNotEmpty && !key.startsWith('sk-mock-');
   }
 
-  /// 计算剩余额度百分比 (0.0 ~ 1.0)
+  /// 资料返回了配额总量时才有进度分母。总量为 0 时不能把进度画成满格。
+  bool get hasQuotaTotal => totalQuota > 0;
+
+  /// 计算剩余额度百分比 (0.0 ~ 1.0)。没有总量时为 0，不表示配额已满。
   double get quotaPercent {
-    if (totalQuota <= 0) return 0.0;
+    if (!hasQuotaTotal) {
+      return 0.0;
+    }
     return (quota / totalQuota).clamp(0.0, 1.0);
   }
 

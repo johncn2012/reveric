@@ -13,7 +13,7 @@ import '../../../localization/locale_keys.dart';
 import '../models.dart';
 import '../update_source.dart';
 
-/// 未配置的更新源。检查不会发出网络请求。
+/// 客户端安装包尚未发布。检查不会访问上游 Release，也不会发出网络请求。
 class UnavailableUpdateSource implements UpdateSource {
   const UnavailableUpdateSource();
 
