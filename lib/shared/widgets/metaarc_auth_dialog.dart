@@ -1,4 +1,4 @@
-// 职责: MetaArc 会员账号管理弹窗 — 提供云端会员登录注册、配额与套餐监控、New-API 专属密钥查阅及 Web 充值入口。
+// 职责: MetaArc 会员账号管理弹窗 — 登录注册、展示接口返回的配额与密钥，并打开同域账号中心。
 // 关联文件:
 //   lib/shared/components/reveric_dialog.dart
 //   lib/shared/components/reveric_button.dart
@@ -25,6 +25,7 @@ import '../components/reveric_button.dart';
 import '../components/reveric_dialog.dart';
 import '../localization/app_localization.dart';
 import '../localization/locale_keys.dart';
+import '../models/metaarc_account.dart';
 import '../providers/metaarc_providers.dart';
 import '../theme/theme.dart';
 
@@ -44,7 +45,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
     final errorMessage = useState<String?>(null);
 
     final serverController = useTextEditingController(
-      text: account?.serverUrl ?? 'https://api.metaarc.com.cn',
+      text: MetaArcAccount.normalizeServerUrl(account?.serverUrl),
     );
     final accountController = useTextEditingController();
     final passwordController = useTextEditingController();
@@ -67,7 +68,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
 
       try {
         await ref.read(metaarcAccountProvider.notifier).login(
-          serverUrl: server.isNotEmpty ? server : 'https://api.metaarc.com.cn',
+          serverUrl: server.isNotEmpty ? server : MetaArcAccount.defaultServerUrl,
           account: act,
           password: pwd,
         );
@@ -95,7 +96,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
 
       try {
         await ref.read(metaarcAccountProvider.notifier).register(
-          serverUrl: server.isNotEmpty ? server : 'https://api.metaarc.com.cn',
+          serverUrl: server.isNotEmpty ? server : MetaArcAccount.defaultServerUrl,
           phoneOrEmail: act,
           password: pwd,
           nickname: nick.isNotEmpty ? nick : null,
@@ -120,10 +121,8 @@ class MetaArcAuthDialog extends HookConsumerWidget {
       await ref.read(metaarcAccountProvider.notifier).logout();
     }
 
-    Future<void> openRechargeWeb() async {
-      final webUrl = Uri.parse(
-        account?.serverUrl.replaceFirst('api.', '') ?? 'https://metaarc.com.cn',
-      );
+    Future<void> openAccountCenter() async {
+      final webUrl = Uri.parse(MetaArcAccount.accountCenterUrl(account?.serverUrl));
       if (await canLaunchUrl(webUrl)) {
         await launchUrl(webUrl, mode: LaunchMode.externalApplication);
       }
@@ -383,8 +382,8 @@ class MetaArcAuthDialog extends HookConsumerWidget {
             onPressed: handleRefresh,
           ),
           RevericButton.primary(
-            label: context.t(LocaleKeys.accountUpgradePlan),
-            onPressed: openRechargeWeb,
+            label: context.t(LocaleKeys.accountCenter),
+            onPressed: openAccountCenter,
           ),
         ],
       );
@@ -610,7 +609,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
                 controller: serverController,
                 style: typo.uiTiny.copyWith(color: colors.textMuted),
                 decoration: InputDecoration(
-                  hintText: 'https://api.metaarc.com.cn',
+                  hintText: MetaArcAccount.defaultServerUrl,
                   hintStyle: typo.uiTiny.copyWith(color: colors.textMuted),
                   filled: true,
                   fillColor: colors.canvas,

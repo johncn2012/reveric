@@ -769,7 +769,7 @@ abstract final class LocaleKeys {
   static const accountCopyKey = 'account.copy_key';
   static const accountCopyKeySuccess = 'account.copy_key_success';
   static const accountRefreshQuota = 'account.refresh_quota';
-  static const accountUpgradePlan = 'account.upgrade_plan';
+  static const accountCenter = 'account.center';
   static const accountLogout = 'account.logout';
   static const accountLoginButton = 'account.login_button';
   static const accountRegisterButton = 'account.register_button';

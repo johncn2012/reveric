@@ -130,8 +130,9 @@ tasksRouter.post('/tasks/:id/update-status', requireAuth, async (req: Request, r
   }
 });
 
-// 4. 查询当前用户的配额流水明细（可量化明细）
-tasksRouter.get('/quota/logs', requireAuth, async (req: Request, res: Response) => {
+// 4. 查询当前用户的配额流水。余额快照在 GET /api/auth/profile，这里是流水。
+// 规范路径 GET /api/auth/quota/logs，兼容 GET /api/quota/logs。
+const listQuotaLogs = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const sql = `
@@ -147,4 +148,10 @@ tasksRouter.get('/quota/logs', requireAuth, async (req: Request, res: Response) 
     console.error('[Quota Logs Error]', err);
     return res.status(500).json({ error: 'server_error', message: '无法获取算力流水' });
   }
-});
+};
+
+for (const path of ['/auth/quota/logs', '/quota/logs']) {
+  tasksRouter.get(path, requireAuth, (req, res) => {
+    void listQuotaLogs(req, res);
+  });
+}

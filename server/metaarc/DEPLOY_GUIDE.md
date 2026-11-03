@@ -8,7 +8,7 @@
 
 1. **域名解析（在您的域名 DNS 控制台添加两解析记录）**：
    - `metaarc.com.cn`（或 `@`）-> 指向服务器公网 IP（A 记录）
-   - `api.metaarc.com.cn` -> 指向服务器公网 IP（A 记录）
+   - `api.metaarc.com.cn` -> 可选。账号接口和账号中心都在主域；这条记录只给仍访问旧主机的客户端，Nginx 会转到同一服务
 2. **云服务器安全组 / 防火墙开放端口**：
    - `80` (HTTP)
    - `443` (HTTPS)
@@ -57,9 +57,7 @@ chmod +x nginx/certbot-init.sh
 
 ## 三、线上验证检查清单
 
-- [ ] **官网与收银台**：访问 `https://metaarc.com.cn`，确认页面正常打开、深色电影放映厅样式就绪。
-- [ ] **API 网关健康探针**：访问 `https://api.metaarc.com.cn/health`，应返回 `{"status":"ok","brand":"MetaArc","db":"connected"}`。
-- [ ] **默认超管后台登录**：
-  - 超管账号：`admin@metaarc.com.cn`
-  - 初始密码：`Admin@MetaArc2026`
-- [ ] **客户端一键连接**：在 Flutter 桌面端打开会员弹窗，输入 `https://api.metaarc.com.cn` 即可秒级登录并自动装配算力！
+- [ ] **官网**：访问 `https://metaarc.com.cn`，确认页面正常打开。顶栏「账号」进入 `https://metaarc.com.cn/account`。未登录不出现配额数字。支付按钮保持不可用。
+- [ ] **健康探针**：访问 `https://metaarc.com.cn/health`，应返回 `{"status":"ok","brand":"MetaArc","db":"connected"}`。
+- [ ] **账号路径**：`POST /api/auth/login` 与 `POST /api/login` 对同一请求返回相同结果。没有公开管理后台。
+- [ ] **客户端**：桌面端会员弹窗默认服务器为 `https://metaarc.com.cn`。移动端还没有账号入口。

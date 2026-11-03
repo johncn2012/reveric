@@ -16,13 +16,37 @@ class MetaArcAccount {
     this.nickname,
     this.plan = 'free',
     this.newApiKey = '',
-    this.newApiBaseUrl = 'https://api.metaarc.com.cn/v1',
+    this.newApiBaseUrl = '',
     this.quota = 0.0,
     this.totalQuota = 0.0,
-    this.serverUrl = 'https://api.metaarc.com.cn',
+    this.serverUrl = defaultServerUrl,
     this.updatedAt,
     this.expiresAt,
   });
+
+  /// 账号服务在主域。不使用 api 子域。
+  static const String defaultServerUrl = 'https://metaarc.com.cn';
+
+  /// 把空地址和历史 api 子域收成主域。其它自定义地址保持原样。
+  static String normalizeServerUrl(String? serverUrl) {
+    final trimmed = serverUrl?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return defaultServerUrl;
+    }
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      return trimmed.replaceAll(RegExp(r'/+$'), '');
+    }
+    final host = uri.host == 'api.metaarc.com.cn' ? 'metaarc.com.cn' : uri.host;
+    final port = uri.hasPort ? ':${uri.port}' : '';
+    final path = uri.path.replaceAll(RegExp(r'/+$'), '');
+    return '${uri.scheme}://$host$port$path';
+  }
+
+  /// 同域账号中心。旧的 api 子域会先收成主域。
+  static String accountCenterUrl(String? serverUrl) {
+    return '${normalizeServerUrl(serverUrl)}/account';
+  }
 
   final String userId;
   final String token;
@@ -143,12 +167,17 @@ class MetaArcAccount {
       nickname: json['nickname']?.toString(),
       plan: json['plan']?.toString() ?? 'free',
       newApiKey: json['new_api_key']?.toString() ?? '',
-      newApiBaseUrl: json['new_api_base_url']?.toString() ?? 'https://api.metaarc.com.cn/v1',
+      newApiBaseUrl: _nonEmpty(json['new_api_base_url']),
       quota: (json['quota'] as num?)?.toDouble() ?? 0.0,
       totalQuota: (json['total_quota'] as num?)?.toDouble() ?? 0.0,
-      serverUrl: json['server_url']?.toString() ?? 'https://api.metaarc.com.cn',
+      serverUrl: normalizeServerUrl(json['server_url']?.toString()),
       updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at'].toString()) : null,
       expiresAt: json['expires_at'] != null ? DateTime.tryParse(json['expires_at'].toString()) : null,
     );
   }
+}
+
+String _nonEmpty(Object? value) {
+  final text = value?.toString().trim() ?? '';
+  return text;
 }

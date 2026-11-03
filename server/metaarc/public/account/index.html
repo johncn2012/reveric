@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>账号 — 元弧 MetaArc</title>
+<meta name="description" content="MetaArc 账号中心。登录、注册，以及查看接口返回的资料、套餐、余额和密钥。">
+<link rel="canonical" href="https://metaarc.com.cn/account">
+<link rel="icon" href="/assets/icon-32.png" sizes="32x32">
+<meta name="theme-color" content="#0A0B0E">
+<link rel="stylesheet" href="/account/account.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/"><img src="/assets/icon-180.png" alt="" width="32" height="32">元弧 MetaArc</a>
+  <a class="back" href="/">返回首页</a>
+</header>
+
+<main>
+  <h1>账号</h1>
+  <p class="lead">登录和注册使用主域上的账号接口。支付尚未开通，不能在这里下单或充值。</p>
+  <p class="alert" id="alert" hidden></p>
+
+  <section id="session-out">
+    <div class="split">
+      <form id="login-form">
+        <h2>登录</h2>
+        <label for="login-account">手机号或邮箱</label>
+        <input id="login-account" name="account" type="text" autocomplete="username" required>
+        <label for="login-password">密码</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        <button class="primary" type="submit">登录</button>
+      </form>
+      <form id="register-form">
+        <h2>注册</h2>
+        <label for="register-account">手机号或邮箱</label>
+        <input id="register-account" name="account" type="text" autocomplete="username" required>
+        <label for="register-nickname">昵称（可选）</label>
+        <input id="register-nickname" name="nickname" type="text" autocomplete="nickname">
+        <label for="register-password">密码（至少 6 位）</label>
+        <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+        <button class="primary" type="submit">注册</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="session-in" hidden>
+    <div class="row-actions">
+      <button id="btn-refresh" type="button">刷新</button>
+      <button id="btn-logout" type="button">退出</button>
+    </div>
+
+    <h2>资料</h2>
+    <dl id="profile-fields"></dl>
+
+    <h2>套餐</h2>
+    <div id="plan-slot"></div>
+
+    <h2>余额</h2>
+    <div id="balance-slot"></div>
+
+    <h2>密钥</h2>
+    <div id="key-slot"></div>
+
+    <h2>订单</h2>
+    <div id="orders-slot"></div>
+
+    <h2>流水</h2>
+    <div id="ledger-slot"></div>
+
+    <p class="lead">支付尚未开通。订单和流水只列出接口实际返回的记录。</p>
+  </section>
+
+  <noscript><p class="lead">提交登录和注册需要浏览器脚本。未登录时这里没有配额数字。</p></noscript>
+</main>
+<script src="/account/account.js"></script>
+</body>
+</html>

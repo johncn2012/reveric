@@ -19,7 +19,7 @@
   gap: calc(16 * var(--u));
 }
 
-.account-soon {
+.account-link {
   display: inline-flex;
   align-items: center;
   color: var(--ink-mute);
@@ -27,13 +27,15 @@
   line-height: 1;
   letter-spacing: 0.04em;
   white-space: nowrap;
+  text-decoration: none;
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: calc(8 * var(--u)) calc(14 * var(--u));
 }
+.account-link:hover { color: var(--ink); }
 
 @media (max-width: 820px) {
-  .account-soon {
+  .account-link {
     font-size: 12px;
     padding: 6px 10px;
   }

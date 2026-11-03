@@ -4,11 +4,43 @@ import { query } from '../db.js';
 import { signJwt, requireAuth } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
 
+/**
+ * 账号路径以 /api/auth/* 为规范。桌面端和同域 /account 使用这组路径。
+ * 移动端还没有账号入口；接上时也走这里，不再使用 api 子域。
+ * 挂在 /api 下，因此这里的 /auth/login 即 /api/auth/login。
+ *
+ * 规范路径（新客户端与 /account 使用）：
+ * - POST /api/auth/register
+ * - POST /api/auth/login
+ * - GET  /api/auth/profile
+ *
+ * 兼容别名（门户旧脚本和已发出的客户端继续可用，行为与规范路径相同）：
+ * - POST /api/register
+ * - POST /api/login
+ * - GET  /api/user/profile
+ * - GET  /api/auth/user/profile
+ *
+ * 余额快照在 profile 的 quota、total_quota。流水别名在 tasks 路由：
+ * GET /api/auth/quota/logs，兼容 GET /api/quota/logs。
+ * 订单别名在 orders 路由：GET /api/auth/orders，兼容 GET /api/user/orders。
+ */
 export const authRouter = Router();
 const newApi = new NewApiConnector();
 
-// 1. 用户注册
-authRouter.post('/register', async (req: Request, res: Response) => {
+function publicNewApiBaseUrl(): string {
+  return (process.env.NEW_API_PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+}
+
+function mount(method: 'get' | 'post', paths: string[], handler: (req: Request, res: Response) => Promise<unknown>) {
+  for (const path of paths) {
+    authRouter[method](path, (req, res) => {
+      void handler(req, res);
+    });
+  }
+}
+
+// 1. 用户注册。规范路径 POST /api/auth/register，兼容 POST /api/register。
+const registerAccount = async (req: Request, res: Response) => {
   try {
     const { email, phone, password, nickname } = req.body;
 
@@ -93,17 +125,17 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         quota: initialQuota,
         total_quota: initialQuota,
         new_api_key: newApiKey,
-        new_api_base_url: process.env.NEW_API_PUBLIC_BASE_URL || 'https://api.metaarc.com.cn/v1',
+        new_api_base_url: publicNewApiBaseUrl(),
       },
     });
   } catch (err: any) {
     console.error('[Register Error]', err);
     return res.status(500).json({ error: 'server_error', message: err.message || '注册服务暂时不可用' });
   }
-});
+};
 
-// 2. 用户登录
-authRouter.post('/login', async (req: Request, res: Response) => {
+// 2. 用户登录。规范路径 POST /api/auth/login，兼容 POST /api/login。
+const loginAccount = async (req: Request, res: Response) => {
   try {
     const { account, password } = req.body;
     if (!account || !password) {
@@ -143,7 +175,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
         quota: parseFloat(user.quota),
         total_quota: parseFloat(user.total_quota),
         new_api_key: user.new_api_key || '',
-        new_api_base_url: process.env.NEW_API_PUBLIC_BASE_URL || 'https://api.metaarc.com.cn/v1',
+        new_api_base_url: publicNewApiBaseUrl(),
         expires_at: user.expires_at,
       },
     });
@@ -151,10 +183,11 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     console.error('[Login Error]', err);
     return res.status(500).json({ error: 'server_error', message: err.message || '登录异常' });
   }
-});
+};
 
-// 3. 获取个人资料及实时配额
-authRouter.get('/user/profile', requireAuth, async (req: Request, res: Response) => {
+// 3. 获取个人资料及实时配额。
+// 规范路径 GET /api/auth/profile。余额就是这里的 quota / total_quota，没有另一套演示数字。
+const readProfile = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const userRes = await query('SELECT * FROM users WHERE id = $1', [userId]);
@@ -189,7 +222,7 @@ authRouter.get('/user/profile', requireAuth, async (req: Request, res: Response)
         quota,
         total_quota: parseFloat(user.total_quota),
         new_api_key: user.new_api_key || '',
-        new_api_base_url: process.env.NEW_API_PUBLIC_BASE_URL || 'https://api.metaarc.com.cn/v1',
+        new_api_base_url: publicNewApiBaseUrl(),
         expires_at: user.expires_at,
       },
     });
@@ -197,4 +230,12 @@ authRouter.get('/user/profile', requireAuth, async (req: Request, res: Response)
     console.error('[Profile Error]', err);
     return res.status(500).json({ error: 'server_error', message: err.message || '获取个人资料失败' });
   }
-});
+};
+
+mount('post', ['/auth/register', '/register'], registerAccount);
+mount('post', ['/auth/login', '/login'], loginAccount);
+for (const path of ['/auth/profile', '/auth/user/profile', '/user/profile']) {
+  authRouter.get(path, requireAuth, (req, res) => {
+    void readProfile(req, res);
+  });
+}

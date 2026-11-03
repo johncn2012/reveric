@@ -141,8 +141,9 @@ ordersRouter.post('/orders/notify/:channel', async (req: Request, res: Response)
   }
 });
 
-// 4. 查询当前用户的订单历史
-ordersRouter.get('/user/orders', requireAuth, async (req: Request, res: Response) => {
+// 4. 查询当前用户的订单历史。
+// 规范路径 GET /api/auth/orders，兼容 GET /api/user/orders。两条路径共用下面这个处理函数。
+const listUserOrders = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const sql = `
@@ -159,4 +160,10 @@ ordersRouter.get('/user/orders', requireAuth, async (req: Request, res: Response
     console.error('[User Orders Error]', err);
     return res.status(500).json({ error: 'server_error', message: '无法获取订单列表' });
   }
-});
+};
+
+for (const path of ['/auth/orders', '/user/orders']) {
+  ordersRouter.get(path, requireAuth, (req, res) => {
+    void listUserOrders(req, res);
+  });
+}

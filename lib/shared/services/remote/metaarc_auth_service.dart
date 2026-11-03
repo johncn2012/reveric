@@ -61,7 +61,7 @@ class MetaArcAuthService {
     required String account,
     required String password,
   }) async {
-    final cleanUrl = serverUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    final cleanUrl = MetaArcAccount.normalizeServerUrl(serverUrl);
     final uri = Uri.parse('$cleanUrl/api/auth/login');
 
     final res = await _client.post(
@@ -96,7 +96,7 @@ class MetaArcAuthService {
       nickname: user['nickname']?.toString(),
       plan: user['plan']?.toString() ?? 'free',
       newApiKey: user['new_api_key']?.toString() ?? '',
-      newApiBaseUrl: user['new_api_base_url']?.toString() ?? '$cleanUrl/v1',
+      newApiBaseUrl: _remoteBaseUrl(user['new_api_base_url']),
       quota: (user['quota'] as num?)?.toDouble() ?? 0.0,
       totalQuota: (user['total_quota'] as num?)?.toDouble() ?? 0.0,
       serverUrl: cleanUrl,
@@ -118,7 +118,7 @@ class MetaArcAuthService {
     required String password,
     String? nickname,
   }) async {
-    final cleanUrl = serverUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    final cleanUrl = MetaArcAccount.normalizeServerUrl(serverUrl);
     final uri = Uri.parse('$cleanUrl/api/auth/register');
 
     final isEmail = phoneOrEmail.contains('@');
@@ -159,8 +159,8 @@ class MetaArcAuthService {
 
   /// 刷新云端资料与配额
   Future<MetaArcAccount> fetchProfile(MetaArcAccount current) async {
-    final cleanUrl = current.serverUrl.trim().replaceAll(RegExp(r'/+$'), '');
-    final uri = Uri.parse('$cleanUrl/api/user/profile');
+    final cleanUrl = MetaArcAccount.normalizeServerUrl(current.serverUrl);
+    final uri = Uri.parse('$cleanUrl/api/auth/profile');
 
     final res = await _client.get(
       uri,
@@ -177,10 +177,12 @@ class MetaArcAuthService {
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     final user = (data['user'] is Map<String, dynamic>) ? data['user'] as Map<String, dynamic> : data;
 
+    final remoteBaseUrl = _remoteBaseUrl(user['new_api_base_url']);
     final updated = current.copyWith(
       plan: user['plan']?.toString() ?? current.plan,
       newApiKey: user['new_api_key']?.toString() ?? current.newApiKey,
-      newApiBaseUrl: user['new_api_base_url']?.toString() ?? current.newApiBaseUrl,
+      newApiBaseUrl: remoteBaseUrl.isNotEmpty ? remoteBaseUrl : current.newApiBaseUrl,
+      serverUrl: cleanUrl,
       quota: (user['quota'] as num?)?.toDouble() ?? current.quota,
       totalQuota: (user['total_quota'] as num?)?.toDouble() ?? current.totalQuota,
       nickname: user['nickname']?.toString() ?? current.nickname,
@@ -252,6 +254,11 @@ class MetaArcAuthService {
     } catch (e, stack) {
       _log.error('Failed to auto-provision MetaArc AiProvider', error: e, stackTrace: stack);
     }
+  }
+
+  /// 算力网关地址只采用服务端返回的非空值，不补 api 子域。
+  String _remoteBaseUrl(Object? value) {
+    return value?.toString().trim() ?? '';
   }
 
   /// 登出：清除本地账号与缓存
