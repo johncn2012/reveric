@@ -298,7 +298,7 @@ flutter_launcher_icons:
   remove_alpha_ios: true
 
 patrol:
-  app_name: Reveric
+  app_name: MetaArc
   android:
     package_name: ai.reveric.debug
   ios:

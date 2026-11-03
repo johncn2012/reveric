@@ -14,6 +14,7 @@ import 'package:mcp_dart/src/client/stdio.dart' as native;
 // ignore: implementation_imports
 import 'package:mcp_dart/src/shared/stdio.dart'
     show StdioMessageTooLargeException;
+import '../../app_config.dart';
 import '../../models/mcp/config.dart';
 import 'diagnostics.dart';
 
@@ -141,7 +142,7 @@ class McpClientAdapter implements McpConnection {
     // SDK raw logging can include remote payloads; diagnostics travel through the adapter.
     sdk.silenceMcpLogs();
     final client = sdk.McpClient(
-      const sdk.Implementation(name: 'Reveric', version: '1'),
+      const sdk.Implementation(name: productDisplayName, version: '1'),
       options: sdk.McpClientOptions(
         capabilities: const sdk.ClientCapabilities(),
       ),

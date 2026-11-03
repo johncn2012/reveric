@@ -12,6 +12,10 @@
 /// 供需要同步获取版本号的场景使用（如匿名上报），避免 PackageInfo 异步调用。
 const appVersion = '0.6.2';
 
+/// 窗口、托盘、引导页、通知和系统显示名使用的产品名。
+/// 关于页仍展示 [revericAttribution]，不把修改版写成没有上游。
+const productDisplayName = 'MetaArc';
+
 /// 匿名诊断接收地址，包含完整路径；请求不追加业务 API 后缀。
 /// 为空表示本构建不接匿名诊断：不上报，也不展示 opt-in 入口。
 const anonymousReportingBaseUrl = '';

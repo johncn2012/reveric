@@ -37,6 +37,7 @@ import 'desktop/widgets/desktop_window_frame.dart';
 import 'shared/widgets/app_startup_gate.dart';
 import 'shared/widgets/file_workspace_startup_gate.dart';
 import 'desktop/widgets/activation_failure_app.dart';
+import 'shared/app_config.dart';
 import 'shared/widgets/brand_loader.dart';
 import 'shared/components/reveric_button.dart';
 import 'shared/components/reveric_placeholder.dart';
@@ -615,7 +616,7 @@ class MyApp extends ConsumerWidget {
         : darkThemeData;
 
     return MaterialApp(
-      title: 'Reveric',
+      title: productDisplayName,
       debugShowCheckedModeBanner: false,
       navigatorKey: SystemTrayService().navigatorKey,
       theme: effectiveThemeData.toThemeData(),

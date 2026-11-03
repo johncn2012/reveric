@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../shared/app_config.dart';
 import '../../shared/hooks/use_onboarding_setup.dart';
 import '../../shared/localization/app_localization.dart';
 import '../../shared/localization/locale_keys.dart';
@@ -626,7 +627,7 @@ class _WelcomeBlock extends StatelessWidget {
                 text: '${context.t(LocaleKeys.onboardingBrandWelcome)} ',
               ),
               TextSpan(
-                text: 'Reveric',
+                text: productDisplayName,
                 style: titleStyle.copyWith(color: colors.accentWarm),
               ),
             ],

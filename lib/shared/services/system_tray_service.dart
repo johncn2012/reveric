@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:tray_manager/tray_manager.dart';
 
+import '../app_config.dart';
 import '../components/dialog_feedback.dart';
 import '../database/app_database.dart';
 import '../database/novel_content_database.dart';
@@ -66,7 +67,7 @@ class SystemTrayService with TrayListener {
 
     try {
       await trayManager.setIcon(_iconPath, isTemplate: true);
-      await trayManager.setToolTip('Reveric');
+      await trayManager.setToolTip(productDisplayName);
       await _updateMenu();
 
       await windowManager.setPreventClose(true);
@@ -83,7 +84,7 @@ class SystemTrayService with TrayListener {
     final menu = Menu(
       items: [
         MenuItem(key: 'newNovel', label: '新建小说'),
-        MenuItem(key: 'about', label: '关于 Reveric'),
+        MenuItem(key: 'about', label: '关于 $productDisplayName'),
         MenuItem.separator(),
         MenuItem(key: 'hide', label: '隐藏'),
         MenuItem(key: 'show', label: '显示'),
@@ -181,7 +182,7 @@ class SystemTrayService with TrayListener {
       context: context,
       builder: (ctx) {
         return RevericDialog(
-          title: 'Reveric',
+          title: productDisplayName,
           content: Text('版本 1.0.0\nAI 辅助写作工具'),
           actions: [
             RevericButton.secondary(

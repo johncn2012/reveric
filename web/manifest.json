@@ -1,6 +1,6 @@
 {
-    "name": "reveric",
-    "short_name": "reveric",
+    "name": "MetaArc",
+    "short_name": "MetaArc",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -19,6 +19,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../shared/app_config.dart';
 import '../../shared/hooks/use_onboarding_setup.dart';
 import '../../shared/localization/app_localization.dart';
 import '../../shared/localization/locale_keys.dart';
@@ -127,7 +128,7 @@ class MobileOnboardingPage extends HookConsumerWidget {
                       text: '${context.t(LocaleKeys.onboardingBrandWelcome)} ',
                     ),
                     TextSpan(
-                      text: 'Reveric',
+                      text: productDisplayName,
                       style: typo.display.copyWith(
                         color: colors.accentWarm,
                         fontWeight: FontWeight.w800,

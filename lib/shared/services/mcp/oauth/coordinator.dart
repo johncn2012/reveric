@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mcp_dart/mcp_dart.dart' as sdk;
 import 'package:url_launcher/url_launcher.dart';
+import '../../../app_config.dart';
 import '../../../database/app_database.dart';
 import '../../../models/mcp/config.dart';
 import '../../../models/mcp/tool_descriptor.dart';
@@ -157,7 +158,7 @@ class McpOAuthCoordinator {
                 meta: sdk.buildProtocolRequestMeta(
                   protocolVersion: sdk.defaultProtocolVersion,
                   clientInfo: const sdk.Implementation(
-                    name: 'Reveric',
+                    name: productDisplayName,
                     version: '1',
                   ),
                   clientCapabilities: const sdk.ClientCapabilities(),
