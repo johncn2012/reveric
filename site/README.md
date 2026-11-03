@@ -1,10 +1,10 @@
-# 上游静态站构建（不是 MetaArc 门户）
+# 静态站构建（不是已发布的安装包）
 
-本目录沿用上游 Reveric 的静态站脚本。`site/build.mjs` 会把 `designs/website/` 复制到 `site/dist/`，并把下载链接写成上游仓库的 Release。这不是 MetaArc 门户，也不能当作 MetaArc 已发布的安装包。
+`site/build.mjs` 把 `designs/website/` 复制到 `site/dist/`，并给样式和脚本加内容哈希。下载区保持「尚未发布」占位，不写入安装包地址。`--version` 会被忽略。
 
-MetaArc 门户在 `server/metaarc/public/`。那里的下载区写明尚未发布，不链向上游 Release。
+线上门户在 `server/metaarc/public/`。本构建不修改那份文件。首页顶栏链到 `/account`，套餐只请求 `/api/plans`。账号登录、注册和余额在账号中心，走 `/api/auth/*`。
 
-下面保留这套脚本的原有用法，便于对照代码。其中的 `reveric.app`、Cloudflare Pages 和安装包链接都不是 MetaArc 已交付的下载渠道。
+`site/static/` 里的 `reveric.app` 地址，以及 Cloudflare Pages 项目名 `reveric-site`，都不是 MetaArc 已交付的下载渠道。
 
 ## 脚本说明
 
@@ -15,7 +15,7 @@ MetaArc 门户在 `server/metaarc/public/`。那里的下载区写明尚未发�
 | 路径 | 内容 |
 |---|---|
 | `designs/website/` | 页面真源：`index.html`、`landing.css`、`landing.js`、截图、字体子集和本地化的 [cineview](https://www.npmjs.com/package/cineview) |
-| `site/build.mjs` | 复制页面到 `site/dist/`，注入版本号和安装包链接 |
+| `site/build.mjs` | 复制页面到 `site/dist/`。不注入版本号，也不写入安装包链接 |
 | `site/static/` | `robots.txt`、`sitemap.xml`、`_headers`，原样复制到产物根目录 |
 | `site/scripts/subset_fonts.py` | 按页面用字裁剪 Noto Serif SC |
 | `site/screenshots/` | 原始截图和打码脚本，已加入 `.gitignore`，只在本地保留 |
@@ -30,8 +30,7 @@ python3 -m http.server 4311 --directory designs
 查看构建产物：
 
 ```bash
-node site/build.mjs                  # 版本取最新正式 tag
-node site/build.mjs --version 0.6.1  # 或指定版本
+node site/build.mjs
 python3 -m http.server 4312 --directory site/dist
 ```
 
@@ -45,11 +44,7 @@ python3 -m http.server 4312 --directory site/dist
 
 ## 部署
 
-- **发版**：`Package` workflow 的三个平台都打包成功后，`deploy-website` 用本次 tag 的版本构建并部署。手动只打单个平台时会跳过这一步。
-- **改文案或补打平台后**：在 Actions 页面手动运行 `Website` workflow，版本号取最新正式 tag。推送代码不会触发部署。
-- **本地上传**：`make site-deploy`，依次裁剪字体、构建、上传。只构建不上传用 `make site-build`。
-
-`build.mjs` 的 `assetUrls` 仍拼向上游仓库的 Release，命名对应 `distribute_options.yaml` 与 `build-android.sh`。这些链接不是 MetaArc 发布物。
+现有 `Website` workflow 和 `Package` 里的 `deploy-website` 仍会在有人运行时把 `site/dist` 上传到旧的 Cloudflare 项目 `reveric-site`。构建结果里没有安装包链接。推送代码不会触发部署。本地上传命令是 `make site-deploy`；只构建用 `make site-build`。
 
 ### 首次配置
 

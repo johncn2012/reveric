@@ -286,7 +286,7 @@ $(SITE_FONT_SRC):
 site-fonts: $(SITE_VENV) $(SITE_FONT_SRC) ## 按官网用字重新裁剪字体子集
 	$(SITE_VENV)/bin/python site/scripts/subset_fonts.py $(SITE_FONT_SRC)
 
-site-build: site-fonts ## 构建官网到 site/dist（版本取最新正式 tag）
+site-build: site-fonts ## 构建官网到 site/dist（下载区保持尚未发布，不注入安装包链接）
 	node site/build.mjs
 
 site-deploy: site-build ## 构建并部署官网到 Cloudflare Pages

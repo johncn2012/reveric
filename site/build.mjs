@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// 构建官网静态产物：复制 designs/website 的页面与资源到 site/dist，按发布版本注入版本号和安装包链接。
+// 构建官网静态产物：复制 designs/website 的页面与资源到 site/dist，并给样式和脚本加内容哈希。
+// 下载区是尚未发布的占位，不注入安装包地址。
 //
 // 用法：
-//   node site/build.mjs                  # 版本取本地最新正式 tag（vX.Y.Z）
-//   node site/build.mjs --version 0.6.1  # 指定版本
+//   node site/build.mjs
 //
+// --version 会被忽略。MetaArc 客户端尚未发布，构建不会改写下载链接。
 // 无第三方依赖，Node 18+ 即可运行。
 
-import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -17,51 +17,48 @@ const SITE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(SITE, '..');
 const SRC = join(ROOT, 'designs', 'website');
 const DIST = join(SITE, 'dist');
-const REPO = 'https://github.com/looplj/reveric';
 
 // 页面和它引用的资源；directions.html 等设计过程文件不发布
 const PAGE_FILES = ['index.html', 'landing.css', 'landing.js', 'metaarc.css', 'metaarc.js', 'assets', 'fonts', 'vendor'];
 
-function resolveVersion() {
-  const i = process.argv.indexOf('--version');
-  if (i !== -1) return process.argv[i + 1].replace(/^v/, '');
-  const tags = execSync('git tag --list "v*" --sort=-v:refname', { cwd: ROOT, encoding: 'utf8' })
-    .split('\n')
-    .filter((t) => /^v\d+\.\d+\.\d+$/.test(t));
-  if (tags.length === 0) throw new Error('找不到正式发布 tag（vX.Y.Z），请用 --version 指定');
-  return tags[0].slice(1);
+// 这些字符串一旦出现，说明设计稿又把旧仓库安装包、假后台或演示配额写了回来。
+const FORBIDDEN = [
+  'github.com/looplj/reveric',
+  '/releases/download/',
+  '/api/login',
+  '/api/admin',
+  '管理后台',
+  '48.25M',
+  '48,250,000',
+];
+
+function noteIgnoredVersion() {
+  if (process.argv.includes('--version')) {
+    console.log('已忽略 --version：客户端尚未发布，不写入安装包链接');
+  }
 }
 
-// 与 distribute_options.yaml 的 artifact_name、build-android.sh 的 ANDROID_RELEASE_NAME 保持一致
-function assetUrls(version) {
-  const base = `${REPO}/releases/download/v${version}`;
-  return {
-    mac: `${base}/reveric-${version}-macos-arm64.dmg`,
-    win: `${base}/reveric-${version}-windows-setup.exe`,
-    android: `${base}/reveric-android-arm64-v8a-v${version}.apk`,
-  };
-}
-
-function render(html, version) {
-  const urls = assetUrls(version);
-  let out = html
-    .replace(/(<[^>]*\bdata-version\b[^>]*>)v[^<]*(<)/g, `$1v${version}$2`)
-    .replace(/(<a\b[^>]*\bdata-release-notes\b[^>]*\bhref=")[^"]*(")/g, `$1${REPO}/releases/tag/v${version}$2`)
-    .replace(/(<a\b[^>]*\bdata-os="(\w+)"[^>]*\bhref=")[^"]*(")/g, (m, head, os, tail) => {
-      if (!urls[os]) throw new Error(`未知平台 data-os="${os}"`);
-      return `${head}${urls[os]}${tail}`;
-    });
-  // 样式和脚本文件名不变，按内容加版本参数，避免浏览器拿新页面配旧缓存
+function cacheBust(html) {
+  let out = html;
   for (const file of ['landing.css', 'landing.js']) {
     const hash = createHash('sha256').update(readFileSync(join(SRC, file))).digest('hex').slice(0, 10);
     const before = out;
     out = out.replace(`"${file}"`, `"${file}?v=${hash}"`);
     if (out === before) throw new Error(`页面里没有引用 ${file}`);
   }
-  for (const [os, url] of Object.entries(urls)) {
-    if (!out.includes(url)) throw new Error(`页面里没有 data-os="${os}" 的下载链接`);
-  }
   return out;
+}
+
+function assertHonest(html, script) {
+  const blob = `${html}\n${script}`;
+  for (const needle of FORBIDDEN) {
+    if (blob.includes(needle)) throw new Error(`页面仍包含不应发布的内容：${needle}`);
+  }
+  if (!html.includes('尚未发布')) throw new Error('下载区缺少「尚未发布」占位');
+  if (!html.includes('href="/account"')) throw new Error('顶栏缺少 /account 入口');
+  if (!script.includes("fetch('/api/plans')")) throw new Error('套餐脚本未请求 /api/plans');
+  const downloadLinks = html.match(/<a\b[^>]*\bdata-os=/g);
+  if (downloadLinks) throw new Error('下载区仍是可点击的安装包链接');
 }
 
 // 页面新增了字体子集里没有的字时提醒重新裁剪，否则这些字会回退到系统字体
@@ -75,7 +72,7 @@ function checkFontCoverage(html) {
   }
 }
 
-const version = resolveVersion();
+noteIgnoredVersion();
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });
 
@@ -87,7 +84,10 @@ for (const name of PAGE_FILES) {
 cpSync(join(SITE, 'static'), DIST, { recursive: true });
 
 const html = readFileSync(join(SRC, 'index.html'), 'utf8');
+const script = readFileSync(join(SRC, 'metaarc.js'), 'utf8');
 checkFontCoverage(html);
-writeFileSync(join(DIST, 'index.html'), render(html, version));
+const rendered = cacheBust(html);
+assertHonest(rendered, script);
+writeFileSync(join(DIST, 'index.html'), rendered);
 
-console.log(`site/dist 已生成，版本 v${version}`);
+console.log('site/dist 已生成。下载区为尚未发布占位，未写入安装包链接。');

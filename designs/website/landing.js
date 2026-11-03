@@ -25,7 +25,7 @@
     setTimeout(() => typewriter(cmd, 70), 900);
   }
 
-  // 识别系统：Android / Windows / macOS 直接下载，其他系统跳到下载区
+  // 只有下载卡片带有 http(s) 地址时，才把主按钮指向该地址。
   const ua = navigator.userAgent;
   const os = /Android/i.test(ua) ? 'android'
     : /iPhone|iPad|iPod/i.test(ua) ? null
@@ -34,10 +34,11 @@
     : null;
   const names = { mac: 'macOS', win: 'Windows', android: 'Android' };
   const card = os && document.querySelector(`.dl[data-os="${os}"]`);
-  if (card) {
+  const href = card && card.getAttribute('href');
+  if (card && href && /^https?:\/\//.test(href)) {
     card.classList.add('is-mine');
     const primary = document.getElementById('primary-dl');
-    primary.href = card.href;
+    primary.href = href;
     primary.firstChild.textContent = `下载 ${names[os]} 版 `;
     const alts = document.getElementById('alt-dl');
     alts.querySelectorAll('a').forEach((a) => {

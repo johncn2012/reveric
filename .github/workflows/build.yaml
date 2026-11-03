@@ -304,7 +304,8 @@ jobs:
           files: |
             dist/**/*.apk
 
-  # 三个平台都打包成功后，用本次 tag 的版本构建官网并部署到 Cloudflare Pages。
+  # 三个平台都打包成功后，构建官网并上传到 Cloudflare Pages。
+  # 构建忽略 --version，不写入安装包链接。
   # 手动只打单个平台时，其余打包 job 被跳过，这里也随之跳过；需要时手动运行 Website workflow。
   deploy-website:
     needs: [package-macos, package-windows, package-android]

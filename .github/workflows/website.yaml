@@ -1,7 +1,7 @@
 name: Website
 
-# 在 Actions 页面手动运行，用于改文案或补打平台后重新部署；版本号取最新正式 tag。
-# 发版时的部署由 Package workflow 的 deploy-website job 完成。
+# 在 Actions 页面手动运行，用于改文案后重新上传 site/dist。
+# 构建不写入安装包链接。发版时的上传由 Package workflow 的 deploy-website job 完成。
 on:
   workflow_dispatch:
 
