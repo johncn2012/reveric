@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>元弧 MetaArc — AI 原生视听创作成片平台 | MetaArc.COM.CN</title>
+<meta name="description" content="小说、剧本、画布、导演台、剪辑，都是智能体的工具。一句话，从原著走到成片。MetaArc (元弧) 商业化创作工作台与云端协同平台。">
+<link rel="canonical" href="https://metaarc.com.cn/">
+<link rel="icon" href="assets/icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<meta name="theme-color" content="#0A0B0E">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://metaarc.com.cn/">
+<meta property="og:title" content="元弧 MetaArc — AI 原生视听创作成片平台">
+<meta property="og:description" content="小说、剧本、画布、导演台、剪辑，都是智能体的工具。一句话，从原著走到成片。">
+<meta property="og:image" content="https://metaarc.com.cn/assets/still_kick.webp">
+<meta name="twitter:card" content="summary_large_image">
+<script>(function(s){if(s&&s('selector(:has(*))')&&s('width:1lh')&&s('color:color-mix(in srgb,red,red)'))document.documentElement.classList.add('cv-js')})(window.CSS&&CSS.supports);</script>
+<link rel="stylesheet" href="vendor/cineview/cineview.css">
+<script type="module" src="vendor/cineview/cineview.js"></script>
+<link rel="preload" href="fonts/NotoSerifSC-subset.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="landing.css">
+<link rel="stylesheet" href="metaarc.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top"><img src="assets/icon-180.png" alt="" width="40" height="40">元弧 MetaArc</a>
+  <nav class="topnav">
+    <a href="#run">工作方式</a>
+    <a href="#models">模型</a>
+    <a href="#pricing">套餐定价</a>
+    <a href="#download">下载</a>
+    <a href="https://github.com/looplj/reveric" target="_blank" rel="noopener">GitHub ↗</a>
+  </nav>
+
+  <!-- 顶栏操作区：登录/注册与用户中心 -->
+  <div class="topbar-actions">
+    <div id="unauth-group" style="display:flex; align-items:center;">
+      <button class="btn-auth-primary" id="btn-login-open">登录 / 注册</button>
+    </div>
+    <div id="auth-group" style="display:none; align-items:center; gap:12px;">
+      <button class="btn-admin-pill" id="btn-admin-open" style="display:none;">⚙ 管理后台</button>
+      <div class="user-badge" id="user-badge-btn" title="点击打开用户中心与任务画廊">
+        <div class="user-avatar-mini">弧</div>
+        <span id="nav-user-quota" class="user-quota-chip">48.25M 点数</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<cv-stage design-width="1920" id="stage">
+
+  <!-- ============ SC.01 片头 ============ -->
+  <cv-scene id="top" class="sc cover" preload>
+    <div class="bar bar-top" aria-hidden="true"></div>
+    <cv-animate class="cover-still" fx="push(1.06, 1)" on="clock" duration="9000">
+      <img src="assets/still_kick.webp" alt="用 MetaArc 生成的短剧成片画面" width="1280" height="720">
+    </cv-animate>
+    <div class="cover-scrim" aria-hidden="true"></div>
+    <div class="cover-copy">
+      <cv-animate fx="rise(soft)" on="clock" duration="700"><p class="kicker">AGENT NATIVE · AI 视听创作成片平台</p></cv-animate>
+      <cv-animate fx="rise(soft)" on="clock" delay="120" duration="800">
+        <h1 class="cover-title"><span class="zh">元弧</span><span class="en">MetaArc</span></h1>
+      </cv-animate>
+      <cv-animate fx="rise(soft)" on="clock" delay="260" duration="800">
+        <p class="cover-sub">小说、剧本、画布、导演台、剪辑，都是智能体的工具。<br><span>一句话，从原著走到成片。</span></p>
+      </cv-animate>
+      <cv-animate fx="fade" on="clock" delay="420" duration="600">
+        <p class="cmd"><span class="cmd-p" aria-hidden="true">›</span><span class="cmd-text" id="cmd">把第一卷改编成短剧，做出第一集的成片</span><span class="caret" aria-hidden="true"></span></p>
+      </cv-animate>
+      <cv-animate fx="fade" on="clock" delay="560" duration="600">
+        <div class="ctas">
+          <a class="btn" id="primary-dl" href="#download">免费下载客户端 <small data-version>v0.6.2</small></a>
+          <a class="btn-auth-primary" style="padding: 0 28px; height: 50px; font-size: 16px;" href="#pricing">查看套餐方案</a>
+          <span class="alts" id="alt-dl"><a href="#download">macOS</a><a href="#download">Windows</a><a href="#download">Android</a></span>
+        </div>
+      </cv-animate>
+    </div>
+    <div class="bar bar-bottom mono" aria-hidden="true"><span>SC.01 片头</span><span>MetaArc.COM.CN</span><span>00:00:00:00</span></div>
+  </cv-scene>
+
+  <!-- ============ SC.02 一条指令跑完全程 ============ -->
+  <cv-scene id="run" class="sc run" zone>
+    <cv-animate class="anchor" duration="6000" aria-hidden="true"></cv-animate>
+
+    <div class="slate mono" aria-hidden="true">
+      <span><b>SC.02</b>&nbsp;&nbsp;一条指令跑完全程</span>
+      <span class="slate-swap">
+        <cv-animate fx="keyframes(swap-first)" at="0% 17%" duration="200">TASK 01 / 06</cv-animate>
+        <cv-animate fx="keyframes(swap)" at="16% 34%" duration="200">TASK 02 / 06</cv-animate>
+        <cv-animate fx="keyframes(swap)" at="33% 51%" duration="200">TASK 03 / 06</cv-animate>
+        <cv-animate fx="keyframes(swap)" at="50% 67%" duration="200">TASK 04 / 06</cv-animate>
+        <cv-animate fx="keyframes(swap)" at="66% 84%" duration="200">TASK 05 / 06</cv-animate>
+        <cv-animate fx="keyframes(swap-last)" at="83% 100%" duration="200">TASK 06 / 06</cv-animate>
+      </span>
+      <span class="slate-swap">
+        <cv-animate fx="keyframes(swap-first)" at="0% 17%" duration="200">00:00:42:10</cv-animate>
+        <cv-animate fx="keyframes(swap)" at="16% 34%" duration="200">00:06:18:02</cv-animate>
+        <cv-animate fx="keyframes(swap)" at="33% 51%" duration="200">00:12:04:08</cv-animate>
+        <cv-animate fx="keyframes(swap)" at="50% 67%" duration="200">00:23:51:16</cv-animate>
+        <cv-animate fx="keyframes(swap)" at="66% 84%" duration="200">00:41:17:02</cv-animate>
+        <cv-animate fx="keyframes(swap-last)" at="83% 100%" duration="200">00:47:30:00</cv-animate>
+      </span>
+    </div>
+
+    <div class="run-grid">
+      <div class="run-copy">
+        <h2 class="h2">一句话，<br>智能体自己走完六步</h2>
+        <p class="run-cmd"><span class="cmd-p">›</span>把第一卷改编成短剧，做出第一集的成片</p>
+        <ol class="steps">
+          <li class="step">
+            <cv-animate class="step-on" fx="keyframes(lit-first)" at="0% 17%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
+            <span class="n mono">01<cv-animate class="done" fx="keyframes(on)" at="17% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">读原著</span><em class="m mono">文本模型</em>
+            <cv-animate class="d" fx="keyframes(swap-first)" at="0% 17%" duration="200"><span>检索章节与设定，梳理人物和主线</span></cv-animate>
+          </li>
+          <li class="step">
+            <cv-animate class="step-on" fx="keyframes(lit)" at="16% 34%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
+            <span class="n mono">02<cv-animate class="done" fx="keyframes(on)" at="34% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">改编剧本</span><em class="m mono">文本模型</em>
+            <cv-animate class="d" fx="keyframes(swap)" at="16% 34%" duration="200"><span>对照原著拆分剧集与场次，写对白和动作</span></cv-animate>
+          </li>
+          <li class="step">
+            <cv-animate class="step-on" fx="keyframes(lit)" at="33% 51%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
+            <span class="n mono">03<cv-animate class="done" fx="keyframes(on)" at="51% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">拆分镜</span><em class="m mono">文本模型</em>
+            <cv-animate class="d" fx="keyframes(swap)" at="33% 51%" duration="200"><span>按场次铺分镜节点，逐镜写提示词</span></cv-animate>
+          </li>
+          <li class="step">
+            <cv-animate class="step-on" fx="keyframes(lit)" at="50% 67%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
+            <span class="n mono">04<cv-animate class="done" fx="keyframes(on)" at="67% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">生成素材</span><em class="m mono">图像 · 视频模型</em>
+            <cv-animate class="d" fx="keyframes(swap)" at="50% 67%" duration="200"><span>角色定妆、参考图、视频片段</span></cv-animate>
+          </li>
+          <li class="step">
+            <cv-animate class="step-on" fx="keyframes(lit)" at="66% 84%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
+            <span class="n mono">05<cv-animate class="done" fx="keyframes(on)" at="84% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">剪辑</span><em class="m mono">剪辑台工具</em>
+            <cv-animate class="d" fx="keyframes(swap)" at="66% 84%" duration="200"><span>素材上轨、分割修剪、加字幕</span></cv-animate>
+          </li>
+          <li class="step">
+            <cv-animate class="step-on" fx="keyframes(lit-last)" at="83% 100%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
+            <span class="n mono">06</span><span class="t">成片</span><em class="m mono">视觉模型</em>
+            <cv-animate class="d" fx="keyframes(swap-last)" at="83% 100%" duration="200"><span>渲染预览，抽帧检查画面</span></cv-animate>
+          </li>
+        </ol>
+      </div>
+
+      <div class="run-figure">
+        <div class="win">
+          <cv-animate class="shot" fx="keyframes(swap-first)" at="0% 17%" duration="200">
+            <img src="assets/s1_novel.webp" alt="小说编辑器：章节列表、正文和右侧的智能体面板" loading="lazy">
+          </cv-animate>
+          <cv-animate class="shot shot-adapt" fx="keyframes(swap)" at="16% 34%" duration="200">
+            <img class="adapt-main" src="assets/s2_screenplay.webp" alt="剧本编辑器：按场次排好的剧本" loading="lazy">
+            <img class="adapt-source" src="assets/s2_source.webp" alt="对照用的原著窗口" loading="lazy">
+          </cv-animate>
+          <cv-animate class="shot" fx="keyframes(swap)" at="33% 51%" duration="200">
+            <img src="assets/s3_canvas.webp" alt="画布：角色定妆、生成素材和按场次排开的分镜节点" loading="lazy">
+          </cv-animate>
+          <cv-animate class="shot shot-zoom" fx="keyframes(swap)" at="50% 67%" duration="200">
+            <img src="assets/s3_canvas.webp" alt="画布上生成的参考图与视频片段" loading="lazy">
+          </cv-animate>
+          <cv-animate class="shot" fx="keyframes(swap)" at="66% 84%" duration="200">
+            <img src="assets/s6_editing.webp" alt="剪辑台：预览画面与六轨时间线" loading="lazy">
+          </cv-animate>
+          <cv-animate class="shot shot-still" fx="keyframes(swap-last)" at="83% 100%" duration="200">
+            <img src="assets/still_blade.webp" alt="用 MetaArc 生成的第一集成片画面" loading="lazy">
+            <span class="still-tag mono">▶ 第一集 · 成片预览</span>
+          </cv-animate>
+        </div>
+        <div class="reel" aria-hidden="true">
+          <cv-animate class="reel-seg" fx="wipe(left)" at="0% 16%" duration="200"><span></span></cv-animate>
+          <cv-animate class="reel-seg" fx="wipe(left)" at="16% 33%" duration="200"><span></span></cv-animate>
+          <cv-animate class="reel-seg" fx="wipe(left)" at="33% 50%" duration="200"><span></span></cv-animate>
+          <cv-animate class="reel-seg" fx="wipe(left)" at="50% 66%" duration="200"><span></span></cv-animate>
+          <cv-animate class="reel-seg" fx="wipe(left)" at="66% 83%" duration="200"><span></span></cv-animate>
+          <cv-animate class="reel-seg" fx="wipe(left)" at="83% 98%" duration="200"><span></span></cv-animate>
+        </div>
+        <div class="reel-labels mono" aria-hidden="true"><span>小说</span><span>剧本</span><span>画布</span><span>素材</span><span>剪辑</span><span>成片</span></div>
+      </div>
+    </div>
+  </cv-scene>
+
+  <!-- ============ SC.03 为什么是 Agent Native ============ -->
+  <cv-scene id="agent" class="sc agent">
+    <div class="sec-head">
+      <p class="label mono"><b>SC.03</b>&nbsp;&nbsp;AGENT NATIVE</p>
+      <cv-animate fx="rise(soft)" duration="700"><h2 class="h2">模块就是工具，<br>过程全程可见</h2></cv-animate>
+    </div>
+    <div class="agent-grid">
+      <ol class="points">
+        <li><cv-animate fx="rise(soft)" duration="700">
+          <span class="n mono">01</span>
+          <h3>每个模块都开放给智能体</h3>
+          <p>小说、剧本、画布、导演台、剪辑台都以工具形式提供。智能体自己拆解任务、按顺序执行、检查结果。</p>
+        </cv-animate></li>
+        <li><cv-animate fx="rise(soft)" delay="120" duration="700">
+          <span class="n mono">02</span>
+          <h3>读完整部作品再动手</h3>
+          <p>按需检索章节、设定和人物，不用每次重新交代上下文，角色和画面前后保持一致。</p>
+        </cv-animate></li>
+        <li><cv-animate fx="rise(soft)" delay="240" duration="700">
+          <span class="n mono">03</span>
+          <h3>任务和改动摆在眼前</h3>
+          <p>任务列表、执行过程、改动记录全程可见，不满意随时回滚。云端算力调度与S3永久资产存储，保障成片交付安全。</p>
+        </cv-animate></li>
+      </ol>
+      <cv-animate class="agent-figure" fx="reveal(left, soft)" on="enter(partial)" duration="1000">
+        <div class="win"><img src="assets/s8_chat.webp" alt="智能体对话与实时更新的任务列表" loading="lazy"></div>
+      </cv-animate>
+    </div>
+  </cv-scene>
+
+  <!-- ============ SC.04 你也可以亲自上手（横向胶片） ============ -->
+  <cv-scene id="studio" class="sc studio" track="x">
+    <div class="studio-lead">
+      <p class="label mono"><b>SC.04</b>&nbsp;&nbsp;STUDIO</p>
+      <h2 class="h2">每一步，<br>你也能亲手接管</h2>
+      <p class="lead">智能体用的工具，就是你用的工作台。哪一步想自己来，随时接过去。</p>
+    </div>
+    <figure class="frame">
+      <div class="frame-img"><img src="assets/s1_novel.webp" alt="小说编辑器" loading="lazy"></div>
+      <figcaption><span class="mono">01</span><b>小说</b>章节、设定库、关系图谱</figcaption>
+    </figure>
+    <figure class="frame">
+      <div class="frame-img"><img src="assets/s2_screenplay.webp" alt="剧本编辑器" loading="lazy"></div>
+      <figcaption><span class="mono">02</span><b>剧本</b>对照原著改编，拆分剧集与场次</figcaption>
+    </figure>
+    <figure class="frame">
+      <div class="frame-img"><img src="assets/s3_canvas.webp" alt="无限画布" loading="lazy"></div>
+      <figcaption><span class="mono">03</span><b>画布</b>分镜节点、提示词、生图生视频</figcaption>
+    </figure>
+    <figure class="frame">
+      <div class="frame-img"><img src="assets/s5_director.webp" alt="3D 导演台" loading="lazy"></div>
+      <figcaption><span class="mono">04</span><b>导演台</b>3D 布景、机位、运镜预演</figcaption>
+    </figure>
+    <figure class="frame">
+      <div class="frame-img"><img src="assets/s6_editing.webp" alt="多轨剪辑台" loading="lazy"></div>
+      <figcaption><span class="mono">05</span><b>剪辑</b>6 轨时间线，直接导出成片</figcaption>
+    </figure>
+  </cv-scene>
+
+  <!-- ============ SC.05 模型与算力中枢 ============ -->
+  <cv-scene id="models" class="sc models">
+    <div class="sec-head">
+      <p class="label mono"><b>SC.05</b>&nbsp;&nbsp;UNIFIED AI GATEWAY</p>
+      <cv-animate fx="rise(soft)" duration="700"><h2 class="h2">统一算力中枢，<br>多模型无缝切换</h2></cv-animate>
+      <p class="lead">MetaArc 统一集成 New-API 高性能算力网关，提供点数计量、渠道容灾与秒级流式响应。同时也支持创作者自带 Key (BYOK)。</p>
+    </div>
+    <div class="model-groups">
+      <cv-animate fx="rise(soft)" duration="700"><div class="group"><h3 class="mono">文本与推理</h3><p>Claude 3.5 Sonnet · GPT-4o · Gemini 1.5 Pro · DeepSeek-V3/R1 · Qwen</p></div></cv-animate>
+      <cv-animate fx="rise(soft)" delay="100" duration="700"><div class="group"><h3 class="mono">图像生成</h3><p>Seedream 5.0 · 通义万相 2.7 · DALL-E 3 · Gemini Flash Image</p></div></cv-animate>
+      <cv-animate fx="rise(soft)" delay="200" duration="700"><div class="group"><h3 class="mono">视频生成</h3><p>Doubao Seedance 2.5 · MiniMax H3 · 万相 Wan 2.7 · 可灵 Kling 3.0</p></div></cv-animate>
+    </div>
+  </cv-scene>
+
+  <!-- ============ SC.06 套餐定价与算力点数 ============ -->
+  <cv-scene id="pricing" class="sc pricing">
+    <div class="pricing-header">
+      <p class="label mono"><b>SC.06</b>&nbsp;&nbsp;PLANS & QUOTA</p>
+      <h2 class="h2">灵活套餐，算力即充即用</h2>
+      <p>基于 MetaArc 云端中台与 New-API 统一度量。无论是个人创作者写小说、改编剧本，还是专业工作室批量生成 4K 视频与自动剪辑，都能找到最匹配的方案。</p>
+    </div>
+    <div class="pricing-grid">
+      <!-- 体验版 -->
+      <div class="plan-card">
+        <div class="plan-name">体验版 (Free)</div>
+        <div class="plan-desc">适合新手创作者体验小说扩写与剧本拆解。</div>
+        <div class="plan-price">
+          <span class="plan-currency">¥</span>
+          <span class="plan-amount">0</span>
+          <span class="plan-period">/ 永久</span>
+        </div>
+        <ul class="plan-features">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>赠送 500,000 算力点数</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>支持 Claude / GPT / DeepSeek</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>500MB 云端存储配额</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>单任务并发排队</li>
+        </ul>
+        <button class="btn-plan" data-plan-buy="free">免费开通</button>
+      </div>
+
+      <!-- 专业版 -->
+      <div class="plan-card featured">
+        <span class="plan-badge">最受欢迎</span>
+        <div class="plan-name">专业版 (Pro)</div>
+        <div class="plan-desc">独立创作者首选，支持高画质生图、生视频与无限画布。</div>
+        <div class="plan-price">
+          <span class="plan-currency">¥</span>
+          <span class="plan-amount">99</span>
+          <span class="plan-period">/ 月</span>
+        </div>
+        <ul class="plan-features">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>每月 50,000,000 算力点数</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>解锁 Seedance 2.5 / Kling 4K 视频</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>20GB S3/R2 云端永久资产存储</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>3 路并发高速生成通道</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>多轨剪辑无水印成片导出</li>
+        </ul>
+        <button class="btn-plan" data-plan-buy="pro_monthly">立即订阅</button>
+      </div>
+
+      <!-- 工作室版 -->
+      <div class="plan-card">
+        <div class="plan-name">工作室版 (Studio)</div>
+        <div class="plan-desc">编剧工作室与短剧制作团队的工业化量产利器。</div>
+        <div class="plan-price">
+          <span class="plan-currency">¥</span>
+          <span class="plan-amount">499</span>
+          <span class="plan-period">/ 月</span>
+        </div>
+        <ul class="plan-features">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>每月 300,000,000 算力点数</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>全模型专属 VIP 渠道优先级</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>200GB S3/R2 云端对象存储</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>10 路超高并发任务处理</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>多设备云同步与团队分支审查</li>
+        </ul>
+        <button class="btn-plan" data-plan-buy="studio_yearly">升级工作室版</button>
+      </div>
+    </div>
+  </cv-scene>
+
+  <!-- ============ SC.07 片尾与客户端下载 ============ -->
+  <cv-scene id="download" class="sc ending">
+    <div class="ending-body">
+      <cv-animate fx="rise(soft)" duration="700"><h2 class="ending-title">下载 MetaArc 桌面端，即刻开启成片创作</h2></cv-animate>
+      <p class="lead">全平台客户端现已发布 · 当前版本 <span class="mono" data-version>v0.6.2</span> · 商业授权运营</p>
+      <div class="dl-cards">
+        <a class="dl" data-os="mac" href="https://github.com/looplj/reveric/releases/download/v0.6.2/reveric-0.6.2-macos-arm64.dmg">
+          <span class="dl-os">macOS</span><span class="dl-meta mono">Apple Silicon · .dmg</span><span class="dl-go">下载 ↓</span>
+        </a>
+        <a class="dl" data-os="win" href="https://github.com/looplj/reveric/releases/download/v0.6.2/reveric-0.6.2-windows-setup.exe">
+          <span class="dl-os">Windows</span><span class="dl-meta mono">64 位安装包 · .exe</span><span class="dl-go">下载 ↓</span>
+        </a>
+        <a class="dl" data-os="android" href="https://github.com/looplj/reveric/releases/download/v0.6.2/reveric-android-arm64-v8a-v0.6.2.apk">
+          <span class="dl-os">Android</span><span class="dl-meta mono">arm64 · .apk</span><span class="dl-go">下载 ↓</span>
+        </a>
+      </div>
+      <a class="gh" href="https://github.com/looplj/reveric" target="_blank" rel="noopener">
+        <span class="mono">GITHUB</span><b>looplj/reveric</b><span>欢迎 Star 与技术贡献 ↗</span>
+      </a>
+    </div>
+    <footer class="bar bar-bottom mono">
+      <span>SC.07 片尾 · © 元弧 MetaArc · MetaArc.COM.CN</span>
+      <span><a href="mailto:contact@metaarc.com.cn">商业合作与授权</a></span>
+    </footer>
+  </cv-scene>
+
+</cv-stage>
+
+<!-- ==============================================================================
+     模态框组件 A: 用户认证弹窗 (Auth Modal - 支持真实登录与注册)
+     ============================================================================== -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title" id="auth-modal-title">登录 MetaArc</h3>
+      <button class="modal-close" id="auth-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-btn-login" onclick="metaarc.switchAuthTab('login')">账号登录</button>
+        <button class="auth-tab" id="tab-btn-register" onclick="metaarc.switchAuthTab('register')">新用户注册</button>
+      </div>
+
+      <!-- 登录面板 -->
+      <div id="auth-pane-login">
+        <div class="auth-error-banner" id="login-error-banner"></div>
+        <div class="form-group">
+          <label class="form-label">手机号 / 登录邮箱</label>
+          <input class="form-input" id="login-account-input" type="text" placeholder="输入手机号或登录邮箱" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">登录密码</label>
+          <input class="form-input" id="login-password-input" type="password" placeholder="输入密码" />
+        </div>
+        <button class="btn-auth-primary" id="btn-login-submit" style="width:100%; height:44px; margin-top:8px;">
+          立即登录
+        </button>
+      </div>
+
+      <!-- 注册面板 -->
+      <div id="auth-pane-register" style="display:none;">
+        <div class="auth-error-banner" id="register-error-banner"></div>
+        <div class="form-group">
+          <label class="form-label">创作者昵称 / 团队名</label>
+          <input class="form-input" id="register-nickname-input" type="text" placeholder="例如：云中鹤、科幻创编室" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">登录邮箱或手机号</label>
+          <input class="form-input" id="register-account-input" type="text" placeholder="输入邮箱 (如 creator@example.com) 或手机号" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">设置密码 (至少 6 位)</label>
+          <input class="form-input" id="register-password-input" type="password" placeholder="输入 6 位以上密码" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">确认密码</label>
+          <input class="form-input" id="register-confirm-input" type="password" placeholder="再次输入密码" />
+        </div>
+        <button class="btn-auth-primary" id="btn-register-submit" style="width:100%; height:44px; margin-top:8px;">
+          免费注册并领取新人 500 点算力
+        </button>
+        <p style="font-size:12px; color:var(--ink-mute); text-align:center; margin-top:14px;">
+          注册即自动生成专属 Key，支持桌面端客户端与移动端即时同步
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==============================================================================
+     模态框组件 B: 在线收银台 (Cashier Modal)
+     ============================================================================== -->
+<div class="modal-overlay" id="cashier-modal">
+  <div class="modal-dialog" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3 class="modal-title">MetaArc 算力收银台</h3>
+      <button class="modal-close" id="cashier-close">✕</button>
+    </div>
+    <div class="modal-body" style="text-align: center;">
+      <h4 id="cashier-plan-title" style="font-size: 20px; color: #fff; margin-bottom: 6px;">专业版 (Pro) · 月付</h4>
+      <div id="cashier-plan-price" style="font-size: 38px; font-weight: 700; color: var(--ma-brand-gold); margin-bottom: 4px; font-family: var(--font-mono);">¥99.00</div>
+      <p id="cashier-plan-quota" style="font-size: 13px; color: var(--ink-mute); margin-bottom: 20px;">含 50,000,000 算力点数</p>
+
+      <div class="pay-methods">
+        <div class="pay-method active" id="pay-method-wechat">微信支付</div>
+        <div class="pay-method" id="pay-method-alipay">支付宝</div>
+      </div>
+
+      <!-- 动态模拟支付二维码 -->
+      <div class="cashier-qr-box">
+        <img src="assets/qq-group.jpg" alt="支付二维码" style="filter: contrast(1.1);" />
+      </div>
+      <p style="font-size: 12px; color: var(--ink-mute); margin-bottom: 16px;">请使用微信或支付宝扫一扫完成支付</p>
+
+      <!-- 演示闭环动作按钮 -->
+      <button class="btn-auth-primary" id="btn-confirm-pay" style="width: 100%; height: 42px;">
+        模拟支付成功 (触发自动加点)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==============================================================================
+     侧边抽屉 C: 用户中心与任务画廊 (User Center Drawer)
+     ============================================================================== -->
+<div class="drawer-overlay" id="user-drawer-overlay">
+  <div class="drawer-panel">
+    <div class="drawer-header">
+      <div class="drawer-user-info">
+        <div class="drawer-avatar" id="drawer-avatar-text">弧</div>
+        <div class="drawer-user-meta">
+          <h3 id="drawer-nickname">创作者</h3>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="drawer-plan-badge" style="color:var(--ma-brand-gold); background:rgba(229,181,116,0.15); padding:2px 8px; border-radius:4px;">体验版</span>
+            <span id="drawer-account-text" style="font-size:12px; color:var(--ink-mute);"></span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn-auth-primary" id="btn-logout" style="height:32px; font-size:12px; padding:0 12px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#FCA5A5; box-shadow:none;">退出登录</button>
+        <button class="modal-close" id="drawer-close">✕</button>
+      </div>
+    </div>
+
+    <div class="drawer-body">
+      <!-- 算力配额仪表板 -->
+      <div class="quota-card">
+        <div class="quota-title">⚡ 可用算力配额 (New-API 同步)</div>
+        <div class="quota-values">
+          <span class="quota-current" id="drawer-quota-val">48,250,000</span>
+          <span class="quota-total" id="drawer-total-val">/ 50,000,000</span>
+        </div>
+        <div class="quota-bar-bg">
+          <div class="quota-bar-fill" id="drawer-quota-bar"></div>
+        </div>
+        <div class="quota-actions">
+          <button class="btn-auth-primary" id="btn-quick-recharge" style="flex:1; height:34px; font-size:13px;">充值加购加油包</button>
+        </div>
+      </div>
+
+      <!-- 绑定的 New-API 密钥 -->
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label class="form-label">当前分配的 New-API 专属 Key (客户端直连凭据)</label>
+        <div style="display:flex; gap:8px;">
+          <input class="form-input" id="drawer-api-key" type="text" readonly style="font-family:var(--font-mono); font-size:12px; color:var(--ma-brand-cyan);" />
+          <button class="btn-auth-primary" style="padding:0 14px; height:38px; font-size:12px;" onclick="navigator.clipboard.writeText(document.getElementById('drawer-api-key').value); alert('已复制 API Key！可在客户端模型配置中直接填入。');">复制</button>
+        </div>
+      </div>
+
+      <!-- 异步任务与交付物画廊 -->
+      <div class="section-subtitle">
+        <span>🎬 交付物资产画廊 (S3/R2 云端托管)</span>
+        <span style="font-size:11px; color:var(--ma-success); font-family:var(--font-mono);">● 永久直链</span>
+      </div>
+      <div class="tasks-list" id="user-tasks-container">
+        <!-- 由 metaarc.js 动态渲染 -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==============================================================================
+     超级全屏模态 D: 超级管理员控制台 (Super Admin Console)
+     ============================================================================== -->
+<div class="admin-modal-overlay" id="admin-modal">
+  <div class="admin-nav">
+    <div class="admin-brand">
+      <span style="color:var(--ma-brand-gold);">⚡</span> MetaArc 系统超管后台
+    </div>
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="overview">数据大盘</button>
+      <button class="admin-tab" data-tab="users">用户与调额</button>
+      <button class="admin-tab" data-tab="orders">订单流水</button>
+      <button class="admin-tab" data-tab="settings">系统与API配置</button>
+    </div>
+    <button class="modal-close" id="admin-close" style="font-size: 24px;">✕</button>
+  </div>
+
+  <div class="admin-content">
+    <!-- Tab 1: 数据大盘 -->
+    <div class="admin-tab-pane" id="admin-pane-overview">
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-title">平台总注册用户</div>
+          <div class="stat-val"><span id="admin-stat-total-users">-</span> <span id="admin-stat-today-users" style="font-size:14px; color:var(--ma-success);">+0 今日</span></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">今日营收流水</div>
+          <div class="stat-val" id="admin-stat-today-revenue" style="color:var(--ma-brand-gold);">¥ 0.00</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">平台累计总营收</div>
+          <div class="stat-val" id="admin-stat-total-revenue" style="color:var(--ma-brand-cyan);">¥ 0.00</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">活跃调度任务数</div>
+          <div class="stat-val" id="admin-stat-active-tasks">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 用户与调额 -->
+    <div class="admin-tab-pane" id="admin-pane-users" style="display:none;">
+      <!-- 手工调额操作卡片 -->
+      <div class="stat-box" style="margin-bottom: 24px;">
+        <h4 style="font-size:16px; margin-bottom:12px; color:#fff;">⚡ 管理员手工调额 (补偿/商务赠送)</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:12px; max-width:960px; align-items:center;">
+          <input class="form-input" id="admin-adjust-user-id" type="text" placeholder="目标用户 UUID (可点击下方表格快捷填入)" style="flex:2; min-width:260px;" />
+          <input class="form-input" id="admin-adjust-amount" type="number" placeholder="点数增减 (如 500000)" style="flex:1; min-width:160px;" value="500000" />
+          <input class="form-input" id="admin-adjust-reason" type="text" placeholder="调账原因 / 备注" style="flex:1.5; min-width:160px;" value="商务加点" />
+          <button class="btn-auth-primary" id="btn-adjust-quota" style="white-space:nowrap; padding:0 24px; height:42px;">确认调额</button>
+        </div>
+      </div>
+
+      <div class="admin-table-card">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>用户标识 (UUID)</th>
+              <th>账号/邮箱/手机</th>
+              <th>昵称</th>
+              <th>角色</th>
+              <th>当前套餐</th>
+              <th>已绑 Key</th>
+              <th>剩余点数</th>
+              <th>注册时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-table-body">
+            <tr><td colspan="9" style="text-align:center; color:var(--ink-mute); padding:24px;">正在加载用户列表...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: 订单明细 -->
+    <div class="admin-tab-pane" id="admin-pane-orders" style="display:none;">
+      <div class="admin-table-card">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>订单号</th>
+              <th>购买用户</th>
+              <th>套餐方案</th>
+              <th>支付金额</th>
+              <th>支付渠道</th>
+              <th>交易时间</th>
+              <th>订单状态</th>
+            </tr>
+          </thead>
+          <tbody id="admin-orders-table-body">
+            <tr><td colspan="7" style="text-align:center; color:var(--ink-mute); padding:24px;">暂无订单记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: 系统配置 -->
+    <div class="admin-tab-pane" id="admin-pane-settings" style="display:none;">
+      <div class="stat-box" style="max-width:700px;">
+        <h4 style="font-size:16px; margin-bottom:16px; color:#fff;">🔧 核心集成配置状态</h4>
+        <div class="form-group">
+          <label class="form-label">New-API 集成地址</label>
+          <input class="form-input mono" type="text" value="https://ai.metaarc.com.cn (已集成)" readonly />
+        </div>
+        <div class="form-group">
+          <label class="form-label">云端对象存储 S3/R2 Bucket</label>
+          <input class="form-input mono" type="text" value="metaarc-media-prod (路径隔离已生效)" readonly />
+        </div>
+        <div class="form-group">
+          <label class="form-label">CDN 交付物加速域名</label>
+          <input class="form-input mono" type="text" value="https://assets.metaarc.com.cn" readonly />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="landing.js"></script>
+<script src="metaarc.js"></script>
+</body>
+</html>

@@ -16,6 +16,9 @@ const appVersion = '0.6.2';
 /// 为空表示本构建不接匿名诊断：不上报，也不展示 opt-in 入口。
 const anonymousReportingBaseUrl = '';
 
+/// MetaArc 官方门户与商业中台主页地址。
+const metaArcOfficialWebsiteUrl = 'https://MetaArc.COM.CN';
+
 /// 公开仓库地址，供关于页展示项目主页。
 const revericGitHubRepoUrl = 'https://github.com/looplj/reveric';
 

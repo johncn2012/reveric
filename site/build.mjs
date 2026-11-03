@@ -20,7 +20,7 @@ const DIST = join(SITE, 'dist');
 const REPO = 'https://github.com/looplj/reveric';
 
 // 页面和它引用的资源；directions.html 等设计过程文件不发布
-const PAGE_FILES = ['index.html', 'landing.css', 'landing.js', 'assets', 'fonts', 'vendor'];
+const PAGE_FILES = ['index.html', 'landing.css', 'landing.js', 'metaarc.css', 'metaarc.js', 'assets', 'fonts', 'vendor'];
 
 function resolveVersion() {
   const i = process.argv.indexOf('--version');

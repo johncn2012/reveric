@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # 1. 业务主数据库 (PostgreSQL 16)
+  metaarc-postgres:
+    image: postgres:16-alpine
+    container_name: metaarc-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: metaarc_db
+      POSTGRES_USER: metaarc_user
+      POSTGRES_PASSWORD: YourSecurePassword123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metaarc_user -d metaarc_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. 缓存与分布式锁 (Redis 7)
+  metaarc-redis:
+    image: redis:7-alpine
+    container_name: metaarc-redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. MetaArc 业务中台 (BaaS API & Web Portal)
+  metaarc-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: metaarc-server
+    restart: always
+    depends_on:
+      metaarc-postgres:
+        condition: service_healthy
+      metaarc-redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
+  redis_data:

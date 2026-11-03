@@ -747,6 +747,32 @@ abstract final class LocaleKeys {
 
   // ── account ────────────────────────────────────────
   static const accountUsageCached = 'account.usage_cached';
+  static const accountHubTitle = 'account.hub_title';
+  static const accountLoginTitle = 'account.login_title';
+  static const accountRegisterTitle = 'account.register_title';
+  static const accountTabLogin = 'account.tab_login';
+  static const accountTabRegister = 'account.tab_register';
+  static const accountPhoneOrEmail = 'account.phone_or_email';
+  static const accountPhoneOrEmailHint = 'account.phone_or_email_hint';
+  static const accountPassword = 'account.password';
+  static const accountPasswordHint = 'account.password_hint';
+  static const accountPasswordSetHint = 'account.password_set_hint';
+  static const accountNickname = 'account.nickname';
+  static const accountNicknameHint = 'account.nickname_hint';
+  static const accountCloudGateway = 'account.cloud_gateway';
+  static const accountAvailableQuota = 'account.available_quota';
+  static const accountPointsUnit = 'account.points_unit';
+  static const accountAutoProvisionHint = 'account.auto_provision_hint';
+  static const accountSecretKeyTitle = 'account.secret_key_title';
+  static const accountCopyKey = 'account.copy_key';
+  static const accountCopyKeySuccess = 'account.copy_key_success';
+  static const accountRefreshQuota = 'account.refresh_quota';
+  static const accountUpgradePlan = 'account.upgrade_plan';
+  static const accountLogout = 'account.logout';
+  static const accountLoginButton = 'account.login_button';
+  static const accountRegisterButton = 'account.register_button';
+  static const accountConnectHub = 'account.connect_hub';
+  static const accountCloudBadge = 'account.cloud_badge';
   // ── agent ────────────────────────────────────────
   static const agentBasics = 'agent.basics';
   static const agentDeleteConfirm = 'agent.delete_confirm';
