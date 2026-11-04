@@ -13,7 +13,7 @@ class WebDavBackupConfig {
     this.remoteDirectory = defaultRemoteDirectory,
   });
 
-  static const defaultRemoteDirectory = '/Reveric/Backups';
+  static const defaultRemoteDirectory = '/MetaArc/Backups';
 
   final bool enabled;
   final String serverUrl;

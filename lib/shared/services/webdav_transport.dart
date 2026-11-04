@@ -238,6 +238,13 @@ Uri _remoteUri(String serverUrl, String remotePath) {
   );
 }
 
+/// 新备份文件名以 metaarc_backup_ 开头。旧的 reveric_backup_ 仍列入，已有远程备份可以恢复。
+bool _isBackupArchiveName(String name) {
+  return name.endsWith('.zip') &&
+      (name.startsWith('metaarc_backup_') ||
+          name.startsWith('reveric_backup_'));
+}
+
 List<WebDavBackupFile> _parseBackupFiles(
   String xmlText,
   WebDavBackupConfig config,
@@ -260,9 +267,7 @@ List<WebDavBackupFile> _parseBackupFiles(
         .split('/')
         .where((segment) => segment.isNotEmpty)
         .lastOrNull;
-    if (name == null ||
-        !name.startsWith('reveric_backup_') ||
-        !name.endsWith('.zip')) {
+    if (name == null || !_isBackupArchiveName(name)) {
       continue;
     }
     final sizeText = response

@@ -262,7 +262,7 @@ class BackupService {
         // 8. 打包为 zip（在 isolate 中执行，避免阻塞 UI）
         final ts = DateTime.now();
         final zipName =
-            'reveric_backup_${ts.year}${_pad(ts.month)}${_pad(ts.day)}_${_pad(ts.hour)}${_pad(ts.minute)}${_pad(ts.second)}.zip';
+            'metaarc_backup_${ts.year}${_pad(ts.month)}${_pad(ts.day)}_${_pad(ts.hour)}${_pad(ts.minute)}${_pad(ts.second)}.zip';
 
         _log.info('Starting zip in isolate');
         final zipPath = await Isolate.run(

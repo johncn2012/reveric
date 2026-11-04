@@ -22,6 +22,7 @@ import '../../app_config.dart'
     show
         appVersion,
         revericAttribution,
+        revericGitHubRepoUrl,
         metaArcOfficialWebsiteUrl,
         revericQqGroupJoinUrl,
         revericQqGroupNumber;
@@ -149,6 +150,17 @@ class AboutSettingsSection extends HookConsumerWidget {
             ).copyWith(color: colors.textPrimary),
           ),
           SizedBox(height: actionGap),
+          _buildExternalLinkButton(
+            colors,
+            typo,
+            label: revericGitHubRepoUrl,
+            onTap: () => _openExternalUrl(
+              context,
+              Uri.parse(revericGitHubRepoUrl),
+              LocaleKeys.settingsAboutOpenRepositoryFailed,
+            ),
+          ),
+          SizedBox(height: descriptionGap),
           _buildExternalLinkButton(
             colors,
             typo,

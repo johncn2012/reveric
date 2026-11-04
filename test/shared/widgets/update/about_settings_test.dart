@@ -273,7 +273,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Open Source License'), findsOneWidget);
       expect(find.text(revericAttribution), findsOneWidget);
-      expect(find.text(revericGitHubRepoUrl), findsNothing);
+      expect(find.text(revericGitHubRepoUrl), findsOneWidget);
       expect(find.text(metaArcOfficialWebsiteUrl), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());

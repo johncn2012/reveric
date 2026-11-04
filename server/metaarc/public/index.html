@@ -13,7 +13,7 @@
 <meta property="og:url" content="https://metaarc.com.cn/">
 <meta property="og:title" content="元弧 MetaArc — AI 原生视听创作成片平台">
 <meta property="og:description" content="小说、剧本、画布、导演台、剪辑，都是智能体的工具。一句话，从原著走到成片。">
-<meta property="og:image" content="https://metaarc.com.cn/assets/still_kick.webp">
+<meta property="og:image" content="https://metaarc.com.cn/assets/s6_editing.webp">
 <meta name="twitter:card" content="summary_large_image">
 <script>(function(s){if(s&&s('selector(:has(*))')&&s('width:1lh')&&s('color:color-mix(in srgb,red,red)'))document.documentElement.classList.add('cv-js')})(window.CSS&&CSS.supports);</script>
 <link rel="stylesheet" href="vendor/cineview/cineview.css">
@@ -29,7 +29,7 @@
   <nav class="topnav">
     <a href="#run">工作方式</a>
     <a href="#models">模型</a>
-    <a href="#pricing">套餐定价</a>
+    <a href="#pricing">套餐</a>
     <a href="#download">下载</a>
   </nav>
 
@@ -41,33 +41,28 @@
 
 <cv-stage design-width="1920" id="stage">
 
-  <!-- ============ SC.01 片头 ============ -->
+  <!-- ============ SC.01 片头：产品指挥台 ============ -->
   <cv-scene id="top" class="sc cover" preload>
-    <div class="bar bar-top" aria-hidden="true"></div>
-    <cv-animate class="cover-still" fx="push(1.06, 1)" on="clock" duration="9000">
-      <img src="assets/still_kick.webp" alt="用 MetaArc 生成的短剧成片画面" width="1280" height="720">
-    </cv-animate>
-    <div class="cover-scrim" aria-hidden="true"></div>
-    <div class="cover-copy">
-      <cv-animate fx="rise(soft)" on="clock" duration="700"><p class="kicker">AGENT NATIVE · AI 视听创作成片平台</p></cv-animate>
-      <cv-animate fx="rise(soft)" on="clock" delay="120" duration="800">
-        <h1 class="cover-title"><span class="zh">元弧</span><span class="en">MetaArc</span></h1>
-      </cv-animate>
-      <cv-animate fx="rise(soft)" on="clock" delay="260" duration="800">
-        <p class="cover-sub">小说、剧本、画布、导演台、剪辑，都是智能体的工具。<br><span>一句话，从原著走到成片。</span></p>
-      </cv-animate>
-      <cv-animate fx="fade" on="clock" delay="420" duration="600">
-        <p class="cmd"><span class="cmd-p" aria-hidden="true">›</span><span class="cmd-text" id="cmd">把第一卷改编成短剧，做出第一集的成片</span><span class="caret" aria-hidden="true"></span></p>
-      </cv-animate>
-      <cv-animate fx="fade" on="clock" delay="560" duration="600">
-        <div class="ctas">
-          <a class="btn" id="primary-dl" href="#download">查看下载说明</a>
-          <a class="btn-auth-primary" style="padding: 0 28px; height: 50px; font-size: 16px;" href="#pricing">查看套餐方案</a>
-          <span class="alts" id="alt-dl"><a href="#download">macOS</a><a href="#download">Windows</a><a href="#download">Android</a></span>
+    <div class="desk-frame">
+    <div class="desk">
+      <div class="desk-copy">
+        <h1 class="desk-title">从小说到成片</h1>
+        <p class="desk-sub">多智能体创作台</p>
+        <div class="ctas desk-ctas">
+          <a class="btn btn-pill" id="primary-dl" href="#download">下载 Windows 内测包</a>
+          <a class="btn btn-pill btn-line" href="#pricing">查看套餐</a>
         </div>
-      </cv-animate>
+      </div>
+      <figure class="monitor">
+        <div class="monitor-screen">
+          <img src="assets/s6_editing.webp" alt="MetaArc 剪辑台：深色预览、时间线和轨道" width="2880" height="1800">
+        </div>
+        <div class="monitor-neck" aria-hidden="true"></div>
+        <div class="monitor-foot" aria-hidden="true"></div>
+      </figure>
     </div>
-    <div class="bar bar-bottom mono" aria-hidden="true"><span>SC.01 片头</span><span>MetaArc.COM.CN</span><span>00:00:00:00</span></div>
+    <div class="desk-wood" aria-hidden="true"></div>
+    </div>
   </cv-scene>
 
   <!-- ============ SC.02 一条指令跑完全程 ============ -->

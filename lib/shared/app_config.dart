@@ -23,7 +23,7 @@ const anonymousReportingBaseUrl = '';
 /// MetaArc 官方门户与商业中台主页地址。
 const metaArcOfficialWebsiteUrl = 'https://MetaArc.COM.CN';
 
-/// 上游项目地址。NOTICES 要求保留该署名材料；产品界面、下载和更新检查不使用它。
+/// 上游项目地址。关于页展示该链接，满足 AGPL 署名。下载和更新检查不使用它。
 const revericGitHubRepoUrl = 'https://github.com/looplj/reveric';
 
 /// QQ 交流群官方邀请链接。

@@ -150,7 +150,7 @@ A2uiCatalog _buildCatalog() {
   return A2uiCatalog(
     id: revericA2uiCatalogId,
     protocolVersion: A2uiProtocolVersion.v1_0,
-    title: 'Reveric UI',
+    title: 'MetaArc UI',
     instructions:
         'Build the UI from the components below. Layout: Column, Row, List, '
         'Card, Gap, Divider. Display: Text, Markdown, Icon, Loading. Input: '

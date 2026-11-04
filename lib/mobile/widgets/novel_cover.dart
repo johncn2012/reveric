@@ -123,7 +123,7 @@ class MobileNovelCover extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      'REVERIC',
+                      'METAARC',
                       maxLines: 1,
                       overflow: TextOverflow.clip,
                       style: typo.uiTiny.copyWith(

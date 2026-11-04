@@ -191,7 +191,7 @@ Future<void> _startApplication() async {
 
   // 缓存 Application Support 根目录，供 widget build() 同步解析存储路径使用。
   await RevericPaths.initialize();
-  _log.checkpoint('RevericPaths initialized');
+  _log.checkpoint('Storage paths initialized');
 
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   _log.checkpoint('Drift configured');

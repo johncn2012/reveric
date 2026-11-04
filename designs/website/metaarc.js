@@ -157,6 +157,8 @@ class MetaArcPortal {
       const action = unsigned ? '下载内测包' : '下载';
       link.innerHTML = `<span class="dl-os">Windows</span><span class="dl-meta mono">${meta}</span><span class="dl-go">${action}</span>`;
       card.replaceWith(link);
+      const primary = document.getElementById('primary-dl');
+      if (primary) primary.href = url;
       const lead = document.getElementById('download-lead');
       if (lead) {
         lead.textContent = data.channel === 'stable'
