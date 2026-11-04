@@ -290,7 +290,7 @@ CanvasExportSnapshot buildCanvasExportSnapshot({
     return 0;
   });
   return CanvasExportSnapshot({
-    'format': 'reveric.canvas',
+    'format': 'metaarc.canvas',
     'format_version': 1,
     'exported_at': exportedAt.toUtc().toIso8601String(),
     'source': {

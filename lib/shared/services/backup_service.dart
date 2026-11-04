@@ -10,7 +10,9 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:archive/archive_io.dart';
+import '../brand/identifiers.dart';
 import '../database/app_database.dart' show AppDatabase;
+import '../database/database_file.dart';
 import '../database/novel_content_database.dart' show NovelContentDatabase;
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -157,7 +159,7 @@ class BackupWarning {
 }
 
 const _backupEntries = [
-  'reveric.sqlite',
+  appDatabaseFileName,
   'novel_workspaces',
   'avatars',
   'agent_avatars',
@@ -189,6 +191,7 @@ class BackupService {
     final warnings = <BackupWarning>[];
     try {
       final appSupportDir = await getApplicationSupportDirectory();
+      await ensureAppDatabasePath(appSupportDir);
       _log.info('appSupportDir=${appSupportDir.path}');
       final outputDir = outputDirectory ?? appSupportDir.path;
       _log.info('outputDir=$outputDir');
@@ -212,8 +215,8 @@ class BackupService {
         // 1. 复制主数据库快照
         _log.info('Step 1/8: copying main SQLite snapshot');
         await _copySqliteSnapshotIfExists(
-          p.join(appSupportDir.path, 'reveric.sqlite'),
-          p.join(tempDir.path, 'reveric.sqlite'),
+          p.join(appSupportDir.path, appDatabaseFileName),
+          p.join(tempDir.path, appDatabaseFileName),
         );
         _log.info('Step 1/8: done');
 
@@ -234,7 +237,7 @@ class BackupService {
         // 媒体文件集合只取决于目录，不查询资产或业务引用。
         for (final directory in _backupEntries.where(
           (entry) =>
-              entry != 'reveric.sqlite' &&
+              entry != appDatabaseFileName &&
               entry != 'novel_workspaces' &&
               entry != 'plugin_data',
         )) {
@@ -336,6 +339,7 @@ class BackupService {
         ),
       );
       final appSupportDir = await getApplicationSupportDirectory();
+      await ensureAppDatabasePath(appSupportDir);
       final backup = _readExtractedBackup(
         sourceDir: extractDir,
         zipPath: zipPath,
@@ -396,6 +400,7 @@ class BackupService {
       _log.info('Restore: zip extracted');
 
       final appSupportDir = await getApplicationSupportDirectory();
+      await ensureAppDatabasePath(appSupportDir);
       final backup = _readExtractedBackup(
         sourceDir: extractDir,
         zipPath: zipPath,
@@ -575,7 +580,7 @@ void _validateBackupSchemas(Directory sourceDir) {
   }
 
   check(
-    File(p.join(sourceDir.path, 'reveric.sqlite')),
+    File(p.join(sourceDir.path, appDatabaseFileName)),
     AppDatabase.currentSchemaVersion,
   );
   final workspaces = Directory(p.join(sourceDir.path, 'novel_workspaces'));
@@ -597,8 +602,9 @@ _ExtractedBackup _readExtractedBackup({
   required String zipPath,
   required int expectedVersion,
 }) {
+  normalizeExtractedAppDatabaseSync(sourceDir);
   final manifestFile = File(p.join(sourceDir.path, 'manifest.json'));
-  final backupDatabaseFile = File(p.join(sourceDir.path, 'reveric.sqlite'));
+  final backupDatabaseFile = File(p.join(sourceDir.path, appDatabaseFileName));
   if (!manifestFile.existsSync() || !backupDatabaseFile.existsSync()) {
     throw const _RestoreValidationFailure(RestoreFailureReason.invalidBackup);
   }
@@ -650,7 +656,7 @@ _ExtractedBackup _readExtractedBackup({
 
   final currentById = <String, String>{};
   final currentIdByTitle = <String, String>{};
-  final currentDatabasePath = p.join(appSupportDir.path, 'reveric.sqlite');
+  final currentDatabasePath = p.join(appSupportDir.path, appDatabaseFileName);
   if (File(currentDatabasePath).existsSync()) {
     final currentDb = sqlite3.open(
       toWindowsSafePath(currentDatabasePath),
@@ -713,7 +719,7 @@ Future<void> _replaceAllBackupEntries({
         support: appSupportDir.path,
       );
       await ledger.moveAside(targetPath);
-      if (entryName == 'reveric.sqlite') {
+      if (entryName == appDatabaseFileName) {
         await ledger.moveAside('$targetPath-wal');
         await ledger.moveAside('$targetPath-shm');
       }
@@ -728,7 +734,7 @@ Future<void> _replaceAllBackupEntries({
         );
       }
     }
-    _disableRestoredMcpServers(p.join(appSupportDir.path, 'reveric.sqlite'));
+    _disableRestoredMcpServers(p.join(appSupportDir.path, appDatabaseFileName));
     await ledger.discard();
   } catch (error, stackTrace) {
     _log.error(
@@ -796,7 +802,7 @@ Future<void> _replaceSelectedNovels({
   required Map<String, Map<String, Object?>> novelRows,
   required Set<String> selectedIds,
 }) async {
-  final currentDatabasePath = p.join(appSupportDir.path, 'reveric.sqlite');
+  final currentDatabasePath = p.join(appSupportDir.path, appDatabaseFileName);
   if (!await File(currentDatabasePath).exists()) {
     throw const _RestoreValidationFailure(RestoreFailureReason.invalidBackup);
   }
@@ -1239,7 +1245,7 @@ Future<void> _ensureOutputDirectoryWritable(String outputDir) async {
 }
 
 void _ensurePluginInstallSettled(Directory support) {
-  final file = File(p.join(support.path, 'reveric.sqlite'));
+  final file = File(p.join(support.path, appDatabaseFileName));
   if (!file.existsSync()) {
     return;
   }
@@ -1314,7 +1320,7 @@ Future<void> _copyPluginDatabaseSnapshots(
 
 Future<void> _preflightSqliteSnapshots(Directory appSupportDir) async {
   await _ensureSqliteReadableIfExists(
-    p.join(appSupportDir.path, 'reveric.sqlite'),
+    p.join(appSupportDir.path, appDatabaseFileName),
   );
 
   final novelsDir = Directory(p.join(appSupportDir.path, 'novel_workspaces'));

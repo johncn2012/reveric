@@ -197,7 +197,7 @@ void main() {
   test('host defaults apply only to new bundled plugins', () async {
     for (final platform in ['windows', 'macos', 'android']) {
       final db = AppDatabase.forTest(NativeDatabase.memory());
-      final web = package(id: 'reveric.web');
+      final web = package(id: 'metaarc.web');
       PluginHostService build(List<PluginPackage> packages) =>
           PluginHostService(
             dao: db.pluginDao,
@@ -208,33 +208,33 @@ void main() {
           );
       final host = build([
         web,
-        package(id: 'reveric.memory'),
-        package(id: 'reveric.deepseek'),
+        package(id: 'metaarc.memory'),
+        package(id: 'metaarc.deepseek'),
       ]);
       try {
         await host.start();
         expect(
           {for (final status in host.statuses) status.id: status.enabled},
           {
-            'reveric.web': true,
-            'reveric.memory': false,
-            'reveric.deepseek': false,
+            'metaarc.web': true,
+            'metaarc.memory': false,
+            'metaarc.deepseek': false,
           },
         );
-        await host.setEnabled('reveric.web', false);
-        await host.setEnabled('reveric.memory', true);
+        await host.setEnabled('metaarc.web', false);
+        await host.setEnabled('metaarc.memory', true);
       } finally {
         await host.dispose();
       }
       final restarted = build([
-        package(id: 'reveric.web', version: '2.0.0'),
-        package(id: 'reveric.memory'),
+        package(id: 'metaarc.web', version: '2.0.0'),
+        package(id: 'metaarc.memory'),
       ]);
       try {
         await restarted.start();
         expect(
           {for (final status in restarted.statuses) status.id: status.enabled},
-          {'reveric.web': false, 'reveric.memory': true},
+          {'metaarc.web': false, 'metaarc.memory': true},
         );
       } finally {
         await restarted.dispose();

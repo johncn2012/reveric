@@ -423,7 +423,7 @@ Future<void> _configureDesktopWindow() async {
 }
 
 void _initMacOSAboutMenuHandler() {
-  const channel = MethodChannel('reveric/menu');
+  const channel = MethodChannel('metaarc/menu');
   channel.setMethodCallHandler((call) async {
     if (call.method != 'about') return;
     final context = SystemTrayService().navigatorKey.currentState?.context;

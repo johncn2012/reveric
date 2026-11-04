@@ -6,12 +6,19 @@ import 'dart:async';
 import 'dart:io';
 import 'package:app_links/app_links.dart';
 
+import '../../../brand/identifiers.dart';
+
 class McpOAuthCallbacks {
-  static final mobileUri = Uri.parse('ai.reveric://mcp/oauth/callback');
+  static final mobileUri = Uri.parse(oauthCallbackUri);
+  static final legacyMobileUri = Uri.parse(legacyOauthCallbackUri);
   static bool acceptsRegisteredRedirect(Uri uri) =>
-      uri.scheme == mobileUri.scheme &&
-      uri.host == mobileUri.host &&
-      uri.path == mobileUri.path &&
+      _isRegisteredRedirect(uri, mobileUri) ||
+      _isRegisteredRedirect(uri, legacyMobileUri);
+
+  static bool _isRegisteredRedirect(Uri uri, Uri expected) =>
+      uri.scheme == expected.scheme &&
+      uri.host == expected.host &&
+      uri.path == expected.path &&
       !uri.hasPort &&
       uri.userInfo.isEmpty &&
       !uri.hasQuery &&
@@ -33,7 +40,7 @@ class McpOAuthCallbacks {
   }
 
   void dispatch(Uri uri) {
-    if (!_matches(uri, mobileUri)) {
+    if (!_matches(uri, mobileUri) && !_matches(uri, legacyMobileUri)) {
       return;
     }
     if (!_mobile.hasListener) {

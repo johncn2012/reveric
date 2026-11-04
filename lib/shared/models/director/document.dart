@@ -157,7 +157,7 @@ class DirectorDocument {
   static DirectorDocument blank(String title, {String camera = 'A'}) {
     final initialCamera = newCamera(camera, [0, 1.6, 5], [0, 1, 0], 35);
     return DirectorDocument.fromJson({
-      'format': 'reveric.director',
+      'format': 'metaarc.director',
       'version': 1,
       'id': const Uuid().v4(),
       'revision': 0,
@@ -386,7 +386,7 @@ void validateDocument(Json d) {
     }
   }
 
-  choice(d['format'], 'format', ['reveric.director']);
+  choice(d['format'], 'format', ['metaarc.director', 'reveric.director']);
   choice(d['version'], 'version', [1]);
   if (d['version'] is! int) {
     invalid('version', 'expected_integer');

@@ -26,6 +26,7 @@ import '../models/video/request.dart';
 import '../logger/app_logger.dart';
 import '../logger/startup_failure_reporter.dart';
 import '../utils/windows_safe_path.dart';
+import 'database_file.dart';
 import 'daos/global_agent_dao.dart';
 import 'daos/novel_agent_skill_dao.dart';
 import 'daos/novel_agent_skill_revision_dao.dart';
@@ -1400,19 +1401,19 @@ class AppDatabase extends _$AppDatabase {
 
 QueryExecutor _openConnection() {
   return driftDatabase(
-    name: 'reveric',
+    name: 'metaarc',
     native: DriftNativeOptions(
       databasePath: () async {
         final dir = await getApplicationSupportDirectory();
         if (!await dir.exists()) {
           await dir.create(recursive: true);
         }
-        final safeDir = toWindowsSafePath(dir.path);
-        final dbPath = p.join(safeDir, 'reveric.sqlite');
+        final dbPath = await ensureAppDatabasePath(dir);
+        final safePath = toWindowsSafePath(dbPath);
         if (_log.isDebugEnabled) {
-          _log.debug('resolved path: $dbPath');
+          _log.debug('resolved path: $safePath');
         }
-        return dbPath;
+        return safePath;
       },
       tempDirectoryPath: () async {
         final dir = await getTemporaryDirectory();

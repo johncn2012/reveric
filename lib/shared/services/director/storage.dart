@@ -94,7 +94,7 @@ class DirectorStorage {
 
   Future<int> availableBytes(String path) async {
     final value = await const MethodChannel(
-      'ai.reveric.director/storage',
+      'cn.metaarc.director/storage',
     ).invokeMethod<int>('availableBytes', {'path': path});
     if (value == null || value < 0) {
       throw StateError('storage_probe_failed');

@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../../brand/identifiers.dart';
 import '../../../components/reveric_badge.dart';
 import '../../../components/reveric_button.dart';
 import '../../../components/reveric_icon_button.dart';
@@ -399,7 +400,7 @@ class McpServerEditor extends HookConsumerWidget {
           );
     final callbackPort = value(_Field.callbackPort);
     final callbackUrl = mobile
-        ? 'ai.reveric://mcp/oauth/callback'
+        ? oauthCallbackUri
         : 'http://127.0.0.1:${callbackPort.isEmpty ? '<port>' : callbackPort}/mcp/oauth/callback';
     final transports = {
       'streamable_http': LocaleKeys.settingsMcpHttp,

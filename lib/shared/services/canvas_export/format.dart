@@ -79,7 +79,7 @@ String _anchor(String kind, String id) =>
 String canvasExportReadme(CanvasExportSnapshot snapshot) =>
     '''# Canvas handoff
 
-Format: reveric.canvas, version 1. Exported at: ${snapshot.json['exported_at']}.
+Format: metaarc.canvas, version 1. Exported at: ${snapshot.json['exported_at']}.
 
 canvas.json is the sole machine-readable source. canvas.schema.json is the complete offline JSON Schema Draft 2020-12 contract; all references are local. Reject unknown format versions. Files use UTF-8 without a BOM, UTC ISO 8601 timestamps, string IDs and logical pixel coordinates.
 

@@ -1,3 +1,6 @@
+# Install identity stays ai.reveric so an upgrade replaces the existing setup.
+# Changing AppId would leave the old installation beside the new one.
+# The executable inside the setup is MetaArc.exe.
 app_id: ai.reveric
 publisher: MetaArc
 publisher_url: "https://MetaArc.COM.CN"

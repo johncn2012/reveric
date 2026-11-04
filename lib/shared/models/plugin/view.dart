@@ -2,6 +2,7 @@
 // 关联文件:
 //   lib/shared/models/plugin/manifest.dart
 //   lib/shared/services/plugins/runtime.dart
+import '../../brand/identifiers.dart';
 import 'text.dart';
 
 class PluginView {
@@ -15,7 +16,7 @@ class PluginView {
     }
     if (!RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$').hasMatch(id) ||
         value['location'] != 'home.plugin' ||
-        !['reveric-ui-v1', 'reveric-tsx-v1'].contains(protocol)) {
+        !isKnownPluginProtocol(protocol)) {
       throw const FormatException(
         'Invalid view identity, location or protocol',
       );
@@ -49,7 +50,7 @@ class PluginView {
   String get id => definition['id'] as String;
   String get protocol => definition['protocol'] as String;
   String get source => definition['source'] as String;
-  bool get isTsx => protocol == 'reveric-tsx-v1';
+  bool get isTsx => isPluginTsxProtocol(protocol);
   List<String> get actionNames =>
       (definition['actions'] as List? ?? const []).cast<String>();
 }

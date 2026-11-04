@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../../agent/agent_tool_dispatcher.dart';
+import '../../brand/identifiers.dart';
 import '../../database/daos/plugin_dao.dart';
 import '../../logger/app_logger.dart';
 import '../../models/plugin/action.dart';
@@ -23,6 +24,7 @@ import 'registry.dart';
 import 'runtime.dart';
 import 'sqlite.dart';
 import 'database_install.dart';
+import 'legacy_ids.dart';
 import 'prompt.dart';
 import 'tasks.dart';
 import 'ai.dart';
@@ -37,7 +39,7 @@ import 'package:uuid/uuid.dart';
 
 final _log = AppLogger.forModule('Plugin');
 
-const _defaultEnabledBundledPlugins = {'reveric.web'};
+const _defaultEnabledBundledPlugins = {defaultEnabledBundledPluginId};
 
 class PluginPackage {
   PluginPackage(this.path, this.manifest, this.code, {this.source = 'bundled'});
@@ -961,7 +963,7 @@ class PluginHostService {
       return null;
     }
     final view = tools.single.display?['view'];
-    if (view is! Map || view['protocol'] != 'reveric-ui-v1') {
+    if (view is! Map || !isPluginUiProtocol(view['protocol'])) {
       return null;
     }
     final messages = jsonDecode(
@@ -1075,6 +1077,10 @@ class PluginHostService {
   }
 
   Future<void> _start() async {
+    await migrateBundledPluginIds(
+      database: dao.attachedDatabase,
+      support: supportDirectory,
+    );
     if ((await dao.attachedDatabase.appStateDao.getAllByPrefix(
       'plugin_install.',
     )).isNotEmpty) {

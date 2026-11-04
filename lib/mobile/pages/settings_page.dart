@@ -92,7 +92,7 @@ class _SettingsNavItem {
 
 String _themeNameKey(AppTheme theme) {
   return switch (theme) {
-    AppTheme.reveric => LocaleKeys.settingsThemeReveric,
+    AppTheme.metaarc => LocaleKeys.settingsThemeReveric,
     AppTheme.classic => LocaleKeys.settingsThemeClassic,
     AppTheme.ivory => LocaleKeys.settingsThemeIvory,
   };

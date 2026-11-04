@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../app_config.dart';
+import '../brand/identifiers.dart';
 import '../logger/app_logger.dart';
 
 final _log = AppLogger.forModule('Notification');
@@ -79,7 +80,9 @@ class SystemNotificationService {
         linux: LinuxInitializationSettings(defaultActionName: 'Open'),
         windows: WindowsInitializationSettings(
           appName: productDisplayName,
-          appUserModelId: kDebugMode ? 'ai.reveric.debug' : 'ai.reveric',
+          appUserModelId: kDebugMode
+              ? metaArcDebugApplicationId
+              : metaArcApplicationId,
           guid: kDebugMode
               ? '30c68781-e02c-4fab-a47e-c94e7d57fa2a'
               : 'b2ea38b6-1e84-4651-a790-82f4136d07ae',

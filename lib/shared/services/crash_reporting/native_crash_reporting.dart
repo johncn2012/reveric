@@ -98,7 +98,7 @@ class NativeCrashReporting {
   }
 
   static const MethodChannel _channel = MethodChannel(
-    'reveric/crash_reporting',
+    'metaarc/crash_reporting',
   );
 
   /// 单次启动最多上报的崩溃数量；更早的标记为已上报但不发送，避免积压刷屏。

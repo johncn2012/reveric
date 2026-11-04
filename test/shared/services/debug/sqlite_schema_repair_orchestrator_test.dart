@@ -52,7 +52,7 @@ void main() {
   test(
     'repairs current schema without restoring removed legacy structures',
     () async {
-      final appDatabasePath = p.join(appSupportDir.path, 'reveric.sqlite');
+      final appDatabasePath = p.join(appSupportDir.path, 'metaarc.sqlite');
       final workspaceDirectory = Directory(
         p.join(appSupportDir.path, 'novel_workspaces'),
       );

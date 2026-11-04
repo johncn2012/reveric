@@ -37,7 +37,7 @@ function harness(
   const unavailable = async (): Promise<never> => {
     throw new Error("Unexpected host API");
   };
-  const plugin = { id: "reveric.deepseek", version: "1.0.0" };
+  const plugin = { id: "metaarc.deepseek", version: "1.0.0" };
   const services: PluginServices = {
     plugin,
     sqlite: {

@@ -51,7 +51,7 @@ Novel _novel(String id, String category, {bool draft = false}) {
 class _TestAppSettings extends AppSettingsNotifier {
   @override
   Future<AppSettings> build() async => AppSettings(
-    theme: AppTheme.reveric,
+    theme: AppTheme.metaarc,
     themeMode: AppThemeMode.light,
     language: 'en',
     aiSettings: AiSettings.defaults(),

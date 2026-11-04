@@ -6,7 +6,7 @@ if [ "$#" -ne 2 ] && [ "$#" -ne 5 ]; then
   exit 2
 fi
 depth_root=$(cd "$(dirname "$0")/../.." && pwd)
-depth_binary="${DEPTH_NATIVE_BIN:-$depth_root/build/depth-native/native-macos/reveric-depth-native}"
+depth_binary="${DEPTH_NATIVE_BIN:-$depth_root/build/depth-native/native-macos/metaarc-depth-native}"
 depth_model="${DEPTH_MODEL:?Set DEPTH_MODEL to the ONNX model path}"
 mkdir -p "$1"
 depth_work=$(cd "$1" && pwd)

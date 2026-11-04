@@ -24,7 +24,7 @@ class MainFlutterWindow: NSWindow {
     self.styleMask.insert(.fullSizeContentView)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
-    let directorStorageChannel = FlutterMethodChannel(name: "ai.reveric.director/storage", binaryMessenger: flutterViewController.engine.binaryMessenger)
+    let directorStorageChannel = FlutterMethodChannel(name: "cn.metaarc.director/storage", binaryMessenger: flutterViewController.engine.binaryMessenger)
     MainFlutterWindow.directorStorageChannel = directorStorageChannel
     directorStorageChannel.setMethodCallHandler { call, result in
       guard call.method == "availableBytes", let args = call.arguments as? [String: Any], let path = args["path"] as? String else { result(FlutterMethodNotImplemented); return }
@@ -36,13 +36,13 @@ class MainFlutterWindow: NSWindow {
     }
 
     let channel = FlutterMethodChannel(
-      name: "reveric/menu",
+      name: "metaarc/menu",
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     MainFlutterWindow.menuChannel = channel
 
     let systemFontsChannel = FlutterMethodChannel(
-      name: "reveric/system_fonts",
+      name: "metaarc/system_fonts",
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     MainFlutterWindow.systemFontsChannel = systemFontsChannel
@@ -59,7 +59,7 @@ class MainFlutterWindow: NSWindow {
     }
 
     let windowPositionChannel = FlutterMethodChannel(
-      name: "reveric/window_position",
+      name: "metaarc/window_position",
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     MainFlutterWindow.windowPositionChannel = windowPositionChannel
@@ -128,7 +128,7 @@ class MainFlutterWindow: NSWindow {
     }
 
     let windowLifecycleChannel = FlutterMethodChannel(
-      name: "reveric/window_lifecycle",
+      name: "metaarc/window_lifecycle",
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     MainFlutterWindow.windowLifecycleChannel = windowLifecycleChannel

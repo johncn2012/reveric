@@ -23,7 +23,7 @@ import 'components/toggle.dart';
 final _log = AppLogger.forModule('A2uiCatalog');
 
 /// 组件目录 ID，即对外 UI 协议名；`createSurface` 未声明 `catalogId` 时由宿主补上。
-const String revericA2uiCatalogId = 'reveric-ui-v1';
+const String revericA2uiCatalogId = 'metaarc-ui-v1';
 
 /// 宿主唯一的组件目录。插件页面和以后 AI 生成的界面共用。
 final A2uiCatalog revericA2uiCatalog = _buildCatalog();

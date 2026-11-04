@@ -28,7 +28,7 @@ import 'restart_exit.dart';
 import 'update_source.dart';
 
 final _log = AppLogger.forModule('UpdateService');
-const _updateChannel = MethodChannel('reveric/update');
+const _updateChannel = MethodChannel('metaarc/update');
 
 /// 自动升级核心服务
 class UpdateService {

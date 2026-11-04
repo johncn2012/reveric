@@ -13,6 +13,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/material.dart' show Brightness;
 import 'package:uuid/uuid.dart';
 
+import '../brand/identifiers.dart';
 import '../database/app_database.dart';
 import '../logger/app_logger.dart';
 import '../models/app_settings_aggregate_data.dart';
@@ -63,7 +64,7 @@ class ThemesOrchestrator {
             _options(command, {'id'});
             final id = _text(command, 'id');
             if (id.startsWith('builtin:')) {
-              final base = id.substring(8);
+              final base = canonicalThemeToken(id.substring(8));
               _base(base);
               return {
                 'ok': true,
@@ -89,7 +90,7 @@ class ThemesOrchestrator {
               'darkOverrides',
             });
             final name = _name(command);
-            final base = _text(command, 'baseTheme');
+            final base = canonicalThemeToken(_text(command, 'baseTheme'));
             final light = _patch({}, command['lightOverrides']);
             final dark = _patch({}, command['darkOverrides']);
             _validate(base, light, dark);
@@ -135,9 +136,11 @@ class ThemesOrchestrator {
             final name = command.containsKey('name')
                 ? _name(command)
                 : row.name;
-            final base = command.containsKey('baseTheme')
-                ? _text(command, 'baseTheme')
-                : row.baseTheme;
+            final base = canonicalThemeToken(
+              command.containsKey('baseTheme')
+                  ? _text(command, 'baseTheme')
+                  : row.baseTheme,
+            );
             final light = _patch(row.lightOverrides, command['lightOverrides']);
             final dark = _patch(row.darkOverrides, command['darkOverrides']);
             _validate(base, light, dark);
@@ -172,7 +175,7 @@ class ThemesOrchestrator {
             String base;
             String? customId;
             if (id.startsWith('builtin:')) {
-              base = id.substring(8);
+              base = canonicalThemeToken(id.substring(8));
               _base(base);
             } else {
               final row = await readCustomTheme(db, id);
@@ -276,7 +279,7 @@ class ThemesOrchestrator {
     key: AppearanceSettingsData.appSettingsKey,
     value: jsonEncode({
       ...appearance.toJson(),
-      'theme': base,
+      'theme': canonicalThemeToken(base),
       'customThemeId': customId,
       'themeMode': mode,
     }),
@@ -308,7 +311,7 @@ class ThemesOrchestrator {
   }
 
   void _base(String base) {
-    if (!builtinThemePalettes.containsKey(base)) {
+    if (!builtinThemePalettes.containsKey(canonicalThemeToken(base))) {
       throw const FormatException('baseTheme must name a built-in theme.');
     }
   }

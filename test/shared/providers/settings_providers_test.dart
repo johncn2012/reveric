@@ -22,7 +22,7 @@ void main() {
 
     test('keeps entity recognition enabled and styles disabled by default', () {
       final settings = AppSettings(
-        theme: AppTheme.reveric,
+        theme: AppTheme.metaarc,
         themeMode: AppThemeMode.light,
         language: 'zh_CN',
         aiSettings: AiSettings.defaults(),

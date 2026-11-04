@@ -43,7 +43,7 @@ class _EmptyGlobalSubAgents extends GlobalSubAgents {
 class _TestAppSettings extends AppSettingsNotifier {
   @override
   Future<AppSettings> build() async => AppSettings(
-    theme: AppTheme.reveric,
+    theme: AppTheme.metaarc,
     themeMode: AppThemeMode.light,
     language: 'zh_CN',
     aiSettings: AiSettings.defaults(),

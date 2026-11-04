@@ -24,7 +24,7 @@ int execute(int argc, char** argv) {
         }).detach();
     }
     if (argc != 9) {
-        std::cerr << "Usage: reveric-depth-native MODEL RGB FLOATS GRAY WIDTH HEIGHT FRAMES PROVIDER\n";
+        std::cerr << "Usage: metaarc-depth-native MODEL RGB FLOATS GRAY WIDTH HEIGHT FRAMES PROVIDER\n";
         return 2;
     }
     char error[4096]{};

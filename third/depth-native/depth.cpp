@@ -46,7 +46,7 @@ void run(const char* model_path, const char* rgb_path, const char* float_path,
         throw std::runtime_error("Cannot open depth output");
     }
 
-    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "reveric-depth-native");
+    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "metaarc-depth-native");
     Ort::SessionOptions options;
     options.SetIntraOpNumThreads(4);
     options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);

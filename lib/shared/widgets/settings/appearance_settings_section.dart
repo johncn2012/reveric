@@ -35,7 +35,7 @@ import 'custom_themes_section.dart';
 final _log = AppLogger.forModule('Settings');
 
 const _appBackgroundThemes = [
-  (AppTheme.reveric, LocaleKeys.settingsThemeReveric),
+  (AppTheme.metaarc, LocaleKeys.settingsThemeReveric),
   (AppTheme.classic, LocaleKeys.settingsThemeClassic),
   (AppTheme.ivory, LocaleKeys.settingsThemeIvory),
 ];
@@ -76,7 +76,7 @@ class AppearanceSettingsSection extends HookConsumerWidget {
   const AppearanceSettingsSection({super.key});
 
   static const _themes = [
-    (AppTheme.reveric, LocaleKeys.settingsThemeReveric),
+    (AppTheme.metaarc, LocaleKeys.settingsThemeReveric),
     (AppTheme.classic, LocaleKeys.settingsThemeClassic),
     (AppTheme.ivory, LocaleKeys.settingsThemeIvory),
   ];
@@ -337,7 +337,7 @@ class AppearanceSettingsSection extends HookConsumerWidget {
 
   Widget _buildThemePreview(AppTheme theme, RevericColors colors) {
     final previewColors = switch (theme) {
-      AppTheme.reveric => (
+      AppTheme.metaarc => (
         canvas: const Color(0xFFFEFCF9),
         surface: const Color(0xFFFBFAF7),
         accent: const Color(0xFF283C5F),
@@ -401,7 +401,7 @@ class AppearanceSettingsSection extends HookConsumerWidget {
 
   String _getThemeDescription(BuildContext context, AppTheme theme) {
     return switch (theme) {
-      AppTheme.reveric => context.t(LocaleKeys.settingsThemeRevericDescription),
+      AppTheme.metaarc => context.t(LocaleKeys.settingsThemeRevericDescription),
       AppTheme.classic => context.t(LocaleKeys.settingsThemeClassicDescription),
       AppTheme.ivory => context.t(LocaleKeys.settingsThemeIvoryDescription),
     };

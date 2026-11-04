@@ -39,7 +39,7 @@
 
 `downloads/` 会由 Express 挂到 `/downloads`。Docker Compose 把 `./downloads` 和 `./updates` 挂进容器。大文件以后可以改到对象存储，清单仍由这个接口返回 URL。
 
-Dart 包名、`applicationId` / bundle id（`ai.reveric`、`ai.reveric.debug`）、Windows 可执行文件名 `reveric.exe`、Inno `app_id` 和 MethodChannel 仍用原来的标识，避免把已有调试安装拆成另一个应用。用户可见的安装名、macOS 产物目录和分发钩子是 MetaArc。
+macOS bundle id 是 `cn.metaarc` / `cn.metaarc.debug`。Windows 可执行文件是 `MetaArc.exe`。Inno `app_id` 仍是 `ai.reveric`，这样升级会替换原来的安装，而不是再装一份。Android `applicationId` 和 iOS bundle id 仍是 `ai.reveric`，因为新包读不到旧的私有目录。Dart 包名仍是 `reveric`。
 
 macOS 与 Android 下载卡片保持尚未发布。本接口可以描述它们，但这次不要求打出这两个包。
 

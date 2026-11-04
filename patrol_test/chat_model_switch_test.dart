@@ -63,7 +63,7 @@ void main() {
         );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-          const MethodChannel('reveric/system_notifications'),
+          const MethodChannel('metaarc/system_notifications'),
           (_) async => null,
         );
     await RevericPaths.initialize();
@@ -77,7 +77,7 @@ void main() {
         );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-          const MethodChannel('reveric/system_notifications'),
+          const MethodChannel('metaarc/system_notifications'),
           null,
         );
     if (await tempSupport.exists()) {

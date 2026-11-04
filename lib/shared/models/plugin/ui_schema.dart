@@ -4,7 +4,7 @@
 //   plugins/sdk/generate_ui.mjs
 // GENERATED CODE - DO NOT MODIFY BY HAND
 const pluginUiSchema = <String, dynamic>{
-  "protocol": "reveric-tsx-v1",
+  "protocol": "metaarc-tsx-v1",
   "common": {
     "testId": {"type": "string"},
     "accessibleLabel": {"type": "string"},

@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "reveric-diagnostics",
+  "name": "metaarc-diagnostics",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-02",
   "workers_dev": false,

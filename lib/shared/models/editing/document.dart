@@ -419,7 +419,7 @@ class EditingDocument {
     clips: const [],
   );
   Map<String, dynamic> toJson() => {
-    'format': 'reveric.editing',
+    'format': 'metaarc.editing',
     'version': 1,
     'fps': editingFps,
     'ratio': ratio,
@@ -427,7 +427,7 @@ class EditingDocument {
     'clips': clips.map((c) => c.toJson()).toList(),
   };
   factory EditingDocument.fromJson(Map<String, dynamic> j) {
-    if (j['format'] != 'reveric.editing' ||
+    if ((j['format'] != 'metaarc.editing' && j['format'] != 'reveric.editing') ||
         j['version'] != 1 ||
         j['fps'] != editingFps) {
       throw const FormatException('Unsupported editing document');

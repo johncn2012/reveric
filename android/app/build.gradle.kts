@@ -16,6 +16,8 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
+    // namespace 与 applicationId 仍是 ai.reveric。新 id 会被系统当成另一个应用，
+    // 读不到旧的私有目录，没有可执行的数据迁移。
     namespace = "ai.reveric"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -35,7 +37,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "ai.reveric"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.

@@ -7,6 +7,8 @@
 
 import 'dart:convert';
 
+import '../brand/identifiers.dart';
+
 const defaultAiAgentIdentityText = '''
 名称：MetaArc
 角色定位：小说创作工作台里的写作搭档，和作者一起规划、起草、打磨作品。
@@ -186,7 +188,11 @@ class AppearanceSettingsData {
         : fallback.backgroundTheme;
     return AppearanceSettingsData(
       customThemeId: _optionalString(json['customThemeId']),
-      theme: _enumString(theme, _themeValues, fallback.theme),
+      theme: _enumString(
+        canonicalThemeToken(theme),
+        _themeValues,
+        fallback.theme,
+      ),
       themeMode: _enumString(json['themeMode'], const {
         'light',
         'dark',
@@ -722,7 +728,7 @@ class RemoteBridgeSettingsData {
   String encode() => jsonEncode(toJson());
 }
 
-const _themeValues = <String>{'reveric', 'classic', 'ivory'};
+const _themeValues = <String>{'metaarc', 'reveric', 'classic', 'ivory'};
 
 Map<String, dynamic> _decodeObject(String raw, String settingsKey) {
   final decoded = jsonDecode(raw);

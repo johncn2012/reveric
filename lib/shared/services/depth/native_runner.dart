@@ -19,14 +19,14 @@ class DepthNativeRunner {
       ? p.normalize(
           p.join(
             p.dirname(Platform.resolvedExecutable),
-            '../Resources/depth/bin/reveric-depth-native',
+            '../Resources/depth/bin/metaarc-depth-native',
           ),
         )
       : p.join(
           p.dirname(Platform.resolvedExecutable),
           'depth',
           'bin',
-          'reveric-depth-native.exe',
+          'metaarc-depth-native.exe',
         );
 
   Future<void> run({

@@ -94,7 +94,7 @@ void main() {
       () async {
         final root = await Directory.systemTemp.createTemp('panorama-service-');
         final main = app.AppDatabase.forTest(
-          NativeDatabase(File('${root.path}/reveric.sqlite')),
+          NativeDatabase(File('${root.path}/metaarc.sqlite')),
         );
         final db = NovelContentDatabase.forTest(
           NativeDatabase(File('${root.path}/content.sqlite')),

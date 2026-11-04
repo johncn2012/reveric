@@ -53,7 +53,7 @@ class _TestAppSettingsNotifier extends AppSettingsNotifier {
   @override
   Future<AppSettings> build() async {
     return AppSettings(
-      theme: AppTheme.reveric,
+      theme: AppTheme.metaarc,
       themeMode: AppThemeMode.light,
       language: 'en',
       aiSettings: AiSettings.defaults(),

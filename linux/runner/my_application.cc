@@ -73,7 +73,7 @@ static void setup_system_fonts_channel(MyApplication* self, FlView* view) {
   FlEngine* engine = fl_view_get_engine(view);
   g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
   self->system_fonts_channel = fl_method_channel_new(
-      fl_engine_get_binary_messenger(engine), "reveric/system_fonts",
+      fl_engine_get_binary_messenger(engine), "metaarc/system_fonts",
       FL_METHOD_CODEC(codec));
   fl_method_channel_set_method_call_handler(
       self->system_fonts_channel, system_fonts_method_call_cb, self, nullptr);
@@ -148,7 +148,7 @@ static void my_application_activate(GApplication* application) {
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
   setup_system_fonts_channel(self, view);
   g_autoptr(FlStandardMethodCodec) director_codec = fl_standard_method_codec_new();
-  self->director_storage_channel = fl_method_channel_new(fl_engine_get_binary_messenger(fl_view_get_engine(view)), "ai.reveric.director/storage", FL_METHOD_CODEC(director_codec));
+  self->director_storage_channel = fl_method_channel_new(fl_engine_get_binary_messenger(fl_view_get_engine(view)), "cn.metaarc.director/storage", FL_METHOD_CODEC(director_codec));
   fl_method_channel_set_method_call_handler(self->director_storage_channel, director_storage_call, nullptr, nullptr);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));

@@ -304,7 +304,7 @@ patrol:
   ios:
     bundle_id: ai.reveric.debug
   macos:
-    bundle_id: ai.reveric.debug
+    bundle_id: cn.metaarc.debug
 
 # 打包前需注释掉此配置，让 Flutter 内置 SQLite 库
 # Windows/Android 用户系统不自带 SQLite，使用 system source 会导致应用无法运行

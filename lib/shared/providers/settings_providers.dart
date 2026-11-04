@@ -47,7 +47,7 @@ part 'settings_providers.g.dart';
 final _log = AppLogger.forModule('Settings');
 
 /// 主题类型枚举
-enum AppTheme { reveric, classic, ivory }
+enum AppTheme { metaarc, classic, ivory }
 
 /// 主题模式枚举
 enum AppThemeMode { light, dark, system }
@@ -177,8 +177,8 @@ Color appBackgroundColorForTheme(
   Brightness brightness = Brightness.light,
 }) {
   final colors = switch ((theme, brightness)) {
-    (AppTheme.reveric, Brightness.dark) => RevericColors.revericDark,
-    (AppTheme.reveric, _) => RevericColors.reveric,
+    (AppTheme.metaarc, Brightness.dark) => RevericColors.revericDark,
+    (AppTheme.metaarc, _) => RevericColors.reveric,
     (AppTheme.classic, Brightness.dark) => RevericColors.classicDark,
     (AppTheme.classic, _) => RevericColors.classic,
     (AppTheme.ivory, Brightness.dark) => RevericColors.ivoryDark,
@@ -748,7 +748,7 @@ AppearanceSettingsData _appearanceSettingsDataFromAppSettings(
 ) {
   String themeToString(AppTheme theme) {
     return switch (theme) {
-      AppTheme.reveric => 'reveric',
+      AppTheme.metaarc => 'metaarc',
       AppTheme.classic => 'classic',
       AppTheme.ivory => 'ivory',
     };
@@ -1601,7 +1601,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
 
   AppTheme _parseTheme(String? value) {
     return switch (value) {
-      'reveric' => AppTheme.reveric,
+      'metaarc' || 'reveric' => AppTheme.metaarc,
       'ivory' => AppTheme.ivory,
       _ => AppTheme.classic,
     };

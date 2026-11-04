@@ -36,6 +36,6 @@ Windows 使用 `make run-windows`。账号服务的启动方式见 `server/metaa
 
 ## 署名与许可证
 
-本仓库基于 Reveric（幻界）修改，作者署名为 looplj。客户端关于页保留署名句 “Based on Reveric by looplj.”。
+本仓库基于开源项目 Reveric 修改，作者署名为 looplj。客户端关于页的署名是 “MetaArc 元弧. Based on Reveric by looplj.”，其中保留 NOTICES 要求的句子。
 
 许可证是 [GNU AGPLv3](./LICENSE)。附加条款和第三方声明见 [NOTICES](./NOTICES)。

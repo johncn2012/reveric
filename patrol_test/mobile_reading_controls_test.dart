@@ -254,5 +254,5 @@ const _batteryStateChannel = MethodChannel(
   'dev.fluttercommunity.plus/charging',
 );
 const _systemUiChannel = MethodChannel('flutter/platform', JSONMethodCodec());
-const _appSystemUiChannel = MethodChannel('reveric/system_ui');
+const _appSystemUiChannel = MethodChannel('metaarc/system_ui');
 const _pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');

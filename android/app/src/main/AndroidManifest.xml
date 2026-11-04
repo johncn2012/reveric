@@ -29,6 +29,13 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="cn.metaarc" android:host="mcp" android:path="/oauth/callback" />
+            </intent-filter>
+            <!-- 已登记的 MCP 回调仍可能使用旧 scheme。新的授权使用 cn.metaarc。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="ai.reveric" android:host="mcp" android:path="/oauth/callback" />
             </intent-filter>
             <intent-filter>

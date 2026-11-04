@@ -273,7 +273,7 @@ export interface ToolDisplay {
    */
   resultPath?: string;
   /** Package path of a reveric-ui-v1 card; requires `result`. */
-  view?: { protocol: "reveric-ui-v1"; source: string };
+  view?: { protocol: "metaarc-ui-v1" | "reveric-ui-v1"; source: string };
 }
 
 export interface ToolRegistration {

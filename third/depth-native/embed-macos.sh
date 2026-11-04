@@ -20,7 +20,7 @@ depth_identity="${EXPANDED_CODE_SIGN_IDENTITY:--}"
 if [ -z "$depth_identity" ]; then depth_identity=-; fi
 depth_sign_options=()
 if [ "$depth_identity" != - ]; then depth_sign_options=(--options runtime); fi
-for depth_file in "$depth_destination"/lib/*.dylib "$depth_destination/bin/reveric-depth-native"; do
+for depth_file in "$depth_destination"/lib/*.dylib "$depth_destination/bin/metaarc-depth-native"; do
   if [ ! -L "$depth_file" ]; then
     codesign --force --sign "$depth_identity" "${depth_sign_options[@]}" "$depth_file"
     codesign --verify --strict "$depth_file"

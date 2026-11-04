@@ -84,7 +84,7 @@ String encodeDetachedWindowPlacement({required Size size, Offset? position}) {
 class _NativeWindowChannel {
   const _NativeWindowChannel();
 
-  static const _channel = MethodChannel('reveric/window_position');
+  static const _channel = MethodChannel('metaarc/window_position');
 
   bool get isSupported => Platform.isMacOS || Platform.isWindows;
 

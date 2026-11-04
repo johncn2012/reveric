@@ -38,13 +38,13 @@ const manifest = {
     home: {
       title: "Home",
       location: "home.plugin",
-      protocol: "reveric-tsx-v1",
+      protocol: "metaarc-tsx-v1",
       source: "dist/views/home.js",
     },
     info: {
       title: "Info",
       location: "home.plugin",
-      protocol: "reveric-ui-v1",
+      protocol: "metaarc-ui-v1",
       source: "views/info.json",
       actions: [],
     },

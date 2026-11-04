@@ -122,7 +122,7 @@ export async function buildPlugin({
 
   for (const [id, page] of Object.entries(manifest.pages ?? {})) {
     const source = packagePath(page.source, `pages.${id}.source`);
-    if (page.protocol === "reveric-tsx-v1") {
+    if (page.protocol === "metaarc-tsx-v1" || page.protocol === "reveric-tsx-v1") {
       const name = /^dist\/views\/([a-z][a-z0-9-]*)\.js$/.exec(source)?.[1];
       if (!name)
         fail(`pages.${id}.source must be dist/views/<name>.js: ${source}`);

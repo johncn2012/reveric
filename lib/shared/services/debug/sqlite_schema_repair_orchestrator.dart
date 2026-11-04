@@ -15,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import '../../database/app_database.dart';
+import '../../database/database_file.dart';
 import '../../database/novel_content_database.dart';
 import '../../logger/app_logger.dart';
 import '../../utils/windows_safe_path.dart';
@@ -35,7 +36,7 @@ class SqliteSchemaRepairOrchestrator {
       await NovelContentDatabase.closeAllCached();
 
       final appSupportDir = await getApplicationSupportDirectory();
-      final appDatabasePath = p.join(appSupportDir.path, 'reveric.sqlite');
+      final appDatabasePath = await ensureAppDatabasePath(appSupportDir);
       if (!await File(appDatabasePath).exists()) {
         throw StateError('Main database file not found: $appDatabasePath');
       }

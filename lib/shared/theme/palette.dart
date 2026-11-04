@@ -4,11 +4,12 @@
 //   lib/shared/theme/reveric_theme.dart
 //   lib/shared/services/themes_orchestrator.dart
 import 'package:flutter/material.dart';
+import '../brand/identifiers.dart';
 import 'reveric_colors.dart';
 import 'reveric_theme.dart';
 
 const builtinThemePalettes = <String, (RevericThemeData, RevericThemeData)>{
-  'reveric': (RevericThemeData.reveric, RevericThemeData.revericDark),
+  'metaarc': (RevericThemeData.reveric, RevericThemeData.revericDark),
   'classic': (RevericThemeData.classic, RevericThemeData.classicDark),
   'ivory': (RevericThemeData.ivory, RevericThemeData.ivoryDark),
 };
@@ -100,7 +101,7 @@ RevericThemeData resolveThemePalette({
   required Brightness brightness,
   Map<String, String> overrides = const {},
 }) {
-  final pair = builtinThemePalettes[baseTheme];
+  final pair = builtinThemePalettes[canonicalThemeToken(baseTheme)];
   if (pair == null) {
     throw FormatException('baseTheme must name a built-in theme.');
   }

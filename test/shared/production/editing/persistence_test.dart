@@ -134,7 +134,7 @@ void main() {
     () async {
       final dir = await Directory.systemTemp.createTemp('editing-backup-');
       final schemas = await BackupDatabases.create();
-      final main = schemas.writeMain('${dir.path}/reveric.sqlite');
+      final main = schemas.writeMain('${dir.path}/metaarc.sqlite');
       insertBackupRow(main, 'assets', {
         'id': 'media/video.mp4',
         'type': 'video',

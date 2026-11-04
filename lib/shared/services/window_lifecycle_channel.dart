@@ -77,10 +77,10 @@ class WindowVisibilitySnapshot {
       'reseeded=$reseeded';
 }
 
-/// `reveric/window_lifecycle` 的封装。仅 macOS Runner 实现了该 channel。
+/// `metaarc/window_lifecycle` 的封装。仅 macOS Runner 实现了该 channel。
 class WindowLifecycleChannel {
   WindowLifecycleChannel({MethodChannel? channel})
-    : _channel = channel ?? const MethodChannel('reveric/window_lifecycle');
+    : _channel = channel ?? const MethodChannel('metaarc/window_lifecycle');
 
   final MethodChannel _channel;
 
@@ -99,7 +99,7 @@ class WindowLifecycleChannel {
     if (result == null) {
       throw PlatformException(
         code: 'empty_response',
-        message: 'reveric/window_lifecycle.$method returned null.',
+        message: 'metaarc/window_lifecycle.$method returned null.',
       );
     }
     return WindowVisibilitySnapshot.fromMap(result);

@@ -1307,7 +1307,7 @@ void main() {
       '${root.path}/novel_workspaces/work.sqlite',
     ]);
     await appDb.customStatement('VACUUM INTO ?', [
-      '${root.path}/reveric.sqlite',
+      '${root.path}/metaarc.sqlite',
     ]);
     return Directory('${root.path}/backups')..createSync();
   }
@@ -1385,7 +1385,7 @@ void main() {
               isTrue,
             );
             // Restore must replace these fields from the archive, not preserve the current row.
-            final current = sqlite.sqlite3.open('${root.path}/reveric.sqlite');
+            final current = sqlite.sqlite3.open('${root.path}/metaarc.sqlite');
             current.execute(
               "UPDATE generation_tasks SET output_url='https://current.example/file', output_hash='current-hash' WHERE id=?",
               [id],
@@ -1403,7 +1403,7 @@ void main() {
             );
             expect(restored.success, isTrue);
             final restoredDb = sqlite.sqlite3.open(
-              '${root.path}/reveric.sqlite',
+              '${root.path}/metaarc.sqlite',
               mode: sqlite.OpenMode.readOnly,
             );
             try {
@@ -1506,7 +1506,7 @@ void main() {
           99,
         ]);
         final restoredDb = sqlite.sqlite3.open(
-          '${root.path}/reveric.sqlite',
+          '${root.path}/metaarc.sqlite',
           mode: sqlite.OpenMode.readOnly,
         );
         try {

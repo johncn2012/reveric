@@ -14,7 +14,7 @@ final systemUiServiceProvider = Provider<SystemUiService>((ref) {
 class SystemUiService {
   const SystemUiService();
 
-  static const MethodChannel _channel = MethodChannel('reveric/system_ui');
+  static const MethodChannel _channel = MethodChannel('metaarc/system_ui');
 
   Future<void> enterFullscreen() {
     return _setFullscreen(enabled: true);

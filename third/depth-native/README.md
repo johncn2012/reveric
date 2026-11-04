@@ -1,6 +1,6 @@
 # Reveric 深度原生模块
 
-此模块提供 `reveric-depth-native` 独立任务进程、ONNX Runtime 构建打包及性能验证工具。
+此模块提供 `metaarc-depth-native` 独立任务进程、ONNX Runtime 构建打包及性能验证工具。
 上游来源、版本和本地改动见 [depth-native_UPSTREAM.md](../depth-native_UPSTREAM.md)。
 模型导出与 Hugging Face 发布由独立的 `video-depth-anything-small-onnx` 仓库维护。
 
@@ -29,7 +29,7 @@
 - 模型放应用数据目录的 `cache/modles/`，每次复用前检查大小和 SHA-256；任务记录和临时文件放 `cache/depth/`。
 - 默认从 [looplj/video-depth-anything-small-onnx](https://huggingface.co/looplj/video-depth-anything-small-onnx) 匿名下载模型，固定 revision 为 `ff810849333df46d37ea18a885fc11689661fe96`，文件名为 `video-depth-anything-small-dynamic-fp32.onnx`。
 - `REVERIC_DEPTH_MODEL_SOURCE` 仍可通过 Dart define 或环境变量覆盖为本地模型或其他 HTTPS 来源；HTTP 只用于本机测试服务器。下载后必须通过相同的大小与 SHA-256 校验。
-- 原生程序随应用打包：macOS 为 `Contents/Resources/depth/bin/reveric-depth-native`，Windows 为应用目录下的 `depth/bin/reveric-depth-native.exe`。
+- 原生程序随应用打包：macOS 为 `Contents/Resources/depth/bin/metaarc-depth-native`，Windows 为应用目录下的 `depth/bin/metaarc-depth-native.exe`。
 - 开发时可用 `REVERIC_DEPTH_EXECUTABLE` 指定运行程序。应用运行时不依赖 Python、PyTorch 或模型导出工具。
 - FFmpegKit 处理解码和编码，保留旋转与 VFR 时间戳；结果恢复显示尺寸，输出无音轨 H.264 MP4。成功后入素材库并挂接派生节点，来源变化时仍保留素材。
 - 任务串行运行，每个任务创建一个 Session，在窗口间复用。关闭弹窗或切换页面不停止任务；取消和应用退出会停止处理。
@@ -69,7 +69,7 @@ Android 不注册此能力，也不打包这些原生文件。Windows 实际构�
 - 输出是相对逆深度，不是米制距离或人体骨骼。灰度预览使用全片统一范围。
 
 ```text
-reveric-depth-native [--job] MODEL RGB FLOATS GRAY WIDTH HEIGHT FRAMES PROVIDER
+metaarc-depth-native [--job] MODEL RGB FLOATS GRAY WIDTH HEIGHT FRAMES PROVIDER
 ```
 
 `RGB`、`FLOATS`、`GRAY` 分别为原始 RGB24、float32 深度、8 位灰度文件。
@@ -108,7 +108,7 @@ DEPTH_MODEL=/path/to/model.onnx \
   bash third/depth-native/run-native.sh build/depth-native/benchmark /path/to/video.mp4 448 252 48
 ```
 
-程序默认取 `build/depth-native/native-macos/reveric-depth-native`，可用 `DEPTH_NATIVE_BIN` 覆盖。
+程序默认取 `build/depth-native/native-macos/metaarc-depth-native`，可用 `DEPTH_NATIVE_BIN` 覆盖。
 运行日志含 `/usr/bin/time -l` 内存测量，输入、中间深度及对比视频都写入指定目录。
 更长任务可用 `bounded-run.py LOG COMMAND ...`，超过 6 GiB 采样物理内存或 15 分钟停止。
 

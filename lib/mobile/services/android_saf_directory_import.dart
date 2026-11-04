@@ -13,7 +13,7 @@ import '../../shared/logger/app_logger.dart';
 
 final _log = AppLogger.forModule('AndroidSafDirectoryImport');
 
-const _channel = MethodChannel('reveric/android_directory_import');
+const _channel = MethodChannel('metaarc/android_directory_import');
 
 const androidDocumentImportExtensions = <String>{'txt', 'md', 'csv'};
 

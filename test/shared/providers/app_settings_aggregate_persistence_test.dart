@@ -277,7 +277,7 @@ void main() {
       expect(reloaded.themeMode, AppThemeMode.dark);
       await container
           .read(appSettingsProvider.notifier)
-          .setTheme(AppTheme.reveric);
+          .setTheme(AppTheme.metaarc);
       expect(
         container.read(appSettingsProvider).requireValue.customTheme,
         isNull,
@@ -303,11 +303,11 @@ void main() {
     );
     await container
         .read(appSettingsProvider.notifier)
-        .setTheme(AppTheme.reveric);
+        .setTheme(AppTheme.metaarc);
     container.invalidate(appSettingsProvider);
     expect(
       (await container.read(appSettingsProvider.future)).theme,
-      AppTheme.reveric,
+      AppTheme.metaarc,
     );
   });
 

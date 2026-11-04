@@ -8,6 +8,7 @@ import 'package:mcp_dart/mcp_dart.dart' show JsonSchema;
 import 'package:mcp_dart/src/shared/json_schema/json_schema_validator.dart'
     show compileJsonSchemaValidator;
 import '../../agent/agent_tool_dispatcher.dart';
+import '../../brand/identifiers.dart';
 import '../../models/plugin/text.dart';
 
 class PluginTool {
@@ -40,7 +41,7 @@ class PluginTool {
       if (display.containsKey('view')) {
         final view = display['view'];
         if (view is! Map<String, dynamic> ||
-            view['protocol'] != 'reveric-ui-v1' ||
+            !isPluginUiProtocol(view['protocol']) ||
             view['source'] is! String) {
           throw const FormatException('Invalid display.view');
         }

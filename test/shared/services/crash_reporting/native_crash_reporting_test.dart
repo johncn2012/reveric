@@ -153,7 +153,7 @@ void main() {
   test(
     'configure passes the marker session token to the native handler',
     () async {
-      const channel = MethodChannel('reveric/crash_reporting');
+      const channel = MethodChannel('metaarc/crash_reporting');
       final marker = File('${tempDir.path}/session_running.marker')
         ..writeAsStringSync(jsonEncode({'session_token': '123456-42'}));
       MethodCall? received;

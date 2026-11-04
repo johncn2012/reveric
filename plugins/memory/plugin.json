@@ -1,5 +1,5 @@
 {
-  "id": "reveric.memory",
+  "id": "metaarc.memory",
   "name": {
     "zh-CN": "示例：记忆系统",
     "en": "Example: Memory"
@@ -46,7 +46,7 @@
         "en": "Example: Memory"
       },
       "location": "home.plugin",
-      "protocol": "reveric-tsx-v1",
+      "protocol": "metaarc-tsx-v1",
       "source": "dist/views/manage.js"
     }
   },

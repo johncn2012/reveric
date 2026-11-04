@@ -36,6 +36,6 @@ On Windows, use `make run-windows`. See `server/metaarc/README.md` for the accou
 
 ## Attribution and license
 
-This repository is a modified version of Reveric. The author attribution is looplj. The client About page keeps the sentence “Based on Reveric by looplj.�?
+This repository is a modified version of the open-source project Reveric. The author attribution is looplj. The client About page shows “MetaArc 元弧. Based on Reveric by looplj.”, which keeps the sentence required by NOTICES.
 
 The license is [GNU AGPLv3](./LICENSE). Additional terms and third-party notices are in [NOTICES](./NOTICES).

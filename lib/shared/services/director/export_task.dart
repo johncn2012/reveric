@@ -191,7 +191,7 @@ class ExportTaskOrchestrator extends ChangeNotifier {
       state = OutputState.packaging;
       notifyListeners();
       final manifest = {
-        'format': 'reveric.director.frames',
+        'format': 'metaarc.director.frames',
         'version': 1,
         'operationId': id,
         'documentId': document.id,

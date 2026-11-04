@@ -10,7 +10,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 class SystemFontService {
-  static const MethodChannel _channel = MethodChannel('reveric/system_fonts');
+  static const MethodChannel _channel = MethodChannel('metaarc/system_fonts');
 
   Future<List<String>> listFontFamilies() async {
     if (!Platform.isMacOS && !Platform.isWindows && !Platform.isLinux) {

@@ -71,6 +71,9 @@ Name: "launchAtStartup"; Description: "{cm:AutoStartApp}"; GroupDescription: "{c
 Source: "..\..\windows\packaging\exe\vc_redist.x64.exe"; Flags: dontcopy
 Source: "{{SOURCE_DIR}}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[InstallDelete]
+Type: files; Name: "{app}\reveric.exe"
+
 [Icons]
 Name: "{autoprograms}\\MetaArc"; Filename: "{app}\\{{EXECUTABLE_NAME}}"
 Name: "{autodesktop}\\MetaArc"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; Tasks: desktopicon

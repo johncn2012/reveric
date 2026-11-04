@@ -149,7 +149,9 @@ Map<String, dynamic> canvasExportSchema() {
           },
         ];
   final schema = _object({
-    'format': {'const': 'reveric.canvas'},
+    'format': {
+      'enum': ['metaarc.canvas', 'reveric.canvas'],
+    },
     'format_version': {'const': 1},
     'exported_at': {'type': 'string', 'format': 'date-time'},
     'source': _ref('source'),

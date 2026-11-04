@@ -1,5 +1,5 @@
 {
-  "protocol": "reveric-tsx-v1",
+  "protocol": "metaarc-tsx-v1",
   "common": {
     "testId": {
       "type": "string"

@@ -9,7 +9,7 @@ import 'package:reveric/mobile/services/android_saf_directory_import.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const channel = MethodChannel('reveric/android_directory_import');
+  const channel = MethodChannel('metaarc/android_directory_import');
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

@@ -194,7 +194,7 @@ class LifecycleVisibilityGuard with WidgetsBindingObserver {
         return false;
       } on MissingPluginException catch (error, stackTrace) {
         _log.error(
-          'reveric/window_lifecycle is not implemented on this platform; '
+          'metaarc/window_lifecycle is not implemented on this platform; '
           'the guard should not have been installed',
           error: error,
           stackTrace: stackTrace,
@@ -280,7 +280,7 @@ class LifecycleVisibilityGuard with WidgetsBindingObserver {
       return;
     } on MissingPluginException catch (error, stackTrace) {
       _log.error(
-        'reveric/window_lifecycle is not implemented on this platform; '
+        'metaarc/window_lifecycle is not implemented on this platform; '
         'the guard should not have been installed',
         error: error,
         stackTrace: stackTrace,

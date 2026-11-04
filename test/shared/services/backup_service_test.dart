@@ -133,7 +133,7 @@ void main() {
       ),
     ]);
     final sourceDb = _databases.writeMain(
-      p.join(source.path, 'reveric.sqlite'),
+      p.join(source.path, 'metaarc.sqlite'),
     );
     insertBackupRow(sourceDb, 'app_settings', {
       'key': McpSettings.key,
@@ -141,7 +141,7 @@ void main() {
     });
     sourceDb.close();
     final current = _databases.writeMain(
-      p.join(appSupportDir.path, 'reveric.sqlite'),
+      p.join(appSupportDir.path, 'metaarc.sqlite'),
     );
     current.close();
     final result = await BackupService().restoreFromZip(
@@ -150,7 +150,7 @@ void main() {
     );
     expect(result.success, true, reason: '${result.failureReason}');
     final restoredDb = sqlite3.open(
-      p.join(appSupportDir.path, 'reveric.sqlite'),
+      p.join(appSupportDir.path, 'metaarc.sqlite'),
     );
     try {
       final value =
@@ -176,7 +176,7 @@ void main() {
         'work': (title: 'Work', marker: 'plugin snapshot'),
       });
       final appDatabase = AppDatabase.forTest(
-        NativeDatabase(File(p.join(appSupportDir.path, 'reveric.sqlite'))),
+        NativeDatabase(File(p.join(appSupportDir.path, 'metaarc.sqlite'))),
       );
       final host = PluginHostService(
         dao: appDatabase.pluginDao,
@@ -311,7 +311,7 @@ void main() {
         'work': (title: 'Work', marker: 'current'),
       });
       final database = AppDatabase.forTest(
-        NativeDatabase(File(p.join(appSupportDir.path, 'reveric.sqlite'))),
+        NativeDatabase(File(p.join(appSupportDir.path, 'metaarc.sqlite'))),
       );
       final host = _CancellingPluginHost(database, appSupportDir);
       var beforeFiles = false;
@@ -788,7 +788,7 @@ void main() {
       ..createSync();
     _writeLibrary(source, {'work': (title: 'Work', marker: 'backup')});
     _writeLibrary(appSupportDir, {'work': (title: 'Work', marker: 'current')});
-    final sourceDb = sqlite3.open(p.join(source.path, 'reveric.sqlite'));
+    final sourceDb = sqlite3.open(p.join(source.path, 'metaarc.sqlite'));
     insertBackupRow(sourceDb, 'assets', {
       'id': 'image',
       'type': 'image',
@@ -808,7 +808,7 @@ void main() {
       novelIds: {'work'},
       onBeforeFileRestore: () async {
         final target = sqlite3.open(
-          p.join(appSupportDir.path, 'reveric.sqlite'),
+          p.join(appSupportDir.path, 'metaarc.sqlite'),
         );
         target.execute(
           "CREATE TRIGGER fail_restore BEFORE INSERT ON assets BEGIN SELECT RAISE(FAIL, 'test restore failure'); END",
@@ -861,7 +861,7 @@ void main() {
               ..createSync();
             _writeLibrary(source, {'work': (title: 'Work', marker: 'backup')});
             final relative = main
-                ? 'reveric.sqlite'
+                ? 'metaarc.sqlite'
                 : 'novel_workspaces/work.sqlite';
             final db = sqlite3.open(p.join(source.path, relative));
             final supported = main
@@ -872,7 +872,7 @@ void main() {
             if (delta != 0) {
               // A different schema must never reach current JSON/table readers.
               final futureDb = sqlite3.open(
-                p.join(source.path, 'reveric.sqlite'),
+                p.join(source.path, 'metaarc.sqlite'),
               );
               futureDb.execute('DROP TABLE generation_tasks');
               futureDb.execute(
@@ -884,7 +884,7 @@ void main() {
             _writeLibrary(appSupportDir, {
               'work': (title: 'Work', marker: 'current'),
             });
-            final current = File(p.join(appSupportDir.path, 'reveric.sqlite'));
+            final current = File(p.join(appSupportDir.path, 'metaarc.sqlite'));
             final before = current.readAsBytesSync();
             var hookCalled = false;
             final service = BackupService();
@@ -1113,7 +1113,7 @@ void main() {
   );
 
   test('backs up workspace images, director outputs and user avatars', () async {
-    _createSqlite(p.join(appSupportDir.path, 'reveric.sqlite'));
+    _createSqlite(p.join(appSupportDir.path, 'metaarc.sqlite'));
 
     final workspacesDir = Directory(
       p.join(appSupportDir.path, 'novel_workspaces'),
@@ -1255,7 +1255,7 @@ void main() {
   );
 
   test('fails before backup when output directory is unavailable', () async {
-    _createSqlite(p.join(appSupportDir.path, 'reveric.sqlite'));
+    _createSqlite(p.join(appSupportDir.path, 'metaarc.sqlite'));
 
     final result = await BackupService().backupToZip(
       outputDirectory: p.join(tempRoot.path, 'missing'),
@@ -1269,7 +1269,7 @@ void main() {
   });
 
   test('fails when main database is not readable', () async {
-    final sqlitePath = p.join(appSupportDir.path, 'reveric.sqlite');
+    final sqlitePath = p.join(appSupportDir.path, 'metaarc.sqlite');
     _createSqlite(sqlitePath);
     // Remove read permission — sqlite3.open in read-only mode will reject it
     await Process.run('chmod', ['000', sqlitePath]);
@@ -1374,7 +1374,7 @@ void main() {
         _writeLibrary(appSupportDir, {
           'novel-a': (title: 'Novel A', marker: 'unchanged'),
         });
-        final db = sqlite3.open(p.join(appSupportDir.path, 'reveric.sqlite'));
+        final db = sqlite3.open(p.join(appSupportDir.path, 'metaarc.sqlite'));
         try {
           db.execute('UPDATE novels SET content_database_path = ?', [
             storedPath,
@@ -1515,7 +1515,7 @@ void main() {
           _writeLibrary(appSupportDir, {
             'work': (title: 'Work', marker: 'backup'),
           });
-          final db = sqlite3.open(p.join(appSupportDir.path, 'reveric.sqlite'));
+          final db = sqlite3.open(p.join(appSupportDir.path, 'metaarc.sqlite'));
           db.execute(
             'UPDATE novels SET content_database_path = ?, cover_asset_id = ?',
             ['novel_workspaces${separator}work.sqlite', 'cover'],
@@ -1564,7 +1564,7 @@ void main() {
             [1, 2, 3],
           );
           final main = sqlite3.open(
-            p.join(appSupportDir.path, 'reveric.sqlite'),
+            p.join(appSupportDir.path, 'metaarc.sqlite'),
           );
           expect(
             main
@@ -1591,7 +1591,7 @@ void main() {
           'work': (title: 'Work', marker: 'backup'),
           'other': (title: 'Other', marker: 'other backup'),
         });
-        final main = sqlite3.open(p.join(appSupportDir.path, 'reveric.sqlite'));
+        final main = sqlite3.open(p.join(appSupportDir.path, 'metaarc.sqlite'));
         final expectedIds = {
           'avatar',
           'character-photo',
@@ -1731,7 +1731,7 @@ void main() {
         );
         expect(restored.success, isTrue, reason: '${restored.failureReason}');
         final restoredMain = sqlite3.open(
-          p.join(appSupportDir.path, 'reveric.sqlite'),
+          p.join(appSupportDir.path, 'metaarc.sqlite'),
         );
         expect(
           restoredMain
@@ -1829,7 +1829,7 @@ void main() {
   for (final missing in ['assets', 'draft']) {
     test('restore does not tolerate missing current $missing schema', () async {
       _writeLibrary(appSupportDir, {'work': (title: 'Work', marker: 'backup')});
-      final db = sqlite3.open(p.join(appSupportDir.path, 'reveric.sqlite'));
+      final db = sqlite3.open(p.join(appSupportDir.path, 'metaarc.sqlite'));
       if (missing == 'assets') {
         db.execute('ALTER TABLE assets RENAME TO image_assets');
       } else {
@@ -1868,7 +1868,7 @@ void _writeLibrary(
   Map<String, ({String title, String marker})> novels, {
   Set<String>? draftNovelIds,
 }) {
-  final mainDatabase = File(p.join(appSupportDir.path, 'reveric.sqlite'));
+  final mainDatabase = File(p.join(appSupportDir.path, 'metaarc.sqlite'));
   if (mainDatabase.existsSync()) {
     mainDatabase.deleteSync();
   }
@@ -1912,7 +1912,7 @@ void _writeContentDatabase(String path, String marker) {
 }
 
 Map<String, String> _readLibraryTitles(Directory appSupportDir) {
-  final db = sqlite3.open(p.join(appSupportDir.path, 'reveric.sqlite'));
+  final db = sqlite3.open(p.join(appSupportDir.path, 'metaarc.sqlite'));
   try {
     return {
       for (final row in db.select('SELECT id, title FROM novels'))

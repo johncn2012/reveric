@@ -90,7 +90,7 @@ void main() {
             platform: 'macos',
           ),
         ))!;
-        // 只有内置的 reveric.web 首次默认启用，测试插件需要显式启用。
+        // 只有内置的 metaarc.web 首次默认启用，测试插件需要显式启用。
         await tester.runAsync(() => host.setEnabled('test.web', true));
         addTearDown(() async {
           await host.dispose();

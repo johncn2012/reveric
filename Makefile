@@ -144,24 +144,24 @@ build-macos: ## 构建 macOS 客户端 (debug)
 	@bash third/fjs/tool/build_runtime.sh
 	@bash third/fvp/macos/setup.sh
 	@fvm flutter build macos --debug
-	@echo "✅ macOS 构建完成: $(BUILD_DIR)/macos/Build/Products/Debug/Reveric.app"
+	@echo "✅ macOS 构建完成: $(BUILD_DIR)/macos/Build/Products/Debug/MetaArc.app"
 
 build-macos-release: ## 构建 macOS 客户端 (release)
 	@echo "🍎 构建 macOS 客户端 (release)..."
 	@bash third/fjs/tool/build_runtime.sh
 	@bash third/fvp/macos/setup.sh
 	@fvm flutter build macos --release
-	@echo "✅ macOS 构建完成: $(BUILD_DIR)/macos/Build/Products/Release/Reveric.app"
+	@echo "✅ macOS 构建完成: $(BUILD_DIR)/macos/Build/Products/Release/MetaArc.app"
 
 build-windows: ## 构建 Windows 客户端 (debug)
 	@echo "🪟 构建 Windows 客户端 (debug)..."
 	@fvm flutter build windows --debug
-	@echo "✅ Windows 构建完成: $(BUILD_DIR)/windows/x64/runner/Debug/reveric.exe"
+	@echo "✅ Windows 构建完成: $(BUILD_DIR)/windows/x64/runner/Debug/MetaArc.exe"
 
 build-windows-release: ## 构建 Windows 客户端 (release)
 	@echo "🪟 构建 Windows 客户端 (release)..."
 	@fvm flutter build windows --release
-	@echo "✅ Windows 构建完成: $(BUILD_DIR)/windows/x64/runner/Release/reveric.exe"
+	@echo "✅ Windows 构建完成: $(BUILD_DIR)/windows/x64/runner/Release/MetaArc.exe"
 
 build-linux: ## 构建 Linux 客户端 (debug)
 	@echo "🐧 构建 Linux 客户端 (debug)..."

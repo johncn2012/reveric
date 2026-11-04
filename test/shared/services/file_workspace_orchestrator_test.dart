@@ -68,7 +68,7 @@ void main() {
         await write(support, name, name.endsWith('empty.txt') ? '' : name);
       }
       await Directory(p.join(support.path, 'file_workspaces/empty')).create();
-      await write(support, 'reveric.sqlite', 'database stays');
+      await write(support, 'metaarc.sqlite', 'database stays');
       final legacy = await write(support, 'avatars/a.png', 'avatar stays');
 
       expect(await orchestrator.prepare(destination.path), destination.path);
@@ -94,11 +94,11 @@ void main() {
         true,
       );
       expect(
-        RevericPaths.resolveDatabasePath('reveric.sqlite'),
-        p.join(support.path, 'reveric.sqlite'),
+        RevericPaths.resolveDatabasePath('metaarc.sqlite'),
+        p.join(support.path, 'metaarc.sqlite'),
       );
       expect(
-        await File(p.join(destination.path, 'reveric.sqlite')).exists(),
+        await File(p.join(destination.path, 'metaarc.sqlite')).exists(),
         false,
       );
       expect(RevericPaths.resolveStored('avatars/a.png'), legacy.path);

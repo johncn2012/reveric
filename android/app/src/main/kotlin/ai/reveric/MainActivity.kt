@@ -24,7 +24,7 @@ import java.util.UUID
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ai.reveric.director/storage").setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "cn.metaarc.director/storage").setMethodCallHandler { call, result ->
             if (call.method != "availableBytes") { result.notImplemented(); return@setMethodCallHandler }
             try {
                 val path = call.argument<String>("path") ?: throw IllegalArgumentException("path")
@@ -511,9 +511,9 @@ class MainActivity : FlutterActivity() {
     }
 
     companion object {
-        private const val UPDATE_CHANNEL = "reveric/update"
-        private const val SYSTEM_UI_CHANNEL = "reveric/system_ui"
-        private const val DIRECTORY_IMPORT_CHANNEL = "reveric/android_directory_import"
+        private const val UPDATE_CHANNEL = "metaarc/update"
+        private const val SYSTEM_UI_CHANNEL = "metaarc/system_ui"
+        private const val DIRECTORY_IMPORT_CHANNEL = "metaarc/android_directory_import"
         private const val DIRECTORY_IMPORT_REQUEST_CODE = 224
         private const val DIRECTORY_EXPORT_REQUEST_CODE = 225
         private const val MAX_IMPORT_FILES = 4096

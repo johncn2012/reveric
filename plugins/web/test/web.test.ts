@@ -29,7 +29,7 @@ function harness(
   const unavailable = async () => {
     throw new Error("M2 API unavailable");
   };
-  const plugin = { id: "reveric.web", version: "1.0.0" };
+  const plugin = { id: "metaarc.web", version: "1.0.0" };
   const log = {
     info: (...args: unknown[]) => {
       logs.push(args);

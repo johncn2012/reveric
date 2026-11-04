@@ -3,12 +3,12 @@
 #pragma code_page(65001)
 #include "resource.h"
 
-// Deferred application id. File properties show CompanyName MetaArc; this macro
-// is not written into the version resource.
+// Application id for native code. File properties show CompanyName MetaArc;
+// this macro is not written into the version resource.
 #ifdef _DEBUG
-#define APPLICATION_ID "ai.reveric.debug"
+#define APPLICATION_ID "cn.metaarc.debug"
 #else
-#define APPLICATION_ID "ai.reveric"
+#define APPLICATION_ID "cn.metaarc"
 #endif
 
 #define APSTUDIO_READONLY_SYMBOLS

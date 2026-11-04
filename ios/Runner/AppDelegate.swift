@@ -13,7 +13,7 @@ import UIKit
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DirectorStorage") else { return }
-    let channel = FlutterMethodChannel(name: "ai.reveric.director/storage", binaryMessenger: registrar.messenger())
+    let channel = FlutterMethodChannel(name: "cn.metaarc.director/storage", binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { call, result in
       guard call.method == "availableBytes", let args = call.arguments as? [String: Any], let path = args["path"] as? String else { result(FlutterMethodNotImplemented); return }
       do {

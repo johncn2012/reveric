@@ -12,6 +12,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
+import '../../brand/identifiers.dart';
+import '../../database/database_file.dart';
 import '../../database/type_converters.dart';
 import '../../models/generation/task.dart';
 import '../../models/production/input.dart';
@@ -47,7 +49,8 @@ SelectedMediaBackup collectSelectedMedia({
   Iterable<String> coverAssetIds = const [],
 }) {
   final database = sqlite3.open(
-    p.join(backup.path, 'reveric.sqlite'),
+    existingAppDatabasePath(backup.path) ??
+        p.join(backup.path, appDatabaseFileName),
     mode: OpenMode.readOnly,
   );
   final rows = <String, List<Map<String, Object?>>>{};

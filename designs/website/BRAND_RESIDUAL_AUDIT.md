@@ -1,6 +1,38 @@
 # MetaArc brand residual audit
 
-The scan below is the pre-fix inventory at `main` @ `ff32319924057ca77adc910111be0ad2d9922add`. The status table is what this branch changed. Deferred P2 identifiers were not renamed. Appendix A is the original file index, not a second scan.
+The scan below is the pre-fix inventory at `main` @ `ff32319924057ca77adc910111be0ad2d9922add`. Appendix A is that original file index, not a second scan. The status table records PR #16. The follow-up section records the identifier rename after that PR.
+
+## Follow-up identifiers
+
+| Item | Result |
+| --- | --- |
+| macOS bundle id | `cn.metaarc` / `cn.metaarc.debug`. First launch copies `reveric.sqlite` (and the rest of that support directory, when the new directory has no database) from `ai.reveric` or `ai.reveric.debug`. The old files stay. |
+| Windows exe | `MetaArc.exe` (`BINARY_NAME`). The installer deletes a leftover `reveric.exe` in the same folder. |
+| Windows `Runner.rc` `APPLICATION_ID` | `cn.metaarc` / `cn.metaarc.debug`. Still not written into the version resource. CompanyName stays MetaArc. |
+| Windows toast AUMID | `cn.metaarc` / `cn.metaarc.debug`. The notification GUIDs are unchanged. |
+| SQLite file | `metaarc.sqlite`. Same-directory `reveric.sqlite` is copied, including the `-wal` file, and not deleted. A backup zip that still contains `reveric.sqlite` is renamed inside the temp extract before restore. |
+| Windows data directory from the old company name | If the new support directory has no database, also look at `%APPDATA%\ai.reveric\MetaArc` (and the debug company name in debug builds). That covers the CompanyName change from `ai.reveric` to MetaArc. |
+| Method channels | `metaarc/...` and `cn.metaarc.director/storage`, changed together in Dart and the native shells. |
+| OAuth callback | New flows use `cn.metaarc://mcp/oauth/callback`. Android still registers `ai.reveric://mcp/oauth/callback`, and the handler accepts both. |
+| Bundled plugin ids | `metaarc.deepseek`, `metaarc.memory`, `metaarc.web`. Asset folder names stay `assets/plugins/reveric.*`. Startup rewrites registry, storage, secrets, permissions, tasks, and `plugin_install.*` when the new id is absent, and renames `plugins/<old-id>` and `plugin_data/<old-id>`. |
+| Plugin protocols | New manifests use `metaarc-tsx-v1` / `metaarc-ui-v1`. Readers still accept `reveric-tsx-v1` / `reveric-ui-v1`. The compiled view global stays `__revericView`. |
+| Document formats | New writes use `metaarc.canvas`, `metaarc.director`, `metaarc.director.frames`, `metaarc.editing`. Readers still accept the `reveric.*` ids. |
+| Theme token | Stored value and `AppTheme.metaarc` are `metaarc`. `reveric` and `builtin:reveric` still resolve to the same palette. The palette list no longer exposes a second `reveric` entry. |
+| Depth helper | Build and lookup name is `metaarc-depth-native` / `metaarc-depth-native.exe`. No binary is committed; the next native build produces that name. |
+| Linux binary / GTK id | `metaarc` / `cn.metaarc` (debug suffix unchanged). Linux is not a shipping target; the id matches the desktop rename. |
+| Attribution | About line is `MetaArc 元弧. Based on Reveric by looplj.` The site footer is `开源改编 · Reveric（AGPL-3.0）。Based on Reveric by looplj.` with the upstream link kept. NOTICES still requires that English sentence, so it stays inside the line. |
+| Diagnostics upload | `diagnosticsBaseUrl` is `https://diagnostics.metaarc.com.cn`. Wrangler name is `metaarc-diagnostics`. R2 bucket stays `reveric-diagnosis`. |
+| `brand_loader` goldens | The loader already paints the L1 arc. This environment has no Flutter SDK, so the four PNGs under `test/shared/widgets/goldens/` were not regenerated. Regenerate on a machine with the repo Flutter SDK: `fvm flutter test test/shared/widgets/brand_loader_test.dart --update-goldens`. |
+
+### BLOCKED
+
+| Item | Why it stays |
+| --- | --- |
+| Android `applicationId` / `namespace` | Still `ai.reveric` / `ai.reveric.debug`. A new application id is a different app. The new package cannot read the old private directory, so there is no in-app copy of the database. Patrol's Android package name stays `ai.reveric.debug`. |
+| iOS bundle id | Still `ai.reveric` / `ai.reveric.debug`. The iOS container is sandboxed; the new bundle cannot read the old one. Patrol's iOS bundle id stays `ai.reveric.debug`. |
+| Inno `app_id` | Stays `ai.reveric` on purpose. Changing it would install a second copy beside the existing setup instead of replacing it. The exe inside that setup is `MetaArc.exe`. |
+| Dart package name | Stays `reveric`. `package:reveric/` is the library import, not the installed application id. Renaming it rewrites every import and does not move user data. |
+| Plugin SDK npm name and CLI | Stays `reveric-plugin-sdk` / `reveric-plugin`. That is the package name plugin authors install. The in-app plugin ids are the `metaarc.*` change above. |
 
 ## Status
 
@@ -10,18 +42,18 @@ The scan below is the pre-fix inventory at `main` @ `ff32319924057ca77adc910111b
 | Agent prompts (`assistant`, `explorer`, `review`, `style_polish`, `writer`) | FIXED | Product name is MetaArc 元弧. No other prompt file named Reveric. |
 | Object-storage default prefix and connection probe | FIXED | `metaarc/references`, `.metaarc-connection-check`, body `metaarc`. |
 | Volcengine asset group | FIXED | `metaarc`. |
-| Diagnostics host | FIXED | No MetaArc diagnostics host is live in this repo. `diagnosticsBaseUrl` is empty and the About upload block is hidden, so the client does not call `diagnostics.reveric.app`. Worker route pattern is `diagnostics.metaarc.com.cn`. Binding that hostname is a manual Cloudflare step. The client stays empty until the host answers. R2 bucket name is unchanged. |
+| Diagnostics host | FIXED | `diagnosticsBaseUrl` is `https://diagnostics.metaarc.com.cn`. About upload posts to `/v1/diagnostics`. Wrangler Worker name is `metaarc-diagnostics`. Route is `diagnostics.metaarc.com.cn`. R2 bucket name stays `reveric-diagnosis`. |
 | Skills catalog URL | FIXED | Marketplace loads `https://raw.githubusercontent.com/johncn2012/skills/main/catalog.json` from https://github.com/johncn2012/skills . User-Agent stays `MetaArc-Skills`. Metaso query stays `?s=MetaArc`. |
 | Metaso referral | FIXED | `?s=MetaArc`. |
 | GitHub issue templates | FIXED | MetaArc 元弧. Links go to `github.com/johncn2012/MetaArc`. |
 | `site/static` sitemap and robots | FIXED | `https://metaarc.com.cn/`. |
-| Cloudflare Pages project | FIXED in config | Workflows use `metaarc-site`. Creating or renaming the Pages project is manual; git does not rename `reveric-site`. |
+| Cloudflare Pages project | FIXED | Workflows deploy `site/dist` with `--project-name=metaarc-site`. The Pages project `metaarc-site` exists. |
 | Design-kit rail, lockup, mark, page titles | FIXED | NavRail and mock author say MetaArc 元弧. `Mark` draws the L1 arc. Stacked lockup PNGs use that arc plus the MetaArc wordmark. Theme **token** stays `reveric`. |
-| Windows CompanyName | FIXED | Version resource CompanyName is MetaArc. `APPLICATION_ID` macro `ai.reveric` remains in `Runner.rc` and is not shown. Chinese product strings use MetaArc 元弧. |
-| Chinese theme label | FIXED | Display string is MetaArc 元弧. Saved value `reveric` is still DEFERRED_P2. |
-| Attribution | KEPT | About sentence, site footer 「改编自 Reveric」, `NOTICES`, and the README origin line stay. |
+| Windows CompanyName | FIXED | Version resource CompanyName is MetaArc. `APPLICATION_ID` is now `cn.metaarc` / `cn.metaarc.debug` and is still not shown. Chinese product strings use MetaArc 元弧. The on-disk exe is `MetaArc.exe`. |
+| Chinese theme label | FIXED | Display string is MetaArc 元弧. Saved token is now `metaarc`; `reveric` still loads the same palette. See the follow-up section. |
+| Attribution | UPDATED | About and site footer credit MetaArc 元弧 and keep the required sentence `Based on Reveric by looplj.` `NOTICES` is unchanged. |
 
-DEFERRED_P2 families 1–6 and 8–18 are unchanged. Family 7’s **display** string is no longer the application id; the id macro itself is still deferred.
+The follow-up section is the current state of those identifier families. The inventory below is the pre-rename scan.
 
 Scanned tree: `main` @ `ff32319924057ca77adc910111be0ad2d9922add` (matches `origin/main` at audit time).
 
@@ -103,7 +135,7 @@ Severity: **high**. This is the leftover that contradicts “old ribbon is gone 
 
 `site/build.mjs` copies `site/static/` into `site/dist/`, so a static-site build still publishes the `reveric.app` sitemap. `server/metaarc/public/` does **not** contain that sitemap. See the website section.
 
-Worker name `reveric-diagnostics` and R2 bucket `reveric-diagnosis` (`wrangler.jsonc`, `package.json`) are private infrastructure names next to the public host. They are recorded under DEV_ONLY, beside the host row above.
+The pre-fix Worker name was `reveric-diagnostics`. Wrangler `name` is now `metaarc-diagnostics`. The npm package name in `package.json` and the R2 bucket `reveric-diagnosis` are unchanged.
 
 ## Brand-form notes
 
@@ -117,7 +149,7 @@ Not Reveric hits. Recorded because the lock is 「MetaArc 元弧」.
 
 ## 2. DEFERRED_P2
 
-18 families. Renaming them would split installed apps, databases, plugin ids, or on-disk formats. Listed because they still say Reveric. Not proposed in this PR.
+Historical list from the first audit. The follow-up section says which families were renamed, which still read the old value, and which stay blocked.
 
 Windows file properties show `CompanyName` = `ai.reveric` (`Runner.rc`). That is the deferred application id leaking into a properties sheet. The product name on that same sheet is already MetaArc. `OriginalFilename` says `MetaArc.exe` while CMake `BINARY_NAME` is `reveric`, so the file on disk is `reveric.exe`.
 
@@ -182,7 +214,7 @@ CI download artifact in `.github/workflows/build.yaml` is `MetaArc-<version>-win
 
 ## 3. FALSE_POSITIVE
 
-Kept on purpose. AGPL section 7 and `NOTICES` require the sentence and the upstream link. `site/build.mjs` fails the build if the footer link or the AGPL line is removed, and it also fails if that link is turned into a `/releases/download/` install button.
+Historical wording from the first audit. The follow-up section is the current about line and site footer. AGPL section 7 and `NOTICES` still require the sentence `Based on Reveric by looplj.` and the upstream link. `site/build.mjs` fails the build if the footer link or the AGPL line is removed, and it also fails if that link is turned into a `/releases/download/` install button.
 
 | Path | Current | Why it stays |
 | --- | --- | --- |
@@ -220,12 +252,12 @@ Shipped Flutter theme labels do not say Reveric. The design kit does.
 
 - Dart symbols and filenames: `RevericButton`, `RevericTheme`, `reveric_*.dart`, `showRevericDialog`, and `package:reveric/` imports. Assert text `No RevericTheme found in context` (`reveric_theme.dart`). Exception text `RevericPaths.initialize()` (`storage_paths.dart`).
 - macOS project file still names the product reference `Reveric.app` (`project.pbxproj` ~80, 168, 299; `TEST_HOST`; `Runner.xcscheme` `BuildableName`). `PRODUCT_NAME` is MetaArc and the DMG config expects `MetaArc.app`. This audit did not run a macOS build, so the scheme’s stale `Reveric.app` was not executed. Treat it as a stale Xcode reference, not as proof the shipped bundle is still `Reveric.app`.
-- `Makefile` success lines still print `Reveric.app` and `reveric.exe`.
+- `Makefile` success lines print `MetaArc.app` and `MetaArc.exe`.
 - `windows/runner/crash_handler.cpp` debug strings `Reveric: cannot write native exit state` and the filter symbol `RevericUnhandledExceptionFilter`.
 - `plugins/sdk/README.md` still says the SDK is for Reveric plugins and links `github.com/looplj/reveric`. Package description in `plugins/sdk/package.json` matches. Audience is plugin authors, not the app UI.
 - `docs/` (144 lines) and `.agents/` (144 lines) talk about Reveric paths, `reveric.sqlite`, and format ids. Archive and agent rules, not shipped UI. One historical plugin example in `docs/solutions/plugin-system/web-plugin.md` has `"author": "Reveric"`; the shipped `plugin.json` author is MetaArc.
 - `third/**/REVERIC_PATCH.md` and vendored notes are local fork notes.
-- `server/cf/workers/diagnostics` package name `reveric-diagnostics` and bucket `reveric-diagnosis`.
+- `server/cf/workers/diagnostics` Wrangler name is `metaarc-diagnostics`. The npm package name in `package.json` is still `reveric-diagnostics`. The R2 bucket is `reveric-diagnosis`.
 - `site/README.md` documents `reveric.app` and `reveric-site` as the old Pages target, and says they are not the delivered download channel.
 
 ## Website and public
@@ -244,7 +276,7 @@ Clean, aside from the intentional footer attribution:
 Not clean around the public site, but not inside `public/`:
 
 - `site/static/sitemap.xml` and `robots.txt` now use `https://metaarc.com.cn/`. `site/build.mjs` still copies `site/static/` into `site/dist`.
-- Website and Package workflows deploy that dist to Cloudflare project `metaarc-site`. The project has to exist in Cloudflare before a deploy; this repo cannot rename the old `reveric-site` project.
+- Website and Package workflows deploy that dist to Cloudflare project `metaarc-site`. The Pages project exists. The first deploy is what fills `metaarc-site.pages.dev`.
 
 ## Appendix A — every text file with a hit
 

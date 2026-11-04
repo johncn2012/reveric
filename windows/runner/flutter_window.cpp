@@ -174,7 +174,7 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
-  director_storage_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(flutter_controller_->engine()->messenger(), "ai.reveric.director/storage", &flutter::StandardMethodCodec::GetInstance());
+  director_storage_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(flutter_controller_->engine()->messenger(), "cn.metaarc.director/storage", &flutter::StandardMethodCodec::GetInstance());
   director_storage_channel_->SetMethodCallHandler([](const flutter::MethodCall<flutter::EncodableValue>& call, std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
     if (call.method_name() != "availableBytes") { result->NotImplemented(); return; }
     const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
@@ -188,7 +188,7 @@ bool FlutterWindow::OnCreate() {
   });
   system_fonts_channel_ =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-          flutter_controller_->engine()->messenger(), "reveric/system_fonts",
+          flutter_controller_->engine()->messenger(), "metaarc/system_fonts",
           &flutter::StandardMethodCodec::GetInstance());
   system_fonts_channel_->SetMethodCallHandler(
       [](const flutter::MethodCall<flutter::EncodableValue>& call,
@@ -203,7 +203,7 @@ bool FlutterWindow::OnCreate() {
   window_position_channel_ =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
           flutter_controller_->engine()->messenger(),
-          "reveric/window_position",
+          "metaarc/window_position",
           &flutter::StandardMethodCodec::GetInstance());
   window_position_channel_->SetMethodCallHandler(
       [](const flutter::MethodCall<flutter::EncodableValue>& call,
@@ -287,7 +287,7 @@ bool FlutterWindow::OnCreate() {
   crash_reporting_channel_ =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
           flutter_controller_->engine()->messenger(),
-          "reveric/crash_reporting",
+          "metaarc/crash_reporting",
           &flutter::StandardMethodCodec::GetInstance());
   crash_reporting_channel_->SetMethodCallHandler(
       [](const flutter::MethodCall<flutter::EncodableValue>& call,

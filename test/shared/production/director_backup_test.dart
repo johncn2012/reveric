@@ -16,7 +16,7 @@ void main() {
     () async {
       final dir = await Directory.systemTemp.createTemp('voices-backup-');
       final schemas = await BackupDatabases.create();
-      final main = schemas.writeMain('${dir.path}/reveric.sqlite');
+      final main = schemas.writeMain('${dir.path}/metaarc.sqlite');
       for (final id in ['shared', 'selected', 'history', 'unrelated']) {
         insertBackupRow(main, 'assets', {
           'id': id,
@@ -81,7 +81,7 @@ void main() {
     () async {
       final dir = await Directory.systemTemp.createTemp('audio-backup-');
       final schemas = await BackupDatabases.create();
-      final db = schemas.writeMain('${dir.path}/reveric.sqlite');
+      final db = schemas.writeMain('${dir.path}/metaarc.sqlite');
       insertBackupRow(db, 'assets', {
         'id': 'original',
         'type': 'audio',

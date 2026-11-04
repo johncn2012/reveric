@@ -213,7 +213,7 @@ Json directorSchema() {
   };
   return {
     'document': _shape(DirectorDocument.requiredFields, {
-      'format': _enum(['reveric.director']),
+      'format': _enum(['metaarc.director', 'reveric.director']),
       'version': _enum([1]),
       'id': _id,
       'revision': {
