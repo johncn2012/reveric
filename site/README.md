@@ -2,7 +2,7 @@
 
 `site/build.mjs` 把 `designs/website/` 复制到 `site/dist/`，并给样式和脚本加内容哈希。静态下载区保持「尚未发布」，不写入安装包地址。`--version` 会被忽略。页面脚本会请求 `GET /api/updates/latest?platform=windows&arch=x64`；只有响应里的 `download_url` 是 MetaArc 域名（或与页面同源）上的 `*setup.exe` 时，才把 Windows 卡片换成链接。macOS 与 Android 保持尚未发布。
 
-线上门户在 `server/metaarc/public/`。本构建不修改那份文件。首页顶栏链到 `/account`，套餐只请求 `/api/plans`。账号登录、注册和余额在账号中心，走 `/api/auth/*`。
+线上门户在 `server/metaarc/public/`。构建会把首页、`landing.css`、`landing.js`、`metaarc.css`、`metaarc.js`，以及 L1 图标（`icon-32.png`、`icon-180.png`、`icon-512.png`、`mark.svg` 等）同步过去，不覆盖 `public/account/`。首页顶栏链到 `/account`，套餐只请求 `/api/plans`。账号登录、注册和余额在账号中心，走 `/api/auth/*`。页脚保留 Reveric 的 AGPL 署名和上游仓库链接，不把上游 Release 写成下载入口。
 
 `site/static/` 里的 `reveric.app` 地址，以及 Cloudflare Pages 项目名 `reveric-site`，都不是 MetaArc 已交付的下载渠道。
 

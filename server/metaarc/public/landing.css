@@ -1,5 +1,6 @@
-/* MetaArc 官网。片头是近黑指挥台：白字、胶囊按钮、锐利的产品屏幕。
-   后面的场次仍沿用放映厅节奏。尺寸以 1920 宽设计稿为准，用 --u 等比缩放；窄屏另起一套固定尺寸。 */
+/* MetaArc 官网。片头和后面的场次共用近黑指挥台：白字、细线、胶囊按钮。
+   尺寸以 1920 宽设计稿为准，用 --u 等比缩放；窄屏另起一套固定尺寸。
+   颜色令牌与 metaarc.css 一致，后加载的 metaarc.css 会再写一遍。 */
 
 /* 标题字体：按页面用字裁剪的子集，由 site/scripts/subset_fonts.py 生成 */
 @font-face {
@@ -13,17 +14,17 @@
   --u: calc(min(100vw, 177.78vh) / 1920);
   --m: calc(120 * var(--u));
 
-  --ground: #0A0B0E;
+  --ground: #07080b;
   --bar: #000000;
-  --surface: #13151B;
-  --surface-2: #1A1D25;
-  --ink: #F2EEE7;
-  --ink-soft: #B4B6BF;
-  --ink-mute: #8E919E;
-  --accent: #8797D2;
-  --accent-soft: #AEB9E6;
-  --accent-deep: #283B5E;
-  --line: #2A2D38;
+  --surface: #121418;
+  --surface-2: #1a1d24;
+  --ink: #f4f1ea;
+  --ink-soft: #c4c6ce;
+  --ink-mute: #8d909a;
+  --accent: #f4f1ea;
+  --accent-soft: #d8d6cf;
+  --accent-deep: #3a3d46;
+  --line: #2a2e36;
 
   --font-display: "Noto Serif SC", "Songti SC", "STSong", serif;
   --font-body: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
@@ -54,8 +55,11 @@ img { display: block; max-width: 100%; }
   justify-content: space-between;
   background: #07080b;
 }
-.brand { display: flex; align-items: center; gap: calc(14 * var(--u)); text-decoration: none; font-size: calc(22 * var(--u)); letter-spacing: .02em; }
-.brand img { width: calc(40 * var(--u)); height: calc(40 * var(--u)); border-radius: calc(10 * var(--u)); }
+.brand { display: flex; align-items: center; gap: calc(10 * var(--u)); text-decoration: none; color: inherit; white-space: nowrap; }
+.brand-mark { width: calc(36 * var(--u)); height: calc(36 * var(--u)); flex: none; }
+.brand-lockup { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.brand-en { font-size: calc(18 * var(--u)); font-weight: 650; letter-spacing: -0.03em; }
+.brand-zh { margin-top: calc(3 * var(--u)); font-size: calc(11 * var(--u)); font-weight: 500; letter-spacing: .34em; margin-right: -.34em; }
 .topnav { display: flex; gap: calc(36 * var(--u)); font: 500 calc(15 * var(--u)) / 1 var(--font-body); letter-spacing: .04em; }
 .topnav a { color: rgba(243, 241, 236, .84); text-decoration: none; transition: color .2s; }
 .topnav a:hover { color: var(--ink); }
@@ -117,6 +121,14 @@ img { display: block; max-width: 100%; }
   letter-spacing: .08em;
   color: var(--ink-mute);
   z-index: 2;
+}
+.bar.bar-bottom {
+  height: auto;
+  min-height: var(--bar-h);
+  flex-wrap: wrap;
+  gap: calc(6 * var(--u)) calc(28 * var(--u));
+  padding-top: calc(12 * var(--u));
+  padding-bottom: calc(12 * var(--u));
 }
 .bar-top { top: 0; }
 .bar-bottom { bottom: 0; }
@@ -356,30 +368,44 @@ cv-scene.cover {
 .frame figcaption b { font: 700 calc(26 * var(--u)) / 1 var(--font-display); color: var(--ink); margin-right: calc(8 * var(--u)); }
 
 /* ---------- SC.05 模型自选 ---------- */
-.models { padding: calc(200 * var(--u)) var(--m) calc(180 * var(--u)); }
-.model-groups { margin-top: calc(90 * var(--u)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(64 * var(--u)); }
-.group { padding-top: calc(28 * var(--u)); border-top: 1px solid var(--line); }
-.group h3 { font-size: calc(16 * var(--u)); font-weight: 400; letter-spacing: .1em; color: var(--accent); }
-.group p { margin-top: calc(18 * var(--u)); font: 500 calc(30 * var(--u)) / 1.6 var(--font-display); }
+.models { padding: calc(140 * var(--u)) var(--m) calc(120 * var(--u)); }
+.model-groups { margin-top: calc(48 * var(--u)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(16 * var(--u)); }
+.group {
+  padding: calc(22 * var(--u)) calc(22 * var(--u)) calc(6 * var(--u));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: calc(12 * var(--u));
+  min-width: 0;
+}
+.group h3 { font-size: calc(13 * var(--u)); font-weight: 500; letter-spacing: .14em; color: var(--ink-mute); }
+.group ul { margin-top: calc(12 * var(--u)); }
+.group li {
+  padding: calc(12 * var(--u)) 0;
+  border-top: 1px solid var(--line);
+  font-size: calc(17 * var(--u));
+  line-height: 1.45;
+  color: var(--ink);
+}
+.group p { margin-top: calc(18 * var(--u)); font: 500 calc(22 * var(--u)) / 1.6 var(--font-display); }
 
 /* ---------- SC.06 片尾 ---------- */
 .ending { min-height: 100svh; }
 .ending-body { padding: calc(var(--bar-h) + 140 * var(--u)) var(--m) calc(var(--bar-h) + 120 * var(--u)); }
-.ending-title { font: 900 calc(96 * var(--u)) / 1.15 var(--font-display); letter-spacing: .04em; }
+.ending-title { font: 700 calc(64 * var(--u)) / 1.2 var(--font-display); letter-spacing: .04em; }
 .dl-cards { margin-top: calc(72 * var(--u)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(28 * var(--u)); }
 .dl {
   display: grid; grid-template-rows: auto auto 1fr; gap: calc(10 * var(--u));
   min-height: calc(220 * var(--u));
   padding: calc(34 * var(--u)) calc(36 * var(--u));
-  border: 1px solid var(--line); border-radius: calc(6 * var(--u));
+  border: 1px solid var(--line); border-radius: 12px;
   background: var(--surface);
   text-decoration: none;
   transition: border-color .2s, background .2s;
 }
-.dl:hover, .dl.is-mine { border-color: var(--accent); background: var(--surface-2); }
-.dl-os { font: 700 calc(40 * var(--u)) / 1.2 var(--font-display); }
+.dl:hover, .dl.is-mine { border-color: #4a4e58; background: var(--surface-2); }
+.dl-os { font: 700 calc(36 * var(--u)) / 1.2 var(--font-display); }
 .dl-meta { font-size: calc(16 * var(--u)); letter-spacing: .04em; color: var(--ink-mute); }
-.dl-go { align-self: end; font-size: calc(20 * var(--u)); color: var(--accent-soft); }
+.dl-go { align-self: end; font-size: calc(16 * var(--u)); color: var(--ink-mute); }
 .gh {
   margin-top: calc(28 * var(--u));
   display: flex; align-items: baseline; gap: calc(28 * var(--u));
@@ -394,11 +420,29 @@ cv-scene.cover {
 
 /* ---------- 窄屏：一栏，固定字号 ---------- */
 @media (max-width: 820px) {
-  :root { --m: 22px; --bar-h: 56px; }
-  .brand { font-size: 16px; gap: 10px; }
-  .brand img { width: 28px; height: 28px; border-radius: 7px; }
-  .topnav { gap: 16px; font-size: 12px; }
-  .topnav > a:nth-child(-n+2) { display: none; }
+  :root { --m: 22px; --bar-h: 96px; }
+  .topbar {
+    height: auto;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 8px;
+    padding-top: 10px;
+    padding-bottom: 8px;
+  }
+  .brand { gap: 8px; flex: none; }
+  .brand-mark { width: 28px; height: 28px; }
+  .brand-en { font-size: 15px; }
+  .brand-zh { font-size: 10px; margin-top: 2px; }
+  .topbar-actions { margin-left: auto; }
+  .topnav {
+    order: 3;
+    flex: 1 0 100%;
+    gap: 16px;
+    font-size: 13px;
+    min-width: 0;
+    overflow-x: auto;
+  }
+  .topnav a { flex: none; }
   .qq-pop { left: auto; right: 0; transform: translateY(-6px); }
   .qq-nav:hover .qq-pop, .qq-nav:focus-within .qq-pop { transform: none; }
   .bar { font-size: 11px; }
@@ -451,11 +495,21 @@ cv-scene.cover {
   .frame figcaption .mono { font-size: 11px; }
   .frame figcaption b { font-size: 18px; }
 
-  .model-groups { grid-template-columns: 1fr; gap: 28px; margin-top: 40px; }
+  .model-groups { grid-template-columns: 1fr; gap: 12px; margin-top: 28px; }
+  .group { padding: 16px 16px 6px; border-radius: 10px; }
   .group h3 { font-size: 12px; }
-  .group p { font-size: 20px; }
+  .group li, .group p { font-size: 15px; }
 
-  .ending-body { padding: calc(var(--bar-h) + 72px) var(--m) calc(var(--bar-h) + 56px); }
+  .ending-body { padding: calc(var(--bar-h) + 72px) var(--m) 132px; }
+  .bar.bar-bottom {
+    position: absolute;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px 22px;
+    font-size: 11px;
+    letter-spacing: .02em;
+  }
   .ending-title { font-size: 34px; }
   .dl-cards { grid-template-columns: 1fr; gap: 12px; margin-top: 32px; }
   .dl { min-height: 0; padding: 20px; }

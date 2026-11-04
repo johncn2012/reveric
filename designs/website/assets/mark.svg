@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="MetaArc">
+  
+  <g fill="none" stroke="#ffffff" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,2)">
+    <path d="M11 49 C13 26 21 13 32 13 C43 13 51 26 53 49"/>
+    <path d="M19.5 49 C21 35 26.5 25 32 25 C37.5 25 43 35 44.5 49"/>
+  </g>
+</svg>

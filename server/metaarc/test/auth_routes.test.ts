@@ -126,8 +126,13 @@ test('account page is same-origin and has no demo quota', async () => {
       assert.equal(page.status, 200);
       const html = await page.text();
       assert.match(html, /支付尚未开通/);
+      assert.match(html, /进入创作台/);
+      assert.match(html, /从小说到成片/);
+      assert.match(html, /MetaArc 元弧/);
+      assert.match(html, /暂无订单 · 支付未开通/);
+      assert.match(html, /管理后台/);
       assert.match(html, /\/account\/account\.js/);
-      assert.doesNotMatch(html, /登录即将开放|管理后台|演示配额|500000/);
+      assert.doesNotMatch(html, /登录即将开放|演示配额|500000|微信登录|GitHub 登录/);
     }
 
     const script = await fetch(`${base}/account/account.js`);
@@ -138,13 +143,17 @@ test('account page is same-origin and has no demo quota', async () => {
     assert.match(source, /\/api\/auth\/profile/);
     assert.match(source, /\/api\/auth\/orders/);
     assert.match(source, /\/api\/auth\/quota\/logs/);
-    assert.doesNotMatch(source, /\/orders\/.+\/pay|管理后台|演示配额/);
+    assert.match(source, /\/api\/admin\/users/);
+    assert.match(source, /\/api\/admin\/orders/);
+    assert.doesNotMatch(source, /\/orders\/.+\/pay|管理后台|演示配额|成交额/);
 
     const home = await fetch(`${base}/`);
     assert.equal(home.status, 200);
     const homeHtml = await home.text();
     assert.match(homeHtml, /href="\/account"/);
-    assert.doesNotMatch(homeHtml, /登录即将开放|管理后台/);
+    assert.match(homeHtml, /https:\/\/github.com\/looplj\/reveric/);
+    assert.match(homeHtml, /AGPL-3.0/);
+    assert.doesNotMatch(homeHtml, /登录即将开放|管理后台|\/releases\/download\//);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));

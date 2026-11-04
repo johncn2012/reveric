@@ -23,7 +23,6 @@ const PAGE_FILES = ['index.html', 'landing.css', 'landing.js', 'metaarc.css', 'm
 
 // 这些字符串一旦出现，说明设计稿又把旧仓库安装包、假后台或演示配额写了回来。
 const FORBIDDEN = [
-  'github.com/looplj/reveric',
   '/releases/download/',
   '/api/login',
   '/api/admin',
@@ -56,6 +55,11 @@ function assertHonest(html, script) {
   }
   if (!html.includes('尚未发布')) throw new Error('下载区缺少「尚未发布」占位');
   if (!html.includes('href="/account"')) throw new Error('顶栏缺少 /account 入口');
+  if (!html.includes('https://github.com/looplj/reveric')) throw new Error('页脚缺少 Reveric 上游链接');
+  if (!html.includes('AGPL-3.0')) throw new Error('页脚缺少 AGPL 署名');
+  if (/github\.com\/looplj\/reveric\/releases/i.test(blob)) {
+    throw new Error('页面把上游 Release 写成了下载入口');
+  }
   if (!script.includes("fetch('/api/plans')")) throw new Error('套餐脚本未请求 /api/plans');
   if (!script.includes("/api/updates/latest?platform=windows&arch=x64")) {
     throw new Error('下载脚本未查询 Windows 更新清单');
@@ -92,5 +96,26 @@ checkFontCoverage(html);
 const rendered = cacheBust(html);
 assertHonest(rendered, script);
 writeFileSync(join(DIST, 'index.html'), rendered);
+
+const PUBLIC = join(ROOT, 'server', 'metaarc', 'public');
+if (existsSync(PUBLIC)) {
+  for (const name of [
+    'index.html',
+    'landing.css',
+    'landing.js',
+    'metaarc.css',
+    'metaarc.js',
+    'assets/icon-32.png',
+    'assets/icon-180.png',
+    'assets/icon-512.png',
+    'assets/mark.svg',
+    'assets/mark-black.svg',
+    'assets/icon-dark.svg',
+    'assets/icon-light.svg',
+  ]) {
+    cpSync(join(DIST, name), join(PUBLIC, name));
+  }
+  console.log('已同步首页和 L1 图标到 server/metaarc/public/。账号页不在这次复制里。');
+}
 
 console.log('site/dist 已生成。静态下载区未写入安装包链接。');

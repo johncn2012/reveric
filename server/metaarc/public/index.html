@@ -6,9 +6,9 @@
 <title>MetaArc 元弧 — AI 原生视听创作成片平台 | MetaArc.COM.CN</title>
 <meta name="description" content="小说、剧本、画布、导演台、剪辑，都是智能体的工具。一句话，从原著走到成片。MetaArc (元弧) 商业化创作工作台与云端协同平台。">
 <link rel="canonical" href="https://metaarc.com.cn/">
-<link rel="icon" href="assets/icon-32.png" sizes="32x32">
-<link rel="apple-touch-icon" href="assets/icon-180.png">
-<meta name="theme-color" content="#0A0B0E">
+<link rel="icon" href="assets/icon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icon-180.png" sizes="180x180">
+<meta name="theme-color" content="#07080b">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://metaarc.com.cn/">
 <meta property="og:title" content="MetaArc 元弧 — AI 原生视听创作成片平台">
@@ -19,13 +19,13 @@
 <link rel="stylesheet" href="vendor/cineview/cineview.css">
 <script type="module" src="vendor/cineview/cineview.js"></script>
 <link rel="preload" href="fonts/NotoSerifSC-subset.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="landing.css">
+<link rel="stylesheet" href="landing.css?v=0c1e1c83a3">
 <link rel="stylesheet" href="metaarc.css">
 </head>
 <body>
 
 <header class="topbar">
-  <a class="brand" href="#top"><img src="assets/icon-180.png" alt="" width="40" height="40">MetaArc 元弧</a>
+  <a class="brand" href="#top"><img class="brand-mark" src="assets/mark.svg" alt="" width="36" height="36"><span class="brand-lockup"><span class="brand-en">MetaArc</span><span class="brand-zh">元弧</span></span></a>
   <nav class="topnav">
     <a href="#run">工作方式</a>
     <a href="#models">模型</a>
@@ -230,9 +230,9 @@
       <p class="lead">MetaArc 统一集成 New-API 高性能算力网关，提供点数计量、渠道容灾与秒级流式响应。同时也支持创作者自带 Key (BYOK)。</p>
     </div>
     <div class="model-groups">
-      <cv-animate fx="rise(soft)" duration="700"><div class="group"><h3 class="mono">文本与推理</h3><p>Claude 3.5 Sonnet · GPT-4o · Gemini 1.5 Pro · DeepSeek-V3/R1 · Qwen</p></div></cv-animate>
-      <cv-animate fx="rise(soft)" delay="100" duration="700"><div class="group"><h3 class="mono">图像生成</h3><p>Seedream 5.0 · 通义万相 2.7 · DALL-E 3 · Gemini Flash Image</p></div></cv-animate>
-      <cv-animate fx="rise(soft)" delay="200" duration="700"><div class="group"><h3 class="mono">视频生成</h3><p>Doubao Seedance 2.5 · MiniMax H3 · 万相 Wan 2.7 · 可灵 Kling 3.0</p></div></cv-animate>
+      <cv-animate fx="rise(soft)" duration="700"><div class="group"><h3 class="mono">文本与推理</h3><ul><li>Claude 3.5 Sonnet</li><li>GPT-4o</li><li>Gemini 1.5 Pro</li><li>DeepSeek-V3 / R1</li><li>Qwen</li></ul></div></cv-animate>
+      <cv-animate fx="rise(soft)" delay="100" duration="700"><div class="group"><h3 class="mono">图像生成</h3><ul><li>Seedream 5.0</li><li>通义万相 2.7</li><li>DALL-E 3</li><li>Gemini Flash Image</li></ul></div></cv-animate>
+      <cv-animate fx="rise(soft)" delay="200" duration="700"><div class="group"><h3 class="mono">视频生成</h3><ul><li>Doubao Seedance 2.5</li><li>MiniMax H3</li><li>万相 Wan 2.7</li><li>可灵 Kling 3.0</li></ul></div></cv-animate>
     </div>
   </cv-scene>
 
@@ -266,13 +266,14 @@
     </div>
     <footer class="bar bar-bottom mono">
       <span>SC.07 片尾 · © MetaArc 元弧 · MetaArc.COM.CN</span>
+      <span>改编自 <a href="https://github.com/looplj/reveric">Reveric</a>（AGPL-3.0），作者 looplj</span>
       <span><a href="mailto:contact@metaarc.com.cn">商业合作与授权</a></span>
     </footer>
   </cv-scene>
 
 </cv-stage>
 
-<script src="landing.js"></script>
+<script src="landing.js?v=4e803628ba"></script>
 <script src="metaarc.js"></script>
 </body>
 </html>

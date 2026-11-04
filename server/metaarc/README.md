@@ -9,7 +9,7 @@
 - 兼容别名：`POST /api/register`、`POST /api/login`、`GET /api/user/profile`、`GET /api/user/orders`、`GET /api/quota/logs`。别名和规范路径走同一处理函数
 - `GET /api/plans`
 - `GET /api/updates/latest?platform=windows&arch=x64&current=<版本>`。没有清单或安装包文件时返回 `has_update: false`、`status: "unreleased"`，不带 `download_url`
-- 同域账号中心：`/account`。未登录只有登录和注册；登录后只显示上述接口返回的字段。支付未开通，页面不能下单
+- 同域账号中心：`/account`。未登录是登录和注册；登录后只显示上述接口返回的字段。管理员还会看到运营台，读取 `/api/admin/overview`、`/api/admin/users`、`/api/admin/orders`。支付未开通，页面不能下单，也不汇总金额
 - Docker Compose 会启动 PostgreSQL、Redis 和本服务。业务代码不连接 Redis
 - New-API 连接器在配置可用时尝试开户。失败时写入 `sk-mock-` 开头的占位值，不能当作可用密钥
 - 对象存储代码返回未签名地址，不是可用的预签名上传
@@ -17,8 +17,8 @@
 ## 代码里没有的
 
 - 微信支付、支付宝，以及渠道验签
-- 门户首页上的登录弹窗、假配额和管理后台。首页顶栏链到 `/account`，不在首页嵌这些界面
-- 独立的 `/admin` 站点。管理接口仍在服务里，这期不给入口
+- 门户首页上的登录弹窗和假配额。首页顶栏链到 `/account`，不在首页嵌登录或运营台
+- 独立的 `/admin` 站点。运营台在登录后的 `/account` 里，只对管理员显示，数据来自既有管理接口
 - 已提交的 Windows 安装包。`downloads/` 里只有说明，`updates/latest.json` 不入库
 
 门户价格只来自 `GET /api/plans`。没有支付渠道时，支付按钮保持不可用。
