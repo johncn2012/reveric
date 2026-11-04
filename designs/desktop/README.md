@@ -1,6 +1,6 @@
-# Reveric Design System
+# MetaArc 元弧 Design System
 
-> **Reveric** is an AI‑assisted long‑form fiction writing application. The
+> **MetaArc 元弧** is an AI‑assisted long‑form fiction writing application. The
 > visual language is calm and modern — a cool mint‑white canvas, white
 > cards that float on soft shadows, near‑black ink‑jade (墨玉) actions with
 > jade for AI, sans titles and Georgia only for the manuscript — explicitly rejecting generic
@@ -253,7 +253,7 @@ See [`ICONOGRAPHY.md`](./ICONOGRAPHY.md). Short version:
 | `ICONOGRAPHY.md`          | Icon system rules and inventory                             |
 | `SKILL.md`                | Agent Skill manifest — read when the skill is invoked       |
 | `colors_and_type.css`     | Tokens (CSS custom properties) + semantic element classes   |
-| `assets/logo/`            | Reveric mark (svg + png 128/256) + stacked lockup + app icon |
+| `assets/logo/`            | MetaArc 元弧 L1 mark (svg + png) + stacked lockup + app icon |
 | `assets/icons/phosphor/`  | ~95 phosphor `regular` SVGs (the working subset)            |
 | `assets/illustrations/`   | `ai_assistant_window.svg` — only product illustration       |
 | `assets/images/background/` | Four ink‑painting backgrounds (webp)                      |

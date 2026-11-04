@@ -852,8 +852,7 @@ function Icon({
   });
 }
 
-// Reveric brand mark — rendered inline (no network) so the chrome titlebar
-// can show it at any size.
+// MetaArc 元弧 L1 双弧。
 function Mark({
   size = 18,
   style
@@ -861,19 +860,22 @@ function Mark({
   return /*#__PURE__*/React.createElement("svg", {
     width: size,
     height: size,
-    viewBox: "0 0 1024 1024",
+    viewBox: "0 0 64 64",
     fill: "none",
     xmlns: "http://www.w3.org/2000/svg",
     style: style,
     "aria-hidden": "true"
   }, /*#__PURE__*/React.createElement("g", {
-    transform: "translate(72.05 72.05) scale(.7)"
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "5.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    transform: "translate(0,2)"
   }, /*#__PURE__*/React.createElement("path", {
-    d: "M334 620C334 512 436 465 579 423C749 372 882 326 923 248V429C923 510 836 540 718 577C550 633 338 722 338 811C334 803 334 792 334 781Z",
-    fill: "#283B5E"
+    d: "M11 49 C13 26 21 13 32 13 C43 13 51 26 53 49"
   }), /*#__PURE__*/React.createElement("path", {
-    d: "M608 637C608 708 672 744 758 781C845 818 892 843 913 918C924 953 926 985 921 1009C862 949 744 935 626 925C507 915 415 891 415 816C415 752 490 691 608 637Z",
-    fill: "#8797D2"
+    d: "M19.5 49 C21 35 26.5 25 32 25 C37.5 25 43 35 44.5 49"
   })));
 }
 Object.assign(window, {
@@ -1236,7 +1238,7 @@ Object.assign(window, {
 // NavRail.jsx
 try { (() => {
 // NavRail — leftmost icon + label nav.
-// Sections: 系统 · 创作 · 世界观 · 资料 · AI. Bottom: brand row "幻界".
+// Sections: 系统 · 创作 · 世界观 · 资料 · AI. Bottom: brand row "MetaArc 元弧".
 
 const NAV_SECTIONS = [{
   label: "系统",

@@ -1,4 +1,4 @@
-// 职责: 品牌加载动画（整屏等待用）— 双色折带描线入场，之后循环等待，外部标记完成后淡出。
+// 职责: 品牌加载动画（整屏等待用）— L1 双弧描线入场，之后循环等待，外部标记完成后淡出。
 // 关联文件:
 //   assets/logo/reveric_mark.svg
 //   assets/logo/reveric_wordmark.png
@@ -21,7 +21,7 @@ const double _kLoopPeriod = 1.8;
 const double _kExit = 0.45;
 const double _kShowFade = 0.3;
 
-/// 舞台坐标系（与 reveric_mark.svg 的 1024 坐标一致）的可视区域。
+/// 舞台坐标系。双弧画在词标上方，词标仍用 MetaArc 字标。
 const Rect _kStage = Rect.fromLTWH(20, 195, 984, 880);
 const Rect _kWordmark = Rect.fromLTWH(152, 830, 720, 143);
 const double _kCenterX = 512;
@@ -213,7 +213,7 @@ double _interval(
   return curve.transform(x);
 }
 
-/// 品牌色：logo 本身的颜色，不随主题 accent 变化，只区分深浅。
+/// 品牌色：L1 双弧用单一墨色，不随主题 accent 变化，只区分深浅。
 class _BrandPalette {
   const _BrandPalette({
     required this.ink,
@@ -221,23 +221,22 @@ class _BrandPalette {
     required this.word,
   });
 
-  /// 上方主折带。
+  /// 双弧描线。
   final Color ink;
 
-  /// 下方折带，也用于分隔线与循环光点的光晕。
+  /// 分隔线与循环光点。
   final Color accent;
   final Color word;
 
   static const _light = _BrandPalette(
-    ink: Color(0xFF283B5E),
-    accent: Color(0xFF8797D2),
-    word: Color(0xFF283B5E),
+    ink: Color(0xFF111111),
+    accent: Color(0xFF111111),
+    word: Color(0xFF111111),
   );
-  // 深色背景上主折带的深蓝几乎不可见，换成浅长春花色；与 Android 深色启动页一致。
   static const _dark = _BrandPalette(
-    ink: Color(0xFFC5CEF0),
-    accent: Color(0xFF8797D2),
-    word: Color(0xFFE3E7F6),
+    ink: Color(0xFFFFFFFF),
+    accent: Color(0xFFFFFFFF),
+    word: Color(0xFFFFFFFF),
   );
 
   static _BrandPalette of(Brightness brightness) =>
@@ -257,10 +256,8 @@ class _BrandMarkPainter extends CustomPainter {
     canvas.scale(scale);
     canvas.translate(-_kStage.left, -_kStage.top);
 
-    final drawTop = _interval(t, 0.0, 0.8, Curves.easeInOutCubic);
-    final drawLower = _interval(t, 0.2, 1.0, Curves.easeInOutCubic);
-    final fill = _interval(t, 0.85, 1.25, Curves.easeOutCubic);
-    final outline = 1 - _interval(t, 1.1, 1.4);
+    final drawOuter = _interval(t, 0.0, 0.8, Curves.easeInOutCubic);
+    final drawInner = _interval(t, 0.2, 1.0, Curves.easeInOutCubic);
     final word = _interval(t, 1.3, 1.9, Curves.easeOutCubic);
 
     final looping = t >= _kIntro;
@@ -274,53 +271,22 @@ class _BrandMarkPainter extends CustomPainter {
 
     if (breathe > 0) {
       canvas.drawCircle(
-        _MarkPaths.toStage(_MarkPaths.lowerCenter),
-        150,
+        _MarkPaths.center,
+        120,
         Paint()
-          ..color = palette.accent.withValues(alpha: 0.18 * breathe)
+          ..color = palette.ink.withValues(alpha: 0.08 * breathe)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40),
       );
     }
 
-    canvas.save();
-    canvas.translate(_MarkPaths.offset, _MarkPaths.offset);
-    canvas.scale(_MarkPaths.scale);
-
-    if (fill > 0) {
-      canvas.drawPath(
-        _MarkPaths.top,
-        Paint()..color = palette.ink.withValues(alpha: fill),
-      );
-      // 循环时下方折带轻微下沉再回位，像翻折的纸页；只向远离上方折带的方向移动，不吃掉两者间的缝。
-      canvas.save();
-      canvas.translate(0, 12 * breathe);
-      canvas.drawPath(
-        _MarkPaths.lower,
-        Paint()..color = palette.accent.withValues(alpha: fill),
-      );
-      canvas.restore();
-    }
-
-    if (outline > 0) {
-      final stroke = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 7
-        ..strokeJoin = StrokeJoin.round
-        ..strokeCap = StrokeCap.round;
-      _drawPartial(
-        canvas,
-        _MarkPaths.top,
-        drawTop,
-        stroke..color = palette.ink.withValues(alpha: outline),
-      );
-      _drawPartial(
-        canvas,
-        _MarkPaths.lower,
-        drawLower,
-        stroke..color = palette.accent.withValues(alpha: outline),
-      );
-    }
-    canvas.restore();
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _MarkPaths.strokeWidth
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = palette.ink;
+    _drawPartial(canvas, _MarkPaths.outer, drawOuter, stroke);
+    _drawPartial(canvas, _MarkPaths.inner, drawInner, stroke);
 
     if (word > 0) {
       _drawDivider(canvas, word);
@@ -366,35 +332,56 @@ class _BrandMarkPainter extends CustomPainter {
 
 double _lerp(double a, double b, double p) => a + (b - a) * p;
 
-/// reveric_mark.svg 的两条折带，坐标为 SVG 原始坐标；
-/// 经 [offset] 平移、[scale] 缩放后落到 1024 舞台坐标。
+/// L1 双弧。路径与 designs/website/assets/mark.svg 相同，落到词标上方的舞台坐标。
 abstract final class _MarkPaths {
-  static const double offset = 72.05;
-  static const double scale = 0.7;
+  static const double _scale = 7.25;
+  static const double _originX = 280;
+  static const double _originY = 200;
+  static const double strokeWidth = 5.2 * _scale;
 
-  /// 下方折带的视觉中心（原始坐标），循环光晕围绕它。
-  static const Offset lowerCenter = Offset(660, 830);
+  static Offset _at(double x, double y) =>
+      Offset(_originX + x * _scale, _originY + (y + 2) * _scale);
 
-  static Offset toStage(Offset p) =>
-      Offset(p.dx * scale + offset, p.dy * scale + offset);
+  static final Offset center = _at(32, 32);
 
-  static final top = Path()
-    ..moveTo(334, 620)
-    ..cubicTo(334, 512, 436, 465, 579, 423)
-    ..cubicTo(749, 372, 882, 326, 923, 248)
-    ..lineTo(923, 429)
-    ..cubicTo(923, 510, 836, 540, 718, 577)
-    ..cubicTo(550, 633, 338, 722, 338, 811)
-    ..cubicTo(334, 803, 334, 792, 334, 781)
-    ..close();
+  static final outer = _arc(
+    (11, 49),
+    (13, 26),
+    (21, 13),
+    (32, 13),
+    (43, 13),
+    (51, 26),
+    (53, 49),
+  );
+  static final inner = _arc(
+    (19.5, 49),
+    (21, 35),
+    (26.5, 25),
+    (32, 25),
+    (37.5, 25),
+    (43, 35),
+    (44.5, 49),
+  );
 
-  static final lower = Path()
-    ..moveTo(608, 637)
-    ..cubicTo(608, 708, 672, 744, 758, 781)
-    ..cubicTo(845, 818, 892, 843, 913, 918)
-    ..cubicTo(924, 953, 926, 985, 921, 1009)
-    ..cubicTo(862, 949, 744, 935, 626, 925)
-    ..cubicTo(507, 915, 415, 891, 415, 816)
-    ..cubicTo(415, 752, 490, 691, 608, 637)
-    ..close();
+  static Path _arc(
+    (double, double) start,
+    (double, double) c1,
+    (double, double) c2,
+    (double, double) mid,
+    (double, double) c3,
+    (double, double) c4,
+    (double, double) end,
+  ) {
+    final a = _at(start.$1, start.$2);
+    final b = _at(c1.$1, c1.$2);
+    final c = _at(c2.$1, c2.$2);
+    final d = _at(mid.$1, mid.$2);
+    final e = _at(c3.$1, c3.$2);
+    final f = _at(c4.$1, c4.$2);
+    final g = _at(end.$1, end.$2);
+    return Path()
+      ..moveTo(a.dx, a.dy)
+      ..cubicTo(b.dx, b.dy, c.dx, c.dy, d.dx, d.dy)
+      ..cubicTo(e.dx, e.dy, f.dx, f.dy, g.dx, g.dy);
+  }
 }

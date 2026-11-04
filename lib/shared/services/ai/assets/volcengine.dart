@@ -24,7 +24,7 @@ typedef VolcengineAsset = ({
 });
 
 /// 所有素材进同一个组：同一次生成请求引用的私域素材必须属于同一素材组。
-const providerAssetGroupName = 'reveric';
+const providerAssetGroupName = 'metaarc';
 
 class VolcengineAssetClient implements ProviderAssetClient {
   VolcengineAssetClient({

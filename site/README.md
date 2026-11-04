@@ -4,7 +4,7 @@
 
 线上门户在 `server/metaarc/public/`。构建会把首页、`landing.css`、`landing.js`、`metaarc.css`、`metaarc.js`，以及 L1 图标（`icon-32.png`、`icon-180.png`、`icon-512.png`、`mark.svg` 等）同步过去，不覆盖 `public/account/`。首页顶栏链到 `/account`，套餐只请求 `/api/plans`。账号登录、注册和余额在账号中心，走 `/api/auth/*`。页脚保留 Reveric 的 AGPL 署名和上游仓库链接，不把上游 Release 写成下载入口。
 
-`site/static/` 里的 `reveric.app` 地址，以及 Cloudflare Pages 项目名 `reveric-site`，都不是 MetaArc 已交付的下载渠道。
+`site/static/` 的站点地址是 `https://metaarc.com.cn/`。Cloudflare Pages 项目名写成 `metaarc-site`。仓库改不了 Cloudflare 里的项目：部署前要在 Pages 里建好或改名为 `metaarc-site`，生产分支仍是 `unstable`。这不是已交付的下载渠道。
 
 ## 脚本说明
 
@@ -44,13 +44,13 @@ python3 -m http.server 4312 --directory site/dist
 
 ## 部署
 
-现有 `Website` workflow 和 `Package` 里的 `deploy-website` 仍会在有人运行时把 `site/dist` 上传到旧的 Cloudflare 项目 `reveric-site`。构建结果里没有安装包链接。推送代码不会触发部署。本地上传命令是 `make site-deploy`；只构建用 `make site-build`。
+`Website` workflow 和 `Package` 里的 `deploy-website` 在有人运行时把 `site/dist` 上传到 Cloudflare 项目 `metaarc-site`。项目要先在 Cloudflare 建好，git 推送本身不会创建它，也不会触发部署。构建结果里没有安装包链接。本地上传命令是 `make site-deploy`；只构建用 `make site-build`。
 
 ### 首次配置
 
 1. 创建 Direct Upload 类型的 Pages 项目，生产分支设为 `unstable`（Direct Upload 项目不连 git，这里只需与 workflow 中 `--branch` 一致）：
-   `npx wrangler pages project create reveric-site --production-branch=unstable`
-2. 在 Pages 项目里绑定自定义域名 `reveric.app`。
+   `npx wrangler pages project create metaarc-site --production-branch=unstable`
+2. 在 Pages 项目里绑定自定义域名 `metaarc.com.cn`。这一步在 Cloudflare 控制台完成，工作流不会自动改旧项目 `reveric-site`。
 3. 在 GitHub 仓库 Secrets 中添加：
    - `CLOUDFLARE_API_TOKEN`：带 `Cloudflare Pages: Edit` 权限的 API Token
    - `CLOUDFLARE_ACCOUNT_ID`：Cloudflare 账户 ID

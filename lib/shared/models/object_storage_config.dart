@@ -94,7 +94,7 @@ class ObjectStorageConfig {
   static const appSettingsKey = 'object_storage_settings';
   static const currentVersion = 1;
   static const defaultRegion = 'us-east-1';
-  static const defaultKeyPrefix = 'reveric/references';
+  static const defaultKeyPrefix = 'metaarc/references';
 
   final ObjectStorageProvider provider;
   final String endpoint;

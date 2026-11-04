@@ -47,11 +47,11 @@ ArchitecturesInstallIn64BitMode=x64
 
 [CustomMessages]
 AppDisplayName=MetaArc
-chinesesimplified.AppDisplayName=MetaArc (元弧)
+chinesesimplified.AppDisplayName=MetaArc 元弧
 LaunchApp=Launch MetaArc
-chinesesimplified.LaunchApp=启动 MetaArc (元弧)
+chinesesimplified.LaunchApp=启动 MetaArc 元弧
 AutoStartApp=Start MetaArc when Windows starts
-chinesesimplified.AutoStartApp=Windows 启动时自动启动 MetaArc (元弧)
+chinesesimplified.AutoStartApp=Windows 启动时自动启动 MetaArc 元弧
 PreparingRuntime=Checking and installing Microsoft Visual C++ runtime...
 chinesesimplified.PreparingRuntime=正在检查并安装 Microsoft Visual C++ 运行库…
 RuntimeFailed=Microsoft Visual C++ runtime could not be installed or verified. Restart Windows and try again. If this continues, send the following log files to support:
@@ -59,7 +59,7 @@ chinesesimplified.RuntimeFailed=Microsoft Visual C++ 运行库安装或检查失
 RuntimeRepairNewer=A newer Microsoft Visual C++ runtime is installed, but required DLL files are missing or unreadable. Open Windows Settings > Apps, repair Microsoft Visual C++ Redistributable (x64), then run this installer again.
 chinesesimplified.RuntimeRepairNewer=电脑已安装更高版本的 Microsoft Visual C++ 运行库，但必要的 DLL 文件缺失或无法读取。请在 Windows 设置的应用列表中修复 Microsoft Visual C++ Redistributable (x64)，然后重新运行本安装程序。
 RuntimeRestart=Microsoft Visual C++ runtime requires a restart. Restart Windows, then run this installer again to finish installing MetaArc.
-chinesesimplified.RuntimeRestart=Microsoft Visual C++ 运行库需要重启才能完成配置。请重启 Windows，然后重新运行本安装程序以完成 MetaArc (元弧) 的安装。
+chinesesimplified.RuntimeRestart=Microsoft Visual C++ 运行库需要重启才能完成配置。请重启 Windows，然后重新运行本安装程序以完成 MetaArc 元弧的安装。
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"

@@ -1,12 +1,12 @@
 ---
 name: reveric-design
-description: Use this skill to generate well-branded interfaces and assets for Reveric, the AI-assisted long-form fiction writing app, either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, and UI kit components for prototyping.
+description: Use this skill to generate well-branded interfaces and assets for MetaArc 元弧, the AI-assisted long-form fiction writing app, either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, and UI kit components for prototyping.
 user-invocable: true
 ---
 
-# Reveric Design Skill
+# MetaArc 元弧 Design Skill
 
-Reveric is an **AI-assisted long-form fiction writing application**. The
+MetaArc 元弧 is an **AI-assisted long-form fiction writing application**. The
 visual language is calm and modern — cool mint‑white canvas, white cards
 on soft shadows, near‑black ink‑jade actions (jade for AI), sans for every
 title and all UI, Georgia only for manuscript prose. The writer is the hero;

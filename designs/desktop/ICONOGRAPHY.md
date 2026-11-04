@@ -1,4 +1,4 @@
-# Iconography — Reveric
+# Iconography — MetaArc 元弧
 
 ## System
 
@@ -102,17 +102,12 @@ treatment will visibly clash.
 
 ## Logo & brand mark
 
-The Reveric logo — "Reverie Fold" (source of truth: the repo's `assets/logo/reveric-raw.png`; vector: `assets/logo/reveric_mark.svg`):
+The MetaArc 元弧 mark is the L1 double arc (source of truth: `designs/website/assets/mark.svg`; client copy: `assets/logo/reveric_mark.svg`):
 
-- A sweeping **ink‑blue ribbon** (`#283B5E`) rising from lower left to
-  upper right, its right edge cut straight.
-- A separate **folded periwinkle shape** (`#8797D2`) tucked beneath it,
-  separated from the ribbon by a thin canvas‑colored gap. Keep the gap;
-  never let the two shapes touch or overlap.
-- Both shapes are flat fills — no outlines, gradients or shadows.
-- The **wordmark** "Reveric" set in Literata Regular with light tracking,
-  roughly 1.75× the mark's width, with a hairline periwinkle divider
-  centered below.
+- Two concentric rounded arches, stroked, not filled.
+- App icons use white strokes on black. The mark asset used on light surfaces uses `#111111` strokes on transparency.
+- The wordmark is **MetaArc**, already in `assets/logo/reveric_wordmark.png`.
+- Do not redraw the retired blue ribbon.
 
 Variants in `assets/logo/`:
 

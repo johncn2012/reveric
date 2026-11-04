@@ -21,6 +21,7 @@ import '../../components/reveric_button.dart';
 import '../../app_config.dart'
     show
         appVersion,
+        diagnosticsBaseUrl,
         revericAttribution,
         revericGitHubRepoUrl,
         metaArcOfficialWebsiteUrl,
@@ -92,20 +93,22 @@ class AboutSettingsSection extends HookConsumerWidget {
             _buildOpenApplicationDirectoryButton(context, colors, typo),
             SizedBox(height: sectionGap),
           ],
-          _buildSectionTitle(
-            context,
-            typo,
-            colors,
-            LocaleKeys.settingsAboutUploadLogs,
-          ),
-          SizedBox(height: descriptionGap),
-          Text(
-            context.t(LocaleKeys.settingsAboutUploadLogsDescription),
-            style: _descriptionStyle(typo, colors),
-          ),
-          SizedBox(height: actionGap),
-          const DiagnosticsUploadButton(),
-          SizedBox(height: sectionGap),
+          if (diagnosticsBaseUrl.isNotEmpty) ...[
+            _buildSectionTitle(
+              context,
+              typo,
+              colors,
+              LocaleKeys.settingsAboutUploadLogs,
+            ),
+            SizedBox(height: descriptionGap),
+            Text(
+              context.t(LocaleKeys.settingsAboutUploadLogsDescription),
+              style: _descriptionStyle(typo, colors),
+            ),
+            SizedBox(height: actionGap),
+            const DiagnosticsUploadButton(),
+            SizedBox(height: sectionGap),
+          ],
           _buildSectionTitle(
             context,
             typo,

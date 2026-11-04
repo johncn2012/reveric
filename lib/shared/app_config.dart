@@ -31,8 +31,9 @@ const revericQqGroupJoinUrl = 'https://qm.qq.com/q/Ap8pfOWHDO';
 const revericQqGroupNumber = '924148054';
 
 /// 技能广场只读取公开链接目录，导入沿用各来源平台的现有流程。
+/// 目录仓库是 https://github.com/johncn2012/skills 。客户端拉取该仓库 main 上的 catalog.json。
 const revericSkillsCatalogUrl =
-    'https://raw.githubusercontent.com/looplj/reveric-skills/main/catalog.json';
+    'https://raw.githubusercontent.com/johncn2012/skills/main/catalog.json';
 
 /// AGPLv3 第 7 条附加条款要求修改版保留的作者署名，与 NOTICES 保持一致，不做本地化。
 const revericAttribution = 'Based on Reveric by looplj.';
@@ -50,4 +51,8 @@ final revericApiHeaders = <String, String>{
 };
 
 /// 用户主动提交日志与会话的诊断后端，与匿名事件上报独立。
-const diagnosticsBaseUrl = 'https://diagnostics.reveric.app';
+/// 仓库里没有已接通的 MetaArc 诊断主机。空字符串关掉关于页的上传入口，
+/// 不再请求 diagnostics.reveric.app。Worker 目标域名见
+/// server/cf/workers/diagnostics；Cloudflare 绑定 diagnostics.metaarc.com.cn
+/// 之后，再把这里写成 `https://diagnostics.metaarc.com.cn`。
+const diagnosticsBaseUrl = '';

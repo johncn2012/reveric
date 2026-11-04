@@ -62,11 +62,11 @@ function SettingsScreen({onOpen}){
         </Group>
 
         <Group title="系统">
-          <Row icon="info" iconBg="var(--surface-dim)" iconColor="var(--text-muted)" label="关于 Reveric" value="v0.4.2"/>
+          <Row icon="info" iconBg="var(--surface-dim)" iconColor="var(--text-muted)" label="关于 MetaArc 元弧" value="v0.4.2"/>
         </Group>
 
         <div style={{textAlign:'center', fontSize:11, color:'var(--text-subtle)', padding:'8px 0 4px', fontFamily:'var(--display)'}}>
-          Reveric · 为创作者打造的写作空间
+          MetaArc 元弧 · 为创作者打造的写作空间
         </div>
       </div>
     </div>

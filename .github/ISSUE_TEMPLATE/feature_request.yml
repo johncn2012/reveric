@@ -1,11 +1,11 @@
 name: 功能请求
-description: 为 Reveric 提出新功能建议
+description: 为 MetaArc 元弧提出新功能建议
 title: "[功能] "
 body:
   - type: markdown
     attributes:
       value: |
-        提交前请搜索[已有问题](https://github.com/looplj/reveric/issues)。
+        提交前请搜索[已有问题](https://github.com/johncn2012/MetaArc/issues)。
 
   - type: textarea
     id: problem

@@ -43,8 +43,8 @@ class ObjectStorageService {
 
   /// 预签名链接的有效期；视频服务商通常在提交后很快拉取参考素材。
   static const presignedLifetime = Duration(hours: 24);
-  static const _probeKey = '.reveric-connection-check';
-  static const _probeBody = 'reveric';
+  static const _probeKey = '.metaarc-connection-check';
+  static const _probeBody = 'metaarc';
 
   final AppDatabase database;
   final http.Client Function() _client;

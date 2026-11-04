@@ -1,4 +1,4 @@
-# Reveric Design System
+# MetaArc 元弧 Design System
 
 > The cross-platform visual contract for Reveric's desktop and mobile clients — calm, modern, and focused on long-form writing.
 

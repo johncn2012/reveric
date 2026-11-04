@@ -2,7 +2,7 @@
 
 Independent Cloudflare Worker for user-initiated log and chat-session uploads.
 
-- Host: `https://diagnostics.reveric.app`
+- Host: `https://diagnostics.metaarc.com.cn`
 - Private R2 binding: `DIAGNOSTICS` → `reveric-diagnosis`
 - `GET /health`: health check.
 - `POST /v1/diagnostics`: raw file body. Required headers: `Content-Type`, `Content-Length`, `X-App-Version`, `X-Platform` (`windows`, `macos`, `android`).
@@ -25,6 +25,6 @@ npm run dev
 npm run deploy
 ```
 
-Wrangler login needs Workers, R2, and custom-domain permissions. The `reveric.app` zone must be in the account, and the bucket must already exist. Deployment binds the custom domain and provisions its certificate. workers.dev and preview URLs are disabled.
+Wrangler login needs Workers, R2, and custom-domain permissions. The `metaarc.com.cn` zone must already be in the account, and `diagnostics.metaarc.com.cn` must be attached before `npm run deploy`. That custom-domain step is manual in Cloudflare; this file only changes the route pattern. The existing R2 bucket name is unchanged. The client leaves `diagnosticsBaseUrl` empty until this host answers, so the app does not call the old `diagnostics.reveric.app` address. workers.dev and preview URLs are disabled.
 
 Tests run the bundled Worker with local R2 and rate-limit bindings in Miniflare; they do not write production data. Production smoke tests should use clearly marked synthetic content only.

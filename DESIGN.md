@@ -1,5 +1,5 @@
 ---
-name: "Reveric"
+name: "MetaArc 元弧"
 description: "A warm, literary product UI for AI-assisted long-form fiction writing."
 colors:
   canvas: "#FFFBF5"
