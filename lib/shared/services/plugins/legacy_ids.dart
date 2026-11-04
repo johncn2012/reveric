@@ -35,7 +35,7 @@ Future<void> migrateBundledPluginIds({
     final rows = await database
         .customSelect(
           'SELECT plugin_id FROM plugin_registry WHERE plugin_id = ? LIMIT 1',
-          variables: [Variable.string(entry.key)],
+          variables: [Variable.withString(entry.key)],
         )
         .get();
     if (rows.isNotEmpty) {
@@ -65,7 +65,7 @@ Future<void> _migrateOne({
   final occupied = await database
       .customSelect(
         'SELECT plugin_id FROM plugin_registry WHERE plugin_id = ? LIMIT 1',
-        variables: [Variable.string(to)],
+        variables: [Variable.withString(to)],
       )
       .get();
   if (occupied.isNotEmpty) {
@@ -88,7 +88,7 @@ Future<void> _migrateOne({
       final rows = await database
           .customSelect(
             'SELECT package_path FROM plugin_registry WHERE plugin_id = ?',
-            variables: [Variable.string(from)],
+            variables: [Variable.withString(from)],
           )
           .get();
       for (final row in rows) {
@@ -102,9 +102,9 @@ Future<void> _migrateOne({
           database,
           'UPDATE plugin_registry SET package_path = ? WHERE plugin_id = ? AND package_path = ?',
           [
-            Variable.string(next),
-            Variable.string(from),
-            Variable.string(packagePath),
+            Variable.withString(next),
+            Variable.withString(from),
+            Variable.withString(packagePath),
           ],
           'plugin_registry',
         );
@@ -113,7 +113,7 @@ Future<void> _migrateOne({
         await _update(
           database,
           'UPDATE $table SET plugin_id = ? WHERE plugin_id = ?',
-          [Variable.string(to), Variable.string(from)],
+          [Variable.withString(to), Variable.withString(from)],
           table,
         );
       }
@@ -156,7 +156,7 @@ Future<void> _rewriteInstallRecord(
   final rows = await database
       .customSelect(
         'SELECT value FROM app_states WHERE key = ?',
-        variables: [Variable.string(key)],
+        variables: [Variable.withString(key)],
       )
       .get();
   if (rows.isEmpty) {
@@ -166,7 +166,7 @@ Future<void> _rewriteInstallRecord(
   final taken = await database
       .customSelect(
         'SELECT key FROM app_states WHERE key = ? LIMIT 1',
-        variables: [Variable.string(nextKey)],
+        variables: [Variable.withString(nextKey)],
       )
       .get();
   if (taken.isNotEmpty) {
@@ -183,7 +183,7 @@ Future<void> _rewriteInstallRecord(
   await _update(
     database,
     'UPDATE app_states SET key = ?, value = ? WHERE key = ?',
-    [Variable.string(nextKey), Variable.string(encoded), Variable.string(key)],
+    [Variable.withString(nextKey), Variable.withString(encoded), Variable.withString(key)],
     'app_states',
   );
 }
