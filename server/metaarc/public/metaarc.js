@@ -2,6 +2,7 @@
  * MetaArc (元弧) 门户交互脚本
  * 品牌域名: MetaArc.COM.CN
  * 职责: 按 /api/plans 渲染套餐，并在 Windows 清单给出本域安装包时替换下载卡片。
+ * 接口没有推荐字段。slug 为 creator，或名称以「创作者版」开头时，页面标为推荐。
  * 不请求账号或后台接口，也不发起支付。没有清单时下载区保持尚未发布。
  */
 
@@ -67,23 +68,35 @@ class MetaArcPortal {
     const period = this.formatBillingCycle(plan.billing_cycle);
     const features = this.planFeatures(plan.features);
     const featureHtml = features.length
-      ? `<ul class="plan-features">${features.map((item) => `<li>${this.checkIcon()}${this.escapeHtml(item)}</li>`).join('')}</ul>`
+      ? `<ul class="plan-features">${features.map((item) => `<li>${this.checkIcon()}<span>${this.escapeHtml(item)}</span></li>`).join('')}</ul>`
       : '';
     const priceHtml = price
       ? `<div class="plan-price"><span class="plan-amount">${this.escapeHtml(price)}</span>${period ? `<span class="plan-period">${this.escapeHtml(period)}</span>` : ''}</div>`
       : '';
     const pointsHtml = points
-      ? `<p class="plan-desc">${this.escapeHtml(points)} 点</p>`
+      ? `<p class="plan-points">${this.escapeHtml(points)} 点</p>`
       : '';
+    const offerHtml = (priceHtml || pointsHtml)
+      ? `<div class="plan-offer">${priceHtml}${pointsHtml}</div>`
+      : '';
+    const recommended = this.isRecommendedPlan(plan);
+    const badge = recommended ? '<span class="plan-badge">推荐</span>' : '';
     return `
-      <div class="plan-card" data-plan-slug="${this.escapeHtml(slug)}">
+      <div class="plan-card${recommended ? ' featured' : ''}" data-plan-slug="${this.escapeHtml(slug)}">
+        ${badge}
         <div class="plan-name">${this.escapeHtml(name)}</div>
-        ${priceHtml}
-        ${pointsHtml}
+        ${offerHtml}
         ${featureHtml}
         <button class="btn-plan" type="button" disabled>支付尚未开通</button>
       </div>
     `;
+  }
+
+  isRecommendedPlan(plan) {
+    const slug = typeof plan?.slug === 'string' ? plan.slug.trim().toLowerCase() : '';
+    if (slug === 'creator') return true;
+    const name = typeof plan?.name === 'string' ? plan.name.trim() : '';
+    return name === '创作者版' || name.startsWith('创作者版');
   }
 
   readNumber(value) {
