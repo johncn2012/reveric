@@ -5,6 +5,7 @@ import { NewApiConnector } from '../services/new_api_connector.js';
 
 export const ordersRouter = Router();
 const newApi = new NewApiConnector();
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // 1. 创建订单
 ordersRouter.post('/orders/create', requireAuth, async (req: Request, res: Response) => {
@@ -93,6 +94,19 @@ async function completeOrderPayment(orderId: string, tradeNo: string) {
 ordersRouter.post('/orders/:id/pay', requireAuth, async (req: Request, res: Response) => {
   try {
     const orderId = req.params.id;
+    if (!UUID_REGEX.test(orderId)) {
+      return res.status(400).json({ error: 'invalid_order_id', message: '订单ID格式无效' });
+    }
+
+    const existingRes = await query('SELECT user_id, status FROM orders WHERE id = $1', [orderId]);
+    if (existingRes.rows.length === 0) {
+      return res.status(404).json({ error: 'order_not_found', message: '订单不存在' });
+    }
+
+    if (existingRes.rows[0].user_id !== req.user!.userId && req.user!.role !== 'admin') {
+      return res.status(403).json({ error: 'forbidden', message: '无权操作此订单' });
+    }
+
     const tradeNo = `MANUAL_PAY_${Date.now()}`;
     const order = await completeOrderPayment(orderId, tradeNo);
 

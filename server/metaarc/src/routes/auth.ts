@@ -43,17 +43,20 @@ function mount(method: 'get' | 'post', paths: string[], handler: (req: Request, 
 const registerAccount = async (req: Request, res: Response) => {
   try {
     const { email, phone, password, nickname } = req.body;
+    const cleanEmail = typeof email === 'string' ? email.trim() : '';
+    const cleanPhone = typeof phone === 'string' ? phone.trim() : '';
+    const cleanNickname = typeof nickname === 'string' ? nickname.trim() : '';
 
-    if (!password || password.length < 6) {
+    if (!password || typeof password !== 'string' || password.length < 6) {
       return res.status(400).json({ error: 'invalid_password', message: '密码长度至少为 6 位' });
     }
-    if (!email && !phone) {
+    if (!cleanEmail && !cleanPhone) {
       return res.status(400).json({ error: 'invalid_account', message: '必须提供手机号或邮箱' });
     }
 
     // 检查是否已存在
     const checkSql = 'SELECT id FROM users WHERE (email IS NOT NULL AND email = $1) OR (phone IS NOT NULL AND phone = $2)';
-    const existing = await query(checkSql, [email || '', phone || '']);
+    const existing = await query(checkSql, [cleanEmail || '', cleanPhone || '']);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'user_exists', message: '该手机号或邮箱已被注册' });
     }
@@ -68,7 +71,7 @@ const registerAccount = async (req: Request, res: Response) => {
       VALUES ($1, $2, $3, $4, 'free', $5, $5, 'user')
       RETURNING id, email, phone, nickname, plan, quota, total_quota, role, created_at
     `;
-    const userRes = await query(insertSql, [email || null, phone || null, passwordHash, nickname || '创作者', initialQuota]);
+    const userRes = await query(insertSql, [cleanEmail || null, cleanPhone || null, passwordHash, cleanNickname || '创作者', initialQuota]);
     const newUser = userRes.rows[0];
 
     // 联动 New-API: 自动化创建 New-API 账号并签发专属 Token
@@ -138,13 +141,14 @@ const registerAccount = async (req: Request, res: Response) => {
 const loginAccount = async (req: Request, res: Response) => {
   try {
     const { account, password } = req.body;
-    if (!account || !password) {
+    const cleanAccount = typeof account === 'string' ? account.trim() : '';
+    if (!cleanAccount || typeof password !== 'string' || !password) {
       return res.status(400).json({ error: 'missing_fields', message: '请输入账号与密码' });
     }
 
     // 支持手机号或邮箱登录
     const sql = 'SELECT * FROM users WHERE email = $1 OR phone = $1 LIMIT 1';
-    const userRes = await query(sql, [account.trim()]);
+    const userRes = await query(sql, [cleanAccount]);
     if (userRes.rows.length === 0) {
       return res.status(401).json({ error: 'invalid_credentials', message: '账号或密码错误' });
     }

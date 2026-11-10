@@ -73,7 +73,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
           password: pwd,
         );
       } catch (e) {
-        errorMessage.value = e.toString().replaceFirst('Exception: ', '');
+        errorMessage.value = _dialogFailureText(e, context.t(LocaleKeys.accountRequestFailed));
       } finally {
         isSubmitting.value = false;
       }
@@ -102,7 +102,7 @@ class MetaArcAuthDialog extends HookConsumerWidget {
           nickname: nick.isNotEmpty ? nick : null,
         );
       } catch (e) {
-        errorMessage.value = e.toString().replaceFirst('Exception: ', '');
+        errorMessage.value = _dialogFailureText(e, context.t(LocaleKeys.accountRequestFailed));
       } finally {
         isSubmitting.value = false;
       }
@@ -112,6 +112,8 @@ class MetaArcAuthDialog extends HookConsumerWidget {
       isSubmitting.value = true;
       try {
         await ref.read(metaarcAccountProvider.notifier).refreshProfile();
+      } catch (e) {
+        errorMessage.value = _dialogFailureText(e, context.t(LocaleKeys.accountRequestFailed));
       } finally {
         isSubmitting.value = false;
       }
@@ -676,4 +678,16 @@ class MetaArcAuthDialog extends HookConsumerWidget {
       ],
     );
   }
+}
+
+String _dialogFailureText(Object error, String fallback) {
+  const prefix = 'Exception: ';
+  final text = error.toString();
+  if (text.startsWith(prefix)) {
+    final message = text.substring(prefix.length).trim();
+    if (message.isNotEmpty) {
+      return message;
+    }
+  }
+  return fallback;
 }

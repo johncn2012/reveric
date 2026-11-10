@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 export const tasksRouter = Router();
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // 1. 创建异步调度任务
 tasksRouter.post('/tasks/create', requireAuth, async (req: Request, res: Response) => {
@@ -75,6 +76,9 @@ tasksRouter.get('/tasks/list', requireAuth, async (req: Request, res: Response) 
 tasksRouter.post('/tasks/:id/update-status', requireAuth, async (req: Request, res: Response) => {
   try {
     const taskId = req.params.id;
+    if (!UUID_REGEX.test(taskId)) {
+      return res.status(400).json({ error: 'invalid_task_id', message: '任务ID格式无效' });
+    }
     const userId = req.user!.userId;
     const { status, progress, outputPayload, actualPoints, errorMessage } = req.body;
 

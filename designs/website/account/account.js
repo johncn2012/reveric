@@ -1,0 +1,614 @@
+/**
+ * 同域账号中心。未登录只提交登录和注册；登录后只渲染接口返回的字段。
+ * 规范路径：POST /api/auth/login、POST /api/auth/register、GET /api/auth/profile、
+ * GET /api/auth/orders、GET /api/auth/quota/logs。套餐名称来自 GET /api/plans。
+ * 管理员另读 /api/admin/overview、/api/admin/users、/api/admin/orders、/api/health、
+ * /api/updates/latest。不创建订单，也不展示金额汇总。
+ */
+(function () {
+  const TOKEN_KEY = 'metaarc_account_token';
+  const USER_VIEWS = ['overview', 'projects', 'quota', 'billing'];
+  const ADMIN_VIEWS = ['users', 'orders', 'health', 'updates'];
+  const alertEl = document.getElementById('alert');
+  const gate = document.getElementById('gate');
+  const consoleEl = document.getElementById('console');
+  const adminNav = document.getElementById('admin-nav');
+  const gateTitle = document.getElementById('gate-title');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const forgotPanel = document.getElementById('forgot-panel');
+  const loginLinks = document.getElementById('login-links');
+  let currentUser = null;
+  let busy = false;
+
+  function showAlert(message) {
+    if (!message) {
+      alertEl.hidden = true;
+      alertEl.textContent = '';
+      return;
+    }
+    alertEl.hidden = false;
+    alertEl.textContent = message;
+  }
+
+  function token() {
+    return localStorage.getItem(TOKEN_KEY) || '';
+  }
+
+  function setToken(value) {
+    if (value) localStorage.setItem(TOKEN_KEY, value);
+    else localStorage.removeItem(TOKEN_KEY);
+  }
+
+  async function request(path, options) {
+    const headers = Object.assign({ Accept: 'application/json' }, options && options.headers);
+    if (options && options.body) headers['Content-Type'] = 'application/json';
+    const current = token();
+    if (current) headers.Authorization = 'Bearer ' + current;
+    const res = await fetch(path, {
+      method: (options && options.method) || 'GET',
+      headers: headers,
+      body: options && options.body ? JSON.stringify(options.body) : undefined,
+    });
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = null;
+    }
+    return { res: res, data: data };
+  }
+
+  function errorMessage(result, fallback) {
+    const message = result.data && result.data.message;
+    if (typeof message === 'string' && message.trim()) return message.trim();
+    return fallback + ' (HTTP ' + result.res.status + ')';
+  }
+
+  function showLoggedOut() {
+    gate.hidden = false;
+    consoleEl.hidden = true;
+    currentUser = null;
+    adminNav.hidden = true;
+  }
+
+  function showLoggedIn() {
+    gate.hidden = true;
+    consoleEl.hidden = false;
+  }
+
+  function showGateMode(mode) {
+    const login = mode === 'login';
+    loginForm.hidden = !login;
+    loginLinks.hidden = !login;
+    registerForm.hidden = mode !== 'register';
+    forgotPanel.hidden = mode !== 'forgot';
+    gateTitle.textContent = mode === 'register' ? '注册账号' : '进入创作台';
+    showAlert('');
+  }
+
+  function addField(dl, label, value) {
+    if (value === undefined || value === null || value === '') return;
+    const row = document.createElement('div');
+    row.className = 'field';
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    dd.textContent = String(value);
+    row.append(dt, dd);
+    dl.append(row);
+  }
+
+  function formatNumber(value) {
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) return null;
+    return amount.toLocaleString('zh-CN');
+  }
+
+  function formatCents(cents) {
+    const amount = Number(cents);
+    if (!Number.isFinite(amount)) return '';
+    const yuan = amount / 100;
+    const text = Number.isInteger(yuan) ? String(yuan) : yuan.toFixed(2);
+    return '¥' + text;
+  }
+
+  function formatWhen(value) {
+    if (value === undefined || value === null || value === '') return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    const pad = function (n) { return String(n).padStart(2, '0'); };
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+      + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+  }
+
+  function roleLabel(role) {
+    if (role === 'admin') return '管理员';
+    if (role === 'user') return '用户';
+    return role ? String(role) : '';
+  }
+
+  function statusLabel(status) {
+    if (status === 'paid') return '已记录';
+    if (status === 'pending') return '未完成';
+    if (status === 'failed' || status === 'cancelled' || status === 'canceled') return '未完成';
+    return status ? String(status) : '';
+  }
+
+  function personLabel(row) {
+    if (!row) return '';
+    if (row.email) return String(row.email);
+    if (row.phone) return String(row.phone);
+    if (row.nickname) return String(row.nickname);
+    return '';
+  }
+
+  function renderProfile(user) {
+    const dl = document.getElementById('profile-fields');
+    dl.replaceChildren();
+    addField(dl, '昵称', user.nickname);
+    addField(dl, '邮箱', user.email);
+    addField(dl, '手机', user.phone);
+    addField(dl, '角色', roleLabel(user.role));
+    addField(dl, '套餐', user.plan);
+    addField(dl, '到期', formatWhen(user.expires_at));
+    document.getElementById('who-name').textContent = user.nickname || user.email || user.phone || '已登录';
+    document.getElementById('who-role').textContent = roleLabel(user.role);
+  }
+
+  function meter(label, value, total, detail) {
+    const wrap = document.createElement('div');
+    wrap.className = 'meter';
+    const row = document.createElement('div');
+    row.className = 'meter-row';
+    const name = document.createElement('span');
+    name.textContent = label;
+    const note = document.createElement('span');
+    note.textContent = detail;
+    row.append(name, note);
+    const track = document.createElement('div');
+    track.className = 'meter-track';
+    const fill = document.createElement('div');
+    fill.className = 'meter-fill';
+    const width = total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0;
+    fill.style.width = width + '%';
+    track.append(fill);
+    wrap.append(row, track);
+    return wrap;
+  }
+
+  function renderMeters(user) {
+    const nodes = [document.getElementById('overview-meters'), document.getElementById('quota-meters')];
+    const total = Number(user.total_quota);
+    const remain = Number(user.quota);
+    nodes.forEach(function (slot) {
+      slot.replaceChildren();
+      if (!Number.isFinite(total) && !Number.isFinite(remain)) {
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = '资料接口没有返回配额。';
+        slot.append(empty);
+        return;
+      }
+      const safeTotal = Number.isFinite(total) && total > 0 ? total : 0;
+      const safeRemain = Number.isFinite(remain) && remain > 0 ? remain : 0;
+      const used = safeTotal > 0 ? Math.max(0, safeTotal - safeRemain) : 0;
+      const remainText = formatNumber(safeRemain) + (safeTotal ? ' / ' + formatNumber(safeTotal) : '');
+      slot.append(
+        meter('剩余点数', safeRemain, safeTotal, remainText),
+        meter('已用点数', used, safeTotal, formatNumber(used) || '0')
+      );
+    });
+  }
+
+  function renderKey(user) {
+    const slot = document.getElementById('key-slot');
+    slot.replaceChildren();
+    const key = typeof user.new_api_key === 'string' ? user.new_api_key.trim() : '';
+    const base = typeof user.new_api_base_url === 'string' ? user.new_api_base_url.trim() : '';
+    const note = document.createElement('p');
+    note.className = 'empty';
+    if (!key || key.indexOf('sk-mock-') === 0) {
+      note.textContent = '算力通道尚未开通，接口没有返回可用密钥。';
+      slot.append(note);
+    } else {
+      const code = document.createElement('p');
+      code.className = 'mono';
+      code.textContent = key;
+      slot.append(code);
+    }
+    if (base) {
+      const line = document.createElement('p');
+      line.className = 'empty';
+      line.textContent = '算力地址：' + base;
+      slot.append(line);
+    }
+  }
+
+  function cycleSuffix(cycle) {
+    if (cycle === 'monthly') return ' / 月';
+    if (cycle === 'yearly') return ' / 年';
+    if (typeof cycle === 'string' && cycle.trim()) return ' / ' + cycle.trim();
+    return '';
+  }
+
+  function renderPlan(user, plansResult) {
+    const slot = document.getElementById('plan-slot');
+    slot.replaceChildren();
+    const slug = typeof user.plan === 'string' ? user.plan : '';
+    if (!plansResult.res.ok || !plansResult.data || plansResult.data.success !== true || !Array.isArray(plansResult.data.data)) {
+      const missing = document.createElement('p');
+      missing.className = 'empty';
+      missing.textContent = slug
+        ? '套餐列表暂时无法获取。当前标识：' + slug
+        : '套餐列表暂时无法获取，资料里也没有套餐标识。';
+      slot.append(missing);
+      return;
+    }
+    const match = plansResult.data.data.find(function (plan) {
+      return plan && plan.slug === slug;
+    });
+    if (!match) {
+      const missing = document.createElement('p');
+      missing.className = 'empty';
+      missing.textContent = slug ? '套餐列表里没有「' + slug + '」。' : '资料里没有套餐标识。';
+      slot.append(missing);
+      return;
+    }
+    const dl = document.createElement('dl');
+    addField(dl, '名称', match.name);
+    addField(dl, '标识', match.slug);
+    const price = formatCents(match.price_cents);
+    if (price) addField(dl, '标价', price + cycleSuffix(match.billing_cycle));
+    const points = formatNumber(match.quota_points);
+    if (points) addField(dl, '点数', points);
+    const closed = document.createElement('p');
+    closed.className = 'fine';
+    closed.textContent = '支付尚未开通，不能购买这个套餐。';
+    slot.append(dl, closed);
+  }
+
+  function cell(value) {
+    if (value === undefined || value === null || value === '') return '';
+    return String(value);
+  }
+
+  function renderTable(slot, columns, rows) {
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    const head = document.createElement('tr');
+    columns.forEach(function (column) {
+      const th = document.createElement('th');
+      th.textContent = column.label;
+      head.append(th);
+    });
+    const thead = document.createElement('thead');
+    thead.append(head);
+    const tbody = document.createElement('tbody');
+    rows.forEach(function (row) {
+      const tr = document.createElement('tr');
+      columns.forEach(function (column) {
+        const td = document.createElement('td');
+        column.fill(td, row);
+        tr.append(td);
+      });
+      tbody.append(tr);
+    });
+    table.append(thead, tbody);
+    wrap.append(table);
+    slot.append(wrap);
+  }
+
+  function renderOrderTable(slot, rows, withUser) {
+    slot.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty-well';
+      empty.textContent = '暂无订单 · 支付未开通';
+      slot.append(empty);
+      return;
+    }
+    const columns = [];
+    if (withUser) columns.push({ label: '用户', fill: function (td, row) { td.textContent = personLabel(row); } });
+    columns.push(
+      { label: '套餐', fill: function (td, row) { td.textContent = cell(row.plan_name || row.plan_slug); } },
+      { label: '金额', fill: function (td, row) { td.textContent = formatCents(row.amount_cents); } },
+      { label: '点数', fill: function (td, row) { td.textContent = formatNumber(row.quota_points) || ''; } },
+      { label: '状态', fill: function (td, row) { td.textContent = statusLabel(row.status); } },
+      { label: '创建', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } }
+    );
+    renderTable(slot, columns, rows);
+  }
+
+  function renderOrders(slot, result, withUser) {
+    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
+      slot.replaceChildren();
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = errorMessage(result, '无法获取订单');
+      slot.append(note);
+      return;
+    }
+    renderOrderTable(slot, result.data.data, withUser);
+  }
+
+  function renderLedger(result) {
+    const slot = document.getElementById('ledger-slot');
+    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
+      slot.replaceChildren();
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = errorMessage(result, '无法获取流水');
+      slot.append(note);
+      return;
+    }
+    if (!result.data.data.length) {
+      slot.replaceChildren();
+      const empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = '没有点数流水。';
+      slot.append(empty);
+      return;
+    }
+    slot.replaceChildren();
+    renderTable(slot, [
+      { label: '点数', fill: function (td, row) { td.textContent = formatNumber(row.amount) || cell(row.amount); } },
+      { label: '余额', fill: function (td, row) { td.textContent = formatNumber(row.balance_after) || cell(row.balance_after); } },
+      { label: '类型', fill: function (td, row) { td.textContent = cell(row.type); } },
+      { label: '备注', fill: function (td, row) { td.textContent = cell(row.remark); } },
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+    ], result.data.data);
+  }
+
+  function setKpi(id, value) {
+    const el = document.getElementById(id);
+    el.textContent = value === null || value === undefined ? '—' : String(value);
+  }
+
+  function renderOverview(result) {
+    const note = document.getElementById('kpi-note');
+    if (!result.res.ok || !result.data || result.data.success !== true || !result.data.data) {
+      setKpi('kpi-users', '—');
+      setKpi('kpi-new', '—');
+      setKpi('kpi-tasks', '—');
+      note.hidden = false;
+      note.textContent = errorMessage(result, '运营数据暂时无法读取');
+      return;
+    }
+    const data = result.data.data;
+    setKpi('kpi-users', formatNumber(data.total_users) || '—');
+    setKpi('kpi-new', formatNumber(data.today_new_users) || '—');
+    setKpi('kpi-tasks', formatNumber(data.active_tasks) || '—');
+    note.hidden = true;
+    note.textContent = '';
+  }
+
+  function renderUsers(result) {
+    const slot = document.getElementById('users-slot');
+    slot.replaceChildren();
+    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = errorMessage(result, '无法获取用户');
+      slot.append(note);
+      return;
+    }
+    if (!result.data.data.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = '没有匹配的用户。';
+      slot.append(empty);
+      return;
+    }
+    renderTable(slot, [
+      { label: '邮箱', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
+      {
+        label: '状态',
+        fill: function (td, row) {
+          const dot = document.createElement('i');
+          dot.className = row.role === 'admin' ? 'dot warn' : 'dot';
+          td.append(dot, document.createTextNode(roleLabel(row.role) + (row.plan ? ' · ' + row.plan : '')));
+        },
+      },
+      { label: '配额', fill: function (td, row) { td.textContent = formatNumber(row.quota) || cell(row.quota); } },
+      { label: '注册时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+    ], result.data.data);
+  }
+
+  function renderHealth(result) {
+    const slot = document.getElementById('health-slot');
+    slot.replaceChildren();
+    const ok = result.res.ok && result.data && result.data.status === 'ok';
+    const dl = document.createElement('dl');
+    addField(dl, '服务', ok ? '可用' : '不可用');
+    addField(dl, '数据库', ok && result.data.db === 'connected' ? '已连接' : '未连接');
+    if (result.data && result.data.timestamp) addField(dl, '时间', formatWhen(result.data.timestamp));
+    slot.append(dl);
+    if (!ok) {
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = '健康探针没有返回可用状态。';
+      slot.append(note);
+    }
+  }
+
+  function updateLabel(data) {
+    if (!data || data.has_update !== true) {
+      return (data && typeof data.message === 'string' && data.message.trim()) ? data.message.trim() : '尚未发布';
+    }
+    return data.version ? '清单版本 ' + data.version : '清单返回了更新';
+  }
+
+  function renderUpdates(rows) {
+    const slot = document.getElementById('updates-slot');
+    slot.replaceChildren();
+    const dl = document.createElement('dl');
+    rows.forEach(function (row) {
+      addField(dl, row.name, row.ok ? updateLabel(row.data) : '清单暂时无法读取');
+    });
+    slot.append(dl);
+  }
+
+  async function loadUsers(keyword) {
+    const query = keyword ? '?keyword=' + encodeURIComponent(keyword) : '';
+    const result = await request('/api/admin/users' + query);
+    renderUsers(result);
+  }
+
+  async function loadAdmin() {
+    const [overview, users, orders, health, windows, mac, android] = await Promise.all([
+      request('/api/admin/overview'),
+      request('/api/admin/users'),
+      request('/api/admin/orders'),
+      request('/api/health'),
+      request('/api/updates/latest?platform=windows&arch=x64'),
+      request('/api/updates/latest?platform=macos&arch=arm64'),
+      request('/api/updates/latest?platform=android&arch=arm64'),
+    ]);
+    renderOverview(overview);
+    renderUsers(users);
+    renderOrders(document.getElementById('admin-orders-slot'), orders, true);
+    renderHealth(health);
+    renderUpdates([
+      { name: 'Windows', ok: windows.res.ok, data: windows.data },
+      { name: 'macOS', ok: mac.res.ok, data: mac.data },
+      { name: 'Android', ok: android.res.ok, data: android.data },
+    ]);
+  }
+
+  function viewAllowed(name) {
+    if (USER_VIEWS.indexOf(name) >= 0) return true;
+    return currentUser && currentUser.role === 'admin' && ADMIN_VIEWS.indexOf(name) >= 0;
+  }
+
+  function showView(name) {
+    if (!viewAllowed(name)) name = 'overview';
+    document.querySelectorAll('[data-panel]').forEach(function (panel) {
+      panel.hidden = panel.getAttribute('data-panel') !== name;
+    });
+    document.querySelectorAll('.rail button[data-view]').forEach(function (button) {
+      if (button.getAttribute('data-view') === name) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+    const button = document.querySelector('.rail button[data-view="' + name + '"]');
+    const label = button && button.querySelector('span');
+    document.getElementById('console-title').textContent = label ? label.textContent : '概览';
+    const kicker = button && adminNav.contains(button) ? (adminNav.getAttribute('data-kicker') || '') : '用户中心';
+    document.getElementById('console-kicker').textContent = kicker;
+    if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+  }
+
+  async function loadSession() {
+    showAlert('');
+    const profile = await request('/api/auth/profile');
+    if (profile.res.status === 401) {
+      setToken('');
+      showLoggedOut();
+      showAlert(errorMessage(profile, '登录态已失效'));
+      return;
+    }
+    if (!profile.res.ok || !profile.data || !profile.data.user) {
+      showLoggedIn();
+      showAlert(errorMessage(profile, '无法获取资料'));
+      return;
+    }
+    const user = profile.data.user;
+    currentUser = user;
+    showLoggedIn();
+    adminNav.hidden = user.role !== 'admin';
+    renderProfile(user);
+    renderMeters(user);
+    renderKey(user);
+    const plans = await request('/api/plans');
+    const orders = await request('/api/auth/orders');
+    const ledger = await request('/api/auth/quota/logs');
+    renderPlan(user, plans);
+    renderOrders(document.getElementById('orders-slot'), orders, false);
+    renderLedger(ledger);
+    if (user.role === 'admin') await loadAdmin();
+    const hash = (location.hash || '').replace('#', '');
+    showView(viewAllowed(hash) ? hash : 'overview');
+  }
+
+  async function submitAuth(path, body, button) {
+    if (busy) return;
+    busy = true;
+    button.disabled = true;
+    showAlert('');
+    try {
+      const result = await request(path, { method: 'POST', body: body });
+      if (!result.res.ok || !result.data || !result.data.token) {
+        showAlert(errorMessage(result, '账号请求失败'));
+        return;
+      }
+      setToken(result.data.token);
+      await loadSession();
+    } catch (_) {
+      showAlert('网络请求失败，请稍后再试');
+    } finally {
+      busy = false;
+      button.disabled = false;
+    }
+  }
+
+  loginForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+    const account = document.getElementById('login-account').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!account || !password) {
+      showAlert('请输入账号与密码');
+      return;
+    }
+    submitAuth('/api/auth/login', { account: account, password: password }, loginForm.querySelector('button'));
+  });
+
+  registerForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+    const account = document.getElementById('register-account').value.trim();
+    const password = document.getElementById('register-password').value;
+    const nickname = document.getElementById('register-nickname').value.trim();
+    if (!account || !password) {
+      showAlert('请输入账号与密码');
+      return;
+    }
+    if (password.length < 6) {
+      showAlert('密码长度至少为 6 位');
+      return;
+    }
+    const body = { password: password };
+    if (nickname) body.nickname = nickname;
+    if (account.indexOf('@') >= 0) body.email = account;
+    else body.phone = account;
+    submitAuth('/api/auth/register', body, registerForm.querySelector('button.primary'));
+  });
+
+  document.getElementById('show-register').addEventListener('click', function () { showGateMode('register'); });
+  document.getElementById('show-forgot').addEventListener('click', function () { showGateMode('forgot'); });
+  document.getElementById('register-back').addEventListener('click', function () { showGateMode('login'); });
+  document.getElementById('forgot-back').addEventListener('click', function () { showGateMode('login'); });
+
+  document.getElementById('btn-refresh').addEventListener('click', function () { loadSession(); });
+  document.getElementById('btn-logout').addEventListener('click', function () {
+    setToken('');
+    showAlert('');
+    showLoggedOut();
+    showGateMode('login');
+  });
+
+  document.querySelectorAll('.rail button[data-view]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      showView(button.getAttribute('data-view'));
+    });
+  });
+
+  document.getElementById('user-search').addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (!currentUser || currentUser.role !== 'admin') return;
+    loadUsers(document.getElementById('user-keyword').value.trim());
+  });
+
+  showGateMode('login');
+  if (token()) loadSession();
+  else showLoggedOut();
+})();

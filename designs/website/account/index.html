@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>账号 — MetaArc 元弧</title>
+<meta name="description" content="MetaArc 元弧账号。登录、注册，以及查看资料、配额和账单。支付尚未开通。">
+<link rel="canonical" href="https://metaarc.com.cn/account">
+<link rel="icon" href="/assets/icon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/icon-180.png" sizes="180x180">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="/metaarc.css">
+<link rel="stylesheet" href="/account/account.css">
+</head>
+<body>
+<p class="alert" id="alert" data-alert hidden></p>
+
+<div id="gate" class="gate">
+  <aside class="gate-still">
+    <img src="/assets/account-gate-still.webp" alt="影棚机位：摄影机、监视器与灯光" width="1280" height="720">
+    <p class="gate-caption">从小说到成片</p>
+  </aside>
+  <main class="gate-form">
+    <a class="brand" href="/"><img class="brand-mark" src="/assets/mark.svg" alt="" width="40" height="40"><span class="brand-lockup"><span class="brand-en">MetaArc</span><span class="brand-zh">元弧</span></span></a>
+    <div class="gate-body">
+      <h1 id="gate-title">进入创作台</h1>
+
+      <form id="login-form">
+        <label for="login-account">邮箱</label>
+        <input id="login-account" name="account" type="text" autocomplete="username" placeholder="邮箱或手机号" required>
+        <label for="login-password">密码</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        <button class="primary" type="submit">继续</button>
+      </form>
+
+      <form id="register-form" hidden>
+        <label for="register-account">邮箱</label>
+        <input id="register-account" name="account" type="text" autocomplete="username" placeholder="邮箱或手机号" required>
+        <label for="register-nickname">昵称（可选）</label>
+        <input id="register-nickname" name="nickname" type="text" autocomplete="nickname">
+        <label for="register-password">密码（至少 6 位）</label>
+        <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+        <button class="primary" type="submit">注册</button>
+        <button class="text-link" id="register-back" type="button">返回登录</button>
+      </form>
+
+      <div id="forgot-panel" hidden>
+        <p class="forgot-copy">密码重置尚未开通。需要找回时，请写信到 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>。</p>
+        <button class="text-link" id="forgot-back" type="button">返回登录</button>
+      </div>
+
+      <div class="gate-links" id="login-links">
+        <button type="button" id="show-register">注册账号</button>
+        <button type="button" id="show-forgot">忘记密码</button>
+      </div>
+    </div>
+    <p class="gate-foot">支付尚未开通</p>
+  </main>
+</div>
+
+<div id="console" class="console" hidden>
+  <aside class="rail">
+    <a class="rail-brand" href="/"><img class="brand-mark" src="/assets/mark.svg" alt="" width="28" height="28"><span class="brand-lockup"><span class="brand-en">MetaArc</span><span class="brand-zh">元弧</span></span></a>
+    <nav class="rail-nav" aria-label="用户中心">
+      <button type="button" data-view="overview" aria-current="true"><span>概览</span></button>
+      <button type="button" data-view="projects"><span>项目</span></button>
+      <button type="button" data-view="quota"><span>配额</span></button>
+      <button type="button" data-view="billing"><span>账单</span></button>
+    </nav>
+    <nav class="rail-nav" id="admin-nav" data-kicker="管理后台" aria-label="管理后台" hidden>
+      <p class="rail-label">管理后台</p>
+      <button type="button" data-view="users"><span>用户</span></button>
+      <button type="button" data-view="orders"><span>订单</span></button>
+      <button type="button" data-view="health"><span>健康</span></button>
+      <button type="button" data-view="updates"><span>更新</span></button>
+    </nav>
+  </aside>
+
+  <div class="console-main">
+    <header class="console-top">
+      <div>
+        <p class="kicker" id="console-kicker">用户中心</p>
+        <h1 id="console-title">概览</h1>
+      </div>
+      <div class="who">
+        <span id="who-name"></span>
+        <span id="who-role" class="who-role"></span>
+        <button id="btn-refresh" type="button">刷新</button>
+        <button id="btn-logout" type="button">退出</button>
+      </div>
+    </header>
+
+    <section data-panel="overview">
+      <div class="banner">
+        <h2>支付尚未开通</h2>
+        <p>账户和配额可以在这里看。支付还没接入，不能下单或充值。</p>
+      </div>
+      <dl id="profile-fields" class="profile-strip"></dl>
+      <div class="panels">
+        <div class="panel">
+          <h3>配额用量</h3>
+          <div id="overview-meters"><p class="empty">正在读取配额…</p></div>
+        </div>
+        <div class="panel">
+          <h3>最近项目</h3>
+          <p class="empty">作品保存在本机创作台。这里没有云端项目，也不放示例。</p>
+        </div>
+      </div>
+    </section>
+
+    <section data-panel="projects" hidden>
+      <div class="panel">
+        <h3>最近项目</h3>
+        <p class="empty">作品保存在本机创作台。账号中心没有项目列表，这里不展示虚构作品。</p>
+      </div>
+    </section>
+
+    <section data-panel="quota" hidden>
+      <div class="panels">
+        <div class="panel">
+          <h3>配额用量</h3>
+          <div id="quota-meters"><p class="empty">正在读取配额…</p></div>
+        </div>
+        <div class="panel">
+          <h3>套餐</h3>
+          <div id="plan-slot"></div>
+          <h3 class="subhead">密钥</h3>
+          <div id="key-slot"></div>
+        </div>
+      </div>
+    </section>
+
+    <section data-panel="billing" hidden>
+      <div class="banner banner-slim">
+        <h2>支付尚未开通</h2>
+        <p>不能在这里下单或充值。没有订单时保持空态。</p>
+      </div>
+      <div class="panel">
+        <h3>订单</h3>
+        <div id="orders-slot"><p class="empty-well">暂无订单 · 支付未开通</p></div>
+      </div>
+      <div class="panel">
+        <h3>配额流水</h3>
+        <p class="fine">流水记的是点数变动，不是付款。</p>
+        <div id="ledger-slot"></div>
+      </div>
+    </section>
+
+    <section data-panel="users" hidden>
+      <div class="kpi-row" id="kpi-row">
+        <div class="kpi"><span>用户</span><b id="kpi-users">—</b><em>来自运营接口</em></div>
+        <div class="kpi"><span>今日新增</span><b id="kpi-new">—</b><em>来自运营接口</em></div>
+        <div class="kpi"><span>进行中任务</span><b id="kpi-tasks">—</b><em>来自运营接口</em></div>
+        <div class="kpi"><span>支付</span><b class="kpi-quiet">尚未开通</b><em>不展示金额</em></div>
+      </div>
+      <p class="fine" id="kpi-note" hidden></p>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>用户</h3>
+          <form id="user-search" class="user-search">
+            <input id="user-keyword" type="search" placeholder="邮箱、手机或昵称" autocomplete="off">
+            <button type="submit">查找</button>
+          </form>
+        </div>
+        <div id="users-slot"><p class="empty">尚未读取用户列表。</p></div>
+      </div>
+    </section>
+
+    <section data-panel="orders" hidden>
+      <div class="banner banner-slim">
+        <h2>支付尚未开通</h2>
+        <p>订单区只列出接口实际返回的记录，不汇总金额。</p>
+      </div>
+      <div class="panel">
+        <h3>订单</h3>
+        <div id="admin-orders-slot"><p class="empty-well">暂无订单 · 支付未开通</p></div>
+      </div>
+    </section>
+
+    <section data-panel="health" hidden>
+      <div class="panel">
+        <h3>健康</h3>
+        <div id="health-slot"><p class="empty">尚未读取健康探针。</p></div>
+      </div>
+    </section>
+
+    <section data-panel="updates" hidden>
+      <div class="panel">
+        <h3>更新</h3>
+        <p class="fine">状态来自更新清单。没有安装包时保持尚未发布。</p>
+        <div id="updates-slot"><p class="empty">尚未读取更新清单。</p></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<noscript><p class="gate-foot">登录和注册需要浏览器脚本。未登录时这里没有配额数字。</p></noscript>
+<script src="/account/account.js"></script>
+</body>
+</html>

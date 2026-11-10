@@ -194,12 +194,21 @@ class MetaArcAuthService {
     return updated;
   }
 
-  /// 核心自动装配引擎：将 MetaArc 下发的专属 New-API Key 与网关同步到本地 AiProviders 表
+  /// 核心自动装配引擎：将 MetaArc 下发的专属 New-API Key 与网关同步到本地 AiProviders 表。
+  /// 仅当服务端下发有效凭据（非 sk-mock- 开头）且算力网关地址非空时才启用；否则禁用该 Provider。
   Future<void> syncToAiProviders(MetaArcAccount account) async {
-    if (account.newApiKey.isEmpty) return;
+    final canProvision = account.hasProvisionedApiKey && account.newApiBaseUrl.trim().isNotEmpty;
 
     try {
       final existing = await database.aiProviderDao.getById(metaarcProviderId);
+      if (!canProvision) {
+        if (existing != null && existing.enabled) {
+          await database.aiProviderDao.upsert(existing.copyWith(enabled: false));
+          _log.info('Disabled unprovisioned MetaArc AiProvider (ID: $metaarcProviderId)');
+        }
+        return;
+      }
+
       final defaultModels = [
         'gpt-4o',
         'gpt-4o-mini',

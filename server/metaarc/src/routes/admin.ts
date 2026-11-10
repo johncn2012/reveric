@@ -5,6 +5,7 @@ import { NewApiConnector } from '../services/new_api_connector.js';
 
 export const adminRouter = Router();
 const newApi = new NewApiConnector();
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // 所有接口需超管权限
 adminRouter.use(requireAdmin);
@@ -46,8 +47,10 @@ adminRouter.get('/admin/users', async (req: Request, res: Response) => {
       sql += ` WHERE email ILIKE $1 OR phone ILIKE $1 OR nickname ILIKE $1`;
     }
 
-    params.push(parseInt(limit as string, 10));
-    params.push(parseInt(offset as string, 10));
+    const parsedLimit = Math.max(1, Math.min(200, parseInt(limit as string, 10) || 50));
+    const parsedOffset = Math.max(0, parseInt(offset as string, 10) || 0);
+    params.push(parsedLimit);
+    params.push(parsedOffset);
     sql += ` ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
     const result = await query(sql, params);
@@ -62,6 +65,10 @@ adminRouter.get('/admin/users', async (req: Request, res: Response) => {
 adminRouter.post('/admin/users/:id/adjust-quota', async (req: Request, res: Response) => {
   try {
     const targetUserId = req.params.id;
+    if (!UUID_REGEX.test(targetUserId)) {
+      return res.status(400).json({ error: 'invalid_user_id', message: '用户ID格式无效' });
+    }
+
     const { amount, reason } = req.body; // 正数加点，负数扣点
 
     if (amount === undefined || isNaN(Number(amount))) {
@@ -69,6 +76,9 @@ adminRouter.post('/admin/users/:id/adjust-quota', async (req: Request, res: Resp
     }
 
     const delta = parseFloat(amount);
+    if (!Number.isFinite(delta)) {
+      return res.status(400).json({ error: 'invalid_amount', message: '必须指定有效调账金额' });
+    }
     const userRes = await query(
       'UPDATE users SET quota = GREATEST(0, quota + $1), total_quota = total_quota + GREATEST(0, $1), updated_at = NOW() WHERE id = $2 RETURNING *',
       [delta, targetUserId]
