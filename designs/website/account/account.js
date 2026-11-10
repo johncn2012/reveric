@@ -51,6 +51,12 @@
     });
   }
 
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.action-dropdown-menu.show').forEach(function (m) {
+      m.classList.remove('show');
+    });
+  });
+
   function token() {
     return localStorage.getItem(TOKEN_KEY) || '';
   }
@@ -627,11 +633,7 @@
             }
           });
 
-          const btnPlan = document.createElement('button');
-          btnPlan.className = 'action-btn';
-          btnPlan.type = 'button';
-          btnPlan.textContent = '套餐';
-          btnPlan.addEventListener('click', async function () {
+          const onSetPlan = async function () {
             const rawPlan = prompt('请选择新套餐（free / creator / pro / studio）：', row.plan || 'free');
             if (!rawPlan) return;
             const newPlan = rawPlan.trim().toLowerCase();
@@ -649,13 +651,9 @@
             } else {
               showAlert(errorMessage(res, '套餐设置失败'));
             }
-          });
+          };
 
-          const btnLogs = document.createElement('button');
-          btnLogs.className = 'action-btn';
-          btnLogs.type = 'button';
-          btnLogs.textContent = '流水';
-          btnLogs.addEventListener('click', async function () {
+          const onShowLogs = async function () {
             const res = await request('/api/admin/users/' + row.id + '/quota-logs');
             if (!res.res.ok || !res.data || !res.data.success) {
               showAlert(errorMessage(res, '无法获取流水记录'));
@@ -670,22 +668,17 @@
               container.append(p);
             } else {
               renderTable(container, [
-                { label: '变动点数', fill: function (td, log) { td.textContent = formatNumber(log.amount) || cell(log.amount); } },
-                { label: '变动后余额', fill: function (td, log) { td.textContent = formatNumber(log.balance_after) || cell(log.balance_after); } },
-                { label: '类型', fill: function (td, log) { td.textContent = cell(log.type); } },
-                { label: '备注', fill: function (td, log) { td.textContent = cell(log.remark); } },
-                { label: '时间', fill: function (td, log) { td.textContent = formatWhen(log.created_at); } },
+                { label: '变动点数', fill: function (t, log) { t.textContent = formatNumber(log.amount) || cell(log.amount); } },
+                { label: '变动后余额', fill: function (t, log) { t.textContent = formatNumber(log.balance_after) || cell(log.balance_after); } },
+                { label: '类型', fill: function (t, log) { t.textContent = cell(log.type); } },
+                { label: '备注', fill: function (t, log) { t.textContent = cell(log.remark); } },
+                { label: '时间', fill: function (t, log) { t.textContent = formatWhen(log.created_at); } },
               ], logs);
             }
             openModal('用户算力流水 — ' + (personLabel(row) || row.id), container);
-          });
+          };
 
-          const btnReset = document.createElement('button');
-          btnReset.className = 'action-btn';
-          btnReset.type = 'button';
-          btnReset.textContent = '重置';
-          btnReset.title = '重置用户登录密码';
-          btnReset.addEventListener('click', async function () {
+          const onResetPwd = async function () {
             if (!confirm('确定要重置用户「' + (personLabel(row) || row.id) + '」的密码吗？')) return;
             const res = await request('/api/admin/users/' + row.id + '/reset-password', { method: 'POST' });
             if (res.res.ok && res.data && res.data.success) {
@@ -694,14 +687,10 @@
             } else {
               showAlert(errorMessage(res, '密码重置失败'));
             }
-          });
+          };
 
           const isSuspended = row.status === 'suspended';
-          const btnStatus = document.createElement('button');
-          btnStatus.className = isSuspended ? 'action-btn primary' : 'action-btn';
-          btnStatus.type = 'button';
-          btnStatus.textContent = isSuspended ? '解封' : '封禁';
-          btnStatus.addEventListener('click', async function () {
+          const onToggleStatus = async function () {
             const nextStatus = isSuspended ? 'active' : 'suspended';
             const actionText = isSuspended ? '解封' : '封禁';
             if (!confirm('确定要' + actionText + '用户「' + (personLabel(row) || row.id) + '」吗？')) return;
@@ -715,7 +704,7 @@
             } else {
               showAlert(errorMessage(res, '更新用户状态失败'));
             }
-          });
+          };
 
           const btnDetails = document.createElement('button');
           btnDetails.className = 'action-btn';
@@ -733,6 +722,145 @@
             addField(dl, '当前套餐', row.plan || 'free');
             addField(dl, '可用算力', formatNumber(row.quota) || cell(row.quota));
             addField(dl, '累计配额', formatNumber(row.total_quota) || cell(row.total_quota));
+            if (row.new_api_key) addField(dl, '算力 Key', row.new_api_key.substring(0, 12) + '******');
+            if (row.last_login_at) {
+              const loc = row.last_login_location ? ' (' + row.last_login_location + ')' : '';
+              const ip = row.last_login_ip ? ' · ' + row.last_login_ip : '';
+              addField(dl, '最后登录', formatWhen(row.last_login_at) + ip + loc);
+            }
+            addField(dl, '注册时间', formatWhen(row.created_at));
+            wrap.append(dl);
+
+            const modalActions = document.createElement('div');
+            modalActions.style.marginTop = '14px';
+            modalActions.style.display = 'flex';
+            modalActions.style.gap = '8px';
+            modalActions.style.flexWrap = 'wrap';
+
+            const mBtnPlan = document.createElement('button');
+            mBtnPlan.className = 'action-btn';
+            mBtnPlan.type = 'button';
+            mBtnPlan.textContent = '设置套餐';
+            mBtnPlan.addEventListener('click', onSetPlan);
+
+            const mBtnLogs = document.createElement('button');
+            mBtnLogs.className = 'action-btn';
+            mBtnLogs.type = 'button';
+            mBtnLogs.textContent = '算力流水';
+            mBtnLogs.addEventListener('click', onShowLogs);
+
+            const mBtnReset = document.createElement('button');
+            mBtnReset.className = 'action-btn';
+            mBtnReset.type = 'button';
+            mBtnReset.textContent = '重置密码';
+            mBtnReset.addEventListener('click', onResetPwd);
+
+            const mBtnStatus = document.createElement('button');
+            mBtnStatus.className = isSuspended ? 'action-btn primary' : 'action-btn danger';
+            mBtnStatus.type = 'button';
+            mBtnStatus.textContent = isSuspended ? '解封账号' : '封禁账号';
+            mBtnStatus.addEventListener('click', onToggleStatus);
+
+            const btnLoginAudit = document.createElement('button');
+            btnLoginAudit.className = 'action-btn';
+            btnLoginAudit.type = 'button';
+            btnLoginAudit.textContent = '登录日志';
+            btnLoginAudit.addEventListener('click', async function () {
+              const res = await request('/api/admin/users/' + row.id + '/login-logs');
+              if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
+                notify(errorMessage(res, '无法读取登录日志'), 'error');
+                return;
+              }
+              const userLogs = res.data.data;
+              if (!userLogs.length) {
+                notify('该用户暂无登录日志', 'info');
+                return;
+              }
+              const auditWrap = document.createElement('div');
+              renderTable(auditWrap, [
+                { label: '登录时间', fill: function (t, r) { t.textContent = formatWhen(r.created_at); } },
+                {
+                  label: '状态',
+                  fill: function (t, r) {
+                    const dot = document.createElement('i');
+                    dot.className = r.status === 'success' ? 'dot' : 'dot danger';
+                    t.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
+                  },
+                },
+                { label: 'IP', fill: function (t, r) { t.textContent = r.ip || '—'; } },
+                { label: '地理位置', fill: function (t, r) { t.textContent = r.ip_location || '—'; } },
+                { label: '客户端', fill: function (t, r) { t.textContent = r.user_agent ? (r.user_agent.substring(0, 30) + '…') : '—'; } },
+              ], userLogs);
+              openModal('登录审计历史 — ' + (personLabel(row) || row.id), auditWrap);
+            });
+
+            modalActions.append(mBtnPlan, mBtnLogs, mBtnReset, mBtnStatus, btnLoginAudit);
+            wrap.append(modalActions);
+            openModal('创作者档案详情 — ' + (personLabel(row) || row.id), wrap);
+          });
+
+          // 更多操作下拉菜单
+          const moreWrap = document.createElement('div');
+          moreWrap.className = 'action-more-wrap';
+
+          const btnMore = document.createElement('button');
+          btnMore.className = 'action-btn';
+          btnMore.type = 'button';
+          btnMore.textContent = '更多 ▾';
+          btnMore.title = '更多管理操作';
+
+          const menu = document.createElement('div');
+          menu.className = 'action-dropdown-menu';
+
+          btnMore.addEventListener('click', function (e) {
+            e.stopPropagation();
+            document.querySelectorAll('.action-dropdown-menu.show').forEach(function (m) {
+              if (m !== menu) m.classList.remove('show');
+            });
+            menu.classList.toggle('show');
+          });
+
+          const itemPlan = document.createElement('button');
+          itemPlan.className = 'dropdown-item';
+          itemPlan.type = 'button';
+          itemPlan.textContent = '变更套餐';
+          itemPlan.addEventListener('click', function () {
+            menu.classList.remove('show');
+            onSetPlan();
+          });
+
+          const itemLogs = document.createElement('button');
+          itemLogs.className = 'dropdown-item';
+          itemLogs.type = 'button';
+          itemLogs.textContent = '算力流水';
+          itemLogs.addEventListener('click', function () {
+            menu.classList.remove('show');
+            onShowLogs();
+          });
+
+          const itemReset = document.createElement('button');
+          itemReset.className = 'dropdown-item';
+          itemReset.type = 'button';
+          itemReset.textContent = '重置密码';
+          itemReset.addEventListener('click', function () {
+            menu.classList.remove('show');
+            onResetPwd();
+          });
+
+          const itemStatus = document.createElement('button');
+          itemStatus.className = isSuspended ? 'dropdown-item' : 'dropdown-item danger';
+          itemStatus.type = 'button';
+          itemStatus.textContent = isSuspended ? '解封账号' : '封禁账号';
+          itemStatus.addEventListener('click', function () {
+            menu.classList.remove('show');
+            onToggleStatus();
+          });
+
+          menu.append(itemPlan, itemLogs, itemReset, itemStatus);
+          moreWrap.append(btnMore, menu);
+
+          td.append(btnQuota, btnDetails, moreWrap);
+        },
             if (row.new_api_key) addField(dl, '算力 Key', row.new_api_key.substring(0, 12) + '******');
             if (row.last_login_at) {
               const loc = row.last_login_location ? ' (' + row.last_login_location + ')' : '';
