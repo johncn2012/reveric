@@ -413,6 +413,61 @@
       },
       { label: '配额', fill: function (td, row) { td.textContent = formatNumber(row.quota) || cell(row.quota); } },
       { label: '注册时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      {
+        label: '管理操作',
+        fill: function (td, row) {
+          const btnQuota = document.createElement('button');
+          btnQuota.className = 'action-btn primary';
+          btnQuota.type = 'button';
+          btnQuota.textContent = '调账';
+          btnQuota.addEventListener('click', async function () {
+            const raw = prompt('请输入给用户「' + (personLabel(row) || row.id) + '」调整的算力点数（正数加点，负数扣点）：', '500');
+            if (raw === null) return;
+            const amount = parseFloat(raw.trim());
+            if (!Number.isFinite(amount) || amount === 0) {
+              alert('请输入有效的非零数值');
+              return;
+            }
+            const reason = prompt('请输入调账原因或备注：', '管理员手工调账') || '';
+            const res = await request('/api/admin/users/' + row.id + '/adjust-quota', {
+              method: 'POST',
+              body: { amount: amount, reason: reason },
+            });
+            if (res.res.ok && res.data && res.data.success) {
+              showAlert('调账成功！用户新余额：' + res.data.user.quota);
+              loadUsers(document.getElementById('user-keyword').value.trim());
+            } else {
+              showAlert(errorMessage(res, '调账失败'));
+            }
+          });
+
+          const btnPlan = document.createElement('button');
+          btnPlan.className = 'action-btn';
+          btnPlan.type = 'button';
+          btnPlan.textContent = '设置套餐';
+          btnPlan.addEventListener('click', async function () {
+            const rawPlan = prompt('请选择新套餐（free / creator / pro / studio）：', row.plan || 'free');
+            if (!rawPlan) return;
+            const newPlan = rawPlan.trim().toLowerCase();
+            if (['free', 'creator', 'pro', 'studio'].indexOf(newPlan) < 0) {
+              alert('无效套餐标识，只能填 free / creator / pro / studio');
+              return;
+            }
+            const res = await request('/api/admin/users/' + row.id + '/set-plan', {
+              method: 'POST',
+              body: { plan: newPlan },
+            });
+            if (res.res.ok && res.data && res.data.success) {
+              showAlert('套餐设置成功！');
+              loadUsers(document.getElementById('user-keyword').value.trim());
+            } else {
+              showAlert(errorMessage(res, '套餐设置失败'));
+            }
+          });
+
+          td.append(btnQuota, btnPlan);
+        },
+      },
     ], result.data.data);
   }
 

@@ -124,7 +124,44 @@ adminRouter.post('/admin/users/:id/adjust-quota', async (req: Request, res: Resp
   }
 });
 
-// 4. 全站订单列表
+// 4. 管理员设置用户套餐
+adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response) => {
+  try {
+    const targetUserId = req.params.id;
+    if (!UUID_REGEX.test(targetUserId)) {
+      return res.status(400).json({ error: 'invalid_user_id', message: '用户ID格式无效' });
+    }
+
+    const { plan } = req.body;
+    const ALLOWED_PLANS = ['free', 'creator', 'pro', 'studio'];
+    if (!plan || !ALLOWED_PLANS.includes(plan)) {
+      return res.status(400).json({
+        error: 'invalid_plan',
+        message: `套餐标识无效，允许值: ${ALLOWED_PLANS.join(', ')}`,
+      });
+    }
+
+    const userRes = await query(
+      'UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname, plan, quota, total_quota, role',
+      [plan, targetUserId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
+    }
+
+    return res.json({
+      success: true,
+      message: '套餐变更成功',
+      user: userRes.rows[0],
+    });
+  } catch (err: any) {
+    console.error('[Admin Set Plan Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '套餐设置失败' });
+  }
+});
+
+// 5. 全站订单列表
 adminRouter.get('/admin/orders', async (_req: Request, res: Response) => {
   try {
     const sql = `

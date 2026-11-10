@@ -74,6 +74,12 @@ test('profile, orders and quota logs share auth failures across aliases', async 
     const plansAlias = await fetch(`${base}/api/auth/plans`);
     assert.equal(plansAlias.status, 401);
     assert.notEqual((await plansAlias.json()).success, true);
+
+    // 管理员端点未经授权均返回 401
+    const unauthAdjust = await postJson(`${base}/api/admin/users/invalid-id/adjust-quota`, { amount: 100 });
+    assert.equal(unauthAdjust.status, 401);
+    const unauthSetPlan = await postJson(`${base}/api/admin/users/invalid-id/set-plan`, { plan: 'pro' });
+    assert.equal(unauthSetPlan.status, 401);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));

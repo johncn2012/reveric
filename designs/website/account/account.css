@@ -244,6 +244,31 @@ img { display: block; max-width: 100%; }
 }
 .who button:hover, .user-search button:hover { border-color: #f4f1ea; }
 
+.action-btn {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line, #2a2e36);
+  background: transparent;
+  color: #c4c6ce;
+  margin-right: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.action-btn:hover {
+  border-color: #f4f1ea;
+  color: #f4f1ea;
+}
+.action-btn.primary {
+  border-color: rgba(229, 77, 46, 0.4);
+  color: #ff8566;
+}
+.action-btn.primary:hover {
+  border-color: #e54d2e;
+  background: rgba(229, 77, 46, 0.1);
+}
+
 .banner, .panel, .kpi {
   background: var(--surface, #121418);
   border: 1px solid var(--line, #2a2e36);
