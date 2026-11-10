@@ -20,15 +20,35 @@
   const loginLinks = document.getElementById('login-links');
   let currentUser = null;
   let busy = false;
+  let alertTimer = null;
 
-  function showAlert(message) {
+  function showAlert(message, isSuccess) {
+    if (alertTimer) {
+      clearTimeout(alertTimer);
+      alertTimer = null;
+    }
     if (!message) {
       alertEl.hidden = true;
       alertEl.textContent = '';
+      alertEl.classList.remove('alert-success');
       return;
     }
     alertEl.hidden = false;
     alertEl.textContent = message;
+    if (isSuccess) {
+      alertEl.classList.add('alert-success');
+      alertTimer = setTimeout(function () {
+        showAlert('');
+      }, 4000);
+    } else {
+      alertEl.classList.remove('alert-success');
+    }
+  }
+
+  if (alertEl) {
+    alertEl.addEventListener('click', function () {
+      showAlert('');
+    });
   }
 
   function token() {
@@ -629,7 +649,29 @@
             }
           });
 
-          td.append(btnQuota, btnPlan, btnLogs, btnReset, btnStatus);
+          const btnDetails = document.createElement('button');
+          btnDetails.className = 'action-btn';
+          btnDetails.type = 'button';
+          btnDetails.textContent = '详情';
+          btnDetails.addEventListener('click', function () {
+            const wrap = document.createElement('div');
+            const dl = document.createElement('dl');
+            addField(dl, '用户 ID', row.id);
+            addField(dl, '登录邮箱', row.email || '—');
+            addField(dl, '绑定手机', row.phone || '—');
+            addField(dl, '创作者昵称', row.nickname || '—');
+            addField(dl, '角色权限', roleLabel(row.role));
+            addField(dl, '账号状态', row.status === 'suspended' ? '已封禁' : '正常');
+            addField(dl, '当前套餐', row.plan || 'free');
+            addField(dl, '可用算力', formatNumber(row.quota) || cell(row.quota));
+            addField(dl, '累计配额', formatNumber(row.total_quota) || cell(row.total_quota));
+            if (row.new_api_key) addField(dl, '算力 Key', row.new_api_key.substring(0, 12) + '******');
+            addField(dl, '注册时间', formatWhen(row.created_at));
+            wrap.append(dl);
+            openModal('创作者档案 — ' + (personLabel(row) || row.id), wrap);
+          });
+
+          td.append(btnDetails, btnQuota, btnPlan, btnLogs, btnReset, btnStatus);
         },
       },
     ], result.data.data);
@@ -902,10 +944,31 @@
     renderAdminTasks(result);
   }
 
-  async function loadUsers(keyword) {
-    const query = keyword ? '?keyword=' + encodeURIComponent(keyword) : '';
+  let currentUserKeyword = '';
+  let currentUserFilter = '';
+  async function loadUsers(keyword, filter) {
+    if (keyword !== undefined) currentUserKeyword = keyword;
+    if (filter !== undefined) currentUserFilter = filter;
+    const params = [];
+    if (currentUserKeyword) params.push('keyword=' + encodeURIComponent(currentUserKeyword));
+    if (currentUserFilter) {
+      if (currentUserFilter.indexOf('plan:') === 0) {
+        params.push('plan=' + encodeURIComponent(currentUserFilter.replace('plan:', '')));
+      } else if (currentUserFilter.indexOf('status:') === 0) {
+        params.push('status=' + encodeURIComponent(currentUserFilter.replace('status:', '')));
+      }
+    }
+    const query = params.length ? '?' + params.join('&') : '';
     const result = await request('/api/admin/users' + query);
     renderUsers(result);
+  }
+
+  let currentOrderFilter = '';
+  async function loadAdminOrders(status) {
+    currentOrderFilter = status || '';
+    const query = currentOrderFilter ? '?status=' + encodeURIComponent(currentOrderFilter) : '';
+    const orders = await request('/api/admin/orders' + query);
+    renderOrders(document.getElementById('admin-orders-slot'), orders, true);
   }
 
   async function loadAdmin() {
@@ -1148,6 +1211,30 @@
         b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
       });
       loadAdminMedia(btn.getAttribute('data-media-filter'));
+    });
+  }
+
+  const userFilterGroup = document.getElementById('admin-user-filters');
+  if (userFilterGroup) {
+    userFilterGroup.addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-user-filter]');
+      if (!btn) return;
+      userFilterGroup.querySelectorAll('button').forEach(function (b) {
+        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
+      });
+      loadUsers(undefined, btn.getAttribute('data-user-filter'));
+    });
+  }
+
+  const orderFilterGroup = document.getElementById('admin-order-filters');
+  if (orderFilterGroup) {
+    orderFilterGroup.addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-order-filter]');
+      if (!btn) return;
+      orderFilterGroup.querySelectorAll('button').forEach(function (b) {
+        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
+      });
+      loadAdminOrders(btn.getAttribute('data-order-filter'));
     });
   }
 

@@ -28,6 +28,34 @@ img { display: block; max-width: 100%; }
   background: #1a1214;
   color: var(--ma-danger, #e7b4b4);
   line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.alert.alert-success {
+  border-color: rgba(70, 180, 100, 0.55);
+  background: #101c14;
+  color: #a8e5bc;
+}
+.client-guide {
+  margin-top: 16px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line, #2a2e36);
+  border-radius: 8px;
+}
+.client-guide h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4f1ea;
+}
+.client-guide ol {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #8d909a;
+  line-height: 1.6;
 }
 
 /* ---------- E2 登录分屏 ---------- */

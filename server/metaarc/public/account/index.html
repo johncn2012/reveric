@@ -158,6 +158,14 @@
           <div id="plan-slot"></div>
           <h3 class="subhead">密钥</h3>
           <div id="key-slot"></div>
+          <div class="client-guide">
+            <h4>如何将算力密钥接入 Reveric 创作者桌面端？</h4>
+            <ol>
+              <li>点击上方「复制密钥」；</li>
+              <li>打开本地 Reveric 桌面端，进入「设置」→「AI 服务商」；</li>
+              <li>服务商选择「MetaArc 元弧」，粘贴密钥即可畅享云端大模型与多模态成片算力。</li>
+            </ol>
+          </div>
         </div>
       </div>
     </section>
@@ -193,6 +201,14 @@
             <input id="user-keyword" type="search" placeholder="邮箱、手机或昵称" autocomplete="off">
             <button type="submit">查找</button>
           </form>
+        </div>
+        <div class="task-filters" id="admin-user-filters" style="margin-bottom: 16px;">
+          <button class="action-btn primary" type="button" data-user-filter="">全部</button>
+          <button class="action-btn" type="button" data-user-filter="plan:free">基础版</button>
+          <button class="action-btn" type="button" data-user-filter="plan:creator">创作者版</button>
+          <button class="action-btn" type="button" data-user-filter="plan:pro">专业版</button>
+          <button class="action-btn" type="button" data-user-filter="plan:studio">工作室版</button>
+          <button class="action-btn" type="button" data-user-filter="status:suspended">已封禁</button>
         </div>
         <div id="users-slot"><p class="empty">尚未读取用户列表。</p></div>
       </div>
@@ -241,7 +257,14 @@
         <p>订单区只列出接口实际返回的记录，不汇总金额。</p>
       </div>
       <div class="panel">
-        <h3>订单</h3>
+        <div class="panel-head">
+          <h3>订单</h3>
+          <div class="task-filters" id="admin-order-filters">
+            <button class="action-btn primary" type="button" data-order-filter="">全部</button>
+            <button class="action-btn" type="button" data-order-filter="paid">已记录</button>
+            <button class="action-btn" type="button" data-order-filter="pending">未完成</button>
+          </div>
+        </div>
         <div id="admin-orders-slot"><p class="empty-well">暂无订单 · 支付未开通</p></div>
       </div>
     </section>

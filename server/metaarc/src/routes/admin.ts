@@ -39,13 +39,28 @@ adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
 // 2. 用户管理列表
 adminRouter.get('/admin/users', async (req: Request, res: Response) => {
   try {
-    const { keyword, limit = '50', offset = '0' } = req.query;
-    let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, new_api_key, created_at FROM users';
+    const { keyword, plan, status, limit = '50', offset = '0' } = req.query;
+    let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, expires_at, created_at, updated_at FROM users';
     const params: any[] = [];
+    const whereClauses: string[] = [];
 
-    if (keyword) {
-      params.push(`%${keyword}%`);
-      sql += ` WHERE email ILIKE $1 OR phone ILIKE $1 OR nickname ILIKE $1`;
+    if (keyword && typeof keyword === 'string' && keyword.trim()) {
+      params.push(`%${keyword.trim()}%`);
+      whereClauses.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length})`);
+    }
+
+    if (plan && typeof plan === 'string' && plan.trim()) {
+      params.push(plan.trim());
+      whereClauses.push(`plan = $${params.length}`);
+    }
+
+    if (status && typeof status === 'string' && status.trim()) {
+      params.push(status.trim());
+      whereClauses.push(`status = $${params.length}`);
+    }
+
+    if (whereClauses.length > 0) {
+      sql += ` WHERE ${whereClauses.join(' AND ')}`;
     }
 
     const parsedLimit = Math.max(1, Math.min(200, parseInt(limit as string, 10) || 50));
@@ -163,18 +178,26 @@ adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response
 });
 
 // 5. 全站订单列表
-adminRouter.get('/admin/orders', async (_req: Request, res: Response) => {
+adminRouter.get('/admin/orders', async (req: Request, res: Response) => {
   try {
-    const sql = `
+    const { status, limit = '100' } = req.query;
+    let sql = `
       SELECT o.id, o.user_id, o.amount_cents, o.pay_channel, o.status, o.created_at, o.paid_at,
              u.email, u.phone, u.nickname, p.name as plan_name, p.quota_points
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       LEFT JOIN plans p ON o.plan_id = p.id
-      ORDER BY o.created_at DESC
-      LIMIT 100
     `;
-    const result = await query(sql);
+    const params: any[] = [];
+    if (status && typeof status === 'string' && status.trim()) {
+      params.push(status.trim());
+      sql += ` WHERE o.status = $1`;
+    }
+    const take = Math.min(Math.max(parseInt(limit as string, 10) || 100, 1), 200);
+    sql += ` ORDER BY o.created_at DESC LIMIT $${params.length + 1}`;
+    params.push(take);
+
+    const result = await query(sql, params);
     return res.json({ success: true, data: result.rows });
   } catch (err: any) {
     console.error('[Admin Orders Error]', err);
