@@ -861,55 +861,6 @@
 
           td.append(btnQuota, btnDetails, moreWrap);
         },
-            if (row.new_api_key) addField(dl, '算力 Key', row.new_api_key.substring(0, 12) + '******');
-            if (row.last_login_at) {
-              const loc = row.last_login_location ? ' (' + row.last_login_location + ')' : '';
-              const ip = row.last_login_ip ? ' · ' + row.last_login_ip : '';
-              addField(dl, '最后登录', formatWhen(row.last_login_at) + ip + loc);
-            }
-            addField(dl, '注册时间', formatWhen(row.created_at));
-            wrap.append(dl);
-
-            const btnLoginAudit = document.createElement('button');
-            btnLoginAudit.className = 'action-btn';
-            btnLoginAudit.type = 'button';
-            btnLoginAudit.style.marginTop = '12px';
-            btnLoginAudit.textContent = '查看登录审计日志';
-            btnLoginAudit.addEventListener('click', async function () {
-              const res = await request('/api/admin/users/' + row.id + '/login-logs');
-              if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
-                notify(errorMessage(res, '无法读取登录日志'), 'error');
-                return;
-              }
-              const userLogs = res.data.data;
-              if (!userLogs.length) {
-                notify('该用户暂无登录日志', 'info');
-                return;
-              }
-              const auditWrap = document.createElement('div');
-              renderTable(auditWrap, [
-                { label: '登录时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
-                { label: 'IP 地址', fill: function (td, r) { td.textContent = r.ip; } },
-                { label: '地理位置', fill: function (td, r) { td.textContent = r.ip_location || '—'; } },
-                { label: '设备/环境', fill: function (td, r) { td.textContent = (r.user_agent || '').substring(0, 32) + '…'; } },
-                {
-                  label: '状态',
-                  fill: function (td, r) {
-                    const dot = document.createElement('i');
-                    dot.className = r.status === 'success' ? 'dot' : 'dot danger';
-                    td.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
-                  },
-                },
-              ], userLogs);
-              openModal('用户登录审计 — ' + (personLabel(row) || row.id), auditWrap);
-            });
-            wrap.append(btnLoginAudit);
-
-            openModal('创作者档案 — ' + (personLabel(row) || row.id), wrap);
-          });
-
-          td.append(btnDetails, btnQuota, btnPlan, btnLogs, btnReset, btnStatus);
-        },
       },
     ], result.data.data);
   }
