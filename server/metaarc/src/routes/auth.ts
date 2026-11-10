@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { query } from '../db.js';
 import { signJwt, requireAuth } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
@@ -293,6 +294,50 @@ const changePassword = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * 用户重置 / 轮换专属 API 客户端密钥
+ * POST /api/auth/reset-api-key
+ */
+const resetApiKey = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const userRes = await query('SELECT id, new_api_user_id, email, phone, nickname FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '用户不存在' });
+    }
+
+    const user = userRes.rows[0];
+    let newApiKey = '';
+
+    if (user.new_api_user_id) {
+      try {
+        const token = await newApi.createTokenForUser({
+          userId: user.new_api_user_id,
+          tokenName: `MetaArc Key - ${Date.now().toString(36)}`,
+        });
+        newApiKey = token.key;
+      } catch (tokenErr) {
+        console.warn('[Reset API Key] New-API 签发异常，降级生成标准离线 Key', tokenErr);
+        newApiKey = `sk-metaarc-${crypto.randomBytes(16).toString('hex')}`;
+      }
+    } else {
+      newApiKey = `sk-metaarc-${crypto.randomBytes(16).toString('hex')}`;
+    }
+
+    await query('UPDATE users SET new_api_key = $1, updated_at = NOW() WHERE id = $2', [newApiKey, userId]);
+
+    return res.json({
+      success: true,
+      message: 'API 密钥已重置并立即生效',
+      new_api_key: newApiKey,
+      new_api_base_url: publicNewApiBaseUrl(),
+    });
+  } catch (err: any) {
+    console.error('[Reset API Key Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '重置 API 密钥失败' });
+  }
+};
+
 mount('post', ['/auth/register', '/register'], registerAccount);
 mount('post', ['/auth/login', '/login'], loginAccount);
 for (const path of ['/auth/profile', '/auth/user/profile', '/user/profile']) {
@@ -305,4 +350,7 @@ authRouter.post('/auth/update-profile', requireAuth, (req, res) => {
 });
 authRouter.post('/auth/change-password', requireAuth, (req, res) => {
   void changePassword(req, res);
+});
+authRouter.post('/auth/reset-api-key', requireAuth, (req, res) => {
+  void resetApiKey(req, res);
 });

@@ -97,3 +97,40 @@ mediaRouter.get('/media/list', requireAuth, async (req: Request, res: Response) 
     return res.status(500).json({ error: 'server_error', message: '无法获取媒体资产列表' });
   }
 });
+
+// 4. 用户删除自己的云端媒体资源（管理员可删除任何人的）
+mediaRouter.delete('/media/:id', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === 'admin';
+    const { id } = req.params;
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!id || !uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '媒体资产 ID 格式无效' });
+    }
+
+    let delRes;
+    if (isAdmin) {
+      delRes = await query('DELETE FROM media_assets WHERE id = $1 RETURNING id, storage_key', [id]);
+    } else {
+      delRes = await query(
+        'DELETE FROM media_assets WHERE id = $1 AND user_id = $2 RETURNING id, storage_key',
+        [id, userId]
+      );
+    }
+
+    if (delRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '媒体资产不存在或无权删除' });
+    }
+
+    return res.json({
+      success: true,
+      message: '媒体资产已成功删除',
+      id: delRes.rows[0].id,
+    });
+  } catch (err: any) {
+    console.error('[Media Delete Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '删除媒体资产失败' });
+  }
+});

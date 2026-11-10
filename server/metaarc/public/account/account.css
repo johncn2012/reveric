@@ -296,6 +296,15 @@ img { display: block; max-width: 100%; }
   border-color: #e54d2e;
   background: rgba(229, 77, 46, 0.1);
 }
+.action-btn.danger {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+.action-btn.danger:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
 
 .settings-panel { margin-top: 24px; padding: 24px; }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }

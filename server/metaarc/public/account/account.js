@@ -282,7 +282,32 @@
     note.className = 'empty';
     if (!key || key.indexOf('sk-mock-') === 0) {
       note.textContent = '算力通道尚未开通，接口没有返回可用密钥。';
-      slot.append(note);
+      const genBtn = document.createElement('button');
+      genBtn.className = 'action-btn primary';
+      genBtn.type = 'button';
+      genBtn.style.marginTop = '8px';
+      genBtn.textContent = '签发算力密钥';
+      genBtn.addEventListener('click', async function () {
+        genBtn.disabled = true;
+        genBtn.textContent = '签发中…';
+        try {
+          const res = await request('/api/auth/reset-api-key', { method: 'POST' });
+          if (res.res.ok && res.data && res.data.success && res.data.new_api_key) {
+            currentUser.new_api_key = res.data.new_api_key;
+            notify('算力密钥已成功签发', 'success');
+            renderKey(currentUser);
+          } else {
+            notify(errorMessage(res, '签发密钥失败'), 'error');
+            genBtn.disabled = false;
+            genBtn.textContent = '签发算力密钥';
+          }
+        } catch (_) {
+          notify('网络异常，请稍后重试', 'error');
+          genBtn.disabled = false;
+          genBtn.textContent = '签发算力密钥';
+        }
+      });
+      slot.append(note, genBtn);
     } else {
       const codeRow = document.createElement('div');
       codeRow.className = 'form-row';
@@ -306,7 +331,32 @@
           prompt('请手动复制密钥：', key);
         }
       });
-      codeRow.append(code, copyBtn);
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'action-btn';
+      resetBtn.type = 'button';
+      resetBtn.textContent = '重置密钥';
+      resetBtn.addEventListener('click', async function () {
+        if (!confirm('确定要重置当前算力密钥吗？重置后旧密钥将立即失效，需在本地客户端更新配置。')) return;
+        resetBtn.disabled = true;
+        resetBtn.textContent = '重置中…';
+        try {
+          const res = await request('/api/auth/reset-api-key', { method: 'POST' });
+          if (res.res.ok && res.data && res.data.success && res.data.new_api_key) {
+            currentUser.new_api_key = res.data.new_api_key;
+            notify('密钥已重新生成并生效', 'success');
+            renderKey(currentUser);
+          } else {
+            notify(errorMessage(res, '重置密钥失败'), 'error');
+            resetBtn.disabled = false;
+            resetBtn.textContent = '重置密钥';
+          }
+        } catch (_) {
+          notify('网络异常，请稍后重试', 'error');
+          resetBtn.disabled = false;
+          resetBtn.textContent = '重置密钥';
+        }
+      });
+      codeRow.append(code, copyBtn, resetBtn);
       slot.append(codeRow);
     }
     if (base) {
@@ -704,6 +754,12 @@
           : (sys.ai_gateway.configured ? '离线 (' + sys.ai_gateway.status + ')' : '未配置');
         addField(dl, 'AI 算力通道', gwText);
       }
+      if (sys.s3) {
+        const s3Text = sys.s3.configured
+          ? '已就绪 (桶: ' + sys.s3.bucket + ' · ' + sys.s3.region + ')'
+          : '默认离线 (桶: ' + sys.s3.bucket + ')';
+        addField(dl, '对象存储 (S3)', s3Text);
+      }
     }
 
     slot.append(dl);
@@ -719,7 +775,11 @@
     if (!data || data.has_update !== true) {
       return (data && typeof data.message === 'string' && data.message.trim()) ? data.message.trim() : '尚未发布';
     }
-    return data.version ? '清单版本 ' + data.version : '清单返回了更新';
+    const parts = [];
+    if (data.version) parts.push('版本 ' + data.version);
+    if (data.channel) parts.push(data.channel);
+    if (data.file_size) parts.push(formatBytes(data.file_size));
+    return parts.length ? parts.join(' · ') : '清单返回了更新';
   }
 
   function renderUpdates(rows) {
@@ -727,7 +787,23 @@
     slot.replaceChildren();
     const dl = document.createElement('dl');
     rows.forEach(function (row) {
-      addField(dl, row.name, row.ok ? updateLabel(row.data) : '清单暂时无法读取');
+      const dt = document.createElement('dt');
+      dt.textContent = row.name;
+      const dd = document.createElement('dd');
+      const textSpan = document.createElement('span');
+      textSpan.textContent = row.ok ? updateLabel(row.data) : '清单暂时无法读取';
+      dd.append(textSpan);
+      if (row.ok && row.data && row.data.download_url) {
+        const dlLink = document.createElement('a');
+        dlLink.className = 'action-btn primary';
+        dlLink.style.marginLeft = '12px';
+        dlLink.href = row.data.download_url;
+        dlLink.target = '_blank';
+        dlLink.rel = 'noopener noreferrer';
+        dlLink.textContent = '下载安装包';
+        dd.append(dlLink);
+      }
+      dl.append(dt, dd);
     });
     slot.append(dl);
   }
@@ -870,9 +946,33 @@
             link.rel = 'noopener noreferrer';
             link.textContent = '查看/下载';
             td.append(link);
-          } else {
-            td.textContent = '—';
           }
+          const delBtn = document.createElement('button');
+          delBtn.className = 'action-btn danger';
+          delBtn.type = 'button';
+          delBtn.textContent = '删除';
+          delBtn.addEventListener('click', async function () {
+            if (!confirm('确定要删除此媒体交付物吗？删除后将无法恢复。')) return;
+            delBtn.disabled = true;
+            delBtn.textContent = '删除中…';
+            try {
+              const res = await request('/api/media/' + encodeURIComponent(row.id), { method: 'DELETE' });
+              if (res.res.ok && res.data && res.data.success) {
+                notify('媒体资产已删除', 'success');
+                const refreshed = await request('/api/media/list');
+                renderUserMedia(refreshed);
+              } else {
+                notify(errorMessage(res, '删除失败'), 'error');
+                delBtn.disabled = false;
+                delBtn.textContent = '删除';
+              }
+            } catch (_) {
+              notify('网络异常，请稍后重试', 'error');
+              delBtn.disabled = false;
+              delBtn.textContent = '删除';
+            }
+          });
+          td.append(delBtn);
         },
       },
     ], result.data.data);
@@ -920,9 +1020,32 @@
             link.rel = 'noopener noreferrer';
             link.textContent = '访问 CDN';
             td.append(link);
-          } else {
-            td.textContent = '—';
           }
+          const delBtn = document.createElement('button');
+          delBtn.className = 'action-btn danger';
+          delBtn.type = 'button';
+          delBtn.textContent = '删除';
+          delBtn.addEventListener('click', async function () {
+            if (!confirm('确定从全平台删除此媒体资产记录吗？')) return;
+            delBtn.disabled = true;
+            delBtn.textContent = '删除中…';
+            try {
+              const res = await request('/api/admin/media/' + encodeURIComponent(row.id), { method: 'DELETE' });
+              if (res.res.ok && res.data && res.data.success) {
+                notify('媒体资源已删除', 'success');
+                await loadAdminMedia(currentMediaFilter);
+              } else {
+                notify(errorMessage(res, '删除失败'), 'error');
+                delBtn.disabled = false;
+                delBtn.textContent = '删除';
+              }
+            } catch (_) {
+              notify('网络异常，请稍后重试', 'error');
+              delBtn.disabled = false;
+              delBtn.textContent = '删除';
+            }
+          });
+          td.append(delBtn);
         },
       },
     ], rows);
