@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { getClientIp } from '../utils/ip_helper.js';
 
 export const tasksRouter = Router();
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -15,6 +16,11 @@ tasksRouter.post('/tasks/create', requireAuth, async (req: Request, res: Respons
       return res.status(400).json({ error: 'missing_task_type', message: '必须指定任务类型' });
     }
 
+    const clientIp = getClientIp(req);
+    const prompt = (inputPayload && typeof inputPayload.prompt === 'string')
+      ? inputPayload.prompt
+      : (typeof req.body.prompt === 'string' ? req.body.prompt : null);
+
     // 检查余额是否足够
     const userRes = await query('SELECT quota FROM users WHERE id = $1', [userId]);
     const currentQuota = parseFloat(userRes.rows[0]?.quota || '0');
@@ -28,14 +34,16 @@ tasksRouter.post('/tasks/create', requireAuth, async (req: Request, res: Respons
     }
 
     const insertSql = `
-      INSERT INTO user_tasks (user_id, task_type, status, progress, input_payload)
-      VALUES ($1, $2, 'pending', 0, $3)
+      INSERT INTO user_tasks (user_id, task_type, status, progress, input_payload, prompt, client_ip)
+      VALUES ($1, $2, 'pending', 0, $3, $4, $5)
       RETURNING *
     `;
     const result = await query(insertSql, [
       userId,
       taskType,
       inputPayload ? JSON.stringify(inputPayload) : '{}',
+      prompt,
+      clientIp,
     ]);
 
     return res.status(201).json({
@@ -54,7 +62,12 @@ tasksRouter.get('/tasks/list', requireAuth, async (req: Request, res: Response) 
     const userId = req.user!.userId;
     const { status } = req.query;
 
-    let sql = 'SELECT * FROM user_tasks WHERE user_id = $1';
+    let sql = `
+      SELECT id, user_id, task_type, status, progress, input_payload, output_payload,
+             prompt, client_ip, duration_ms, error_message, created_at, updated_at
+      FROM user_tasks
+      WHERE user_id = $1
+    `;
     const params: any[] = [userId];
 
     if (status) {
@@ -88,6 +101,11 @@ tasksRouter.post('/tasks/:id/update-status', requireAuth, async (req: Request, r
     }
     const currentTask = taskRes.rows[0];
 
+    // 计算执行耗时
+    const durationMs = currentTask.created_at
+      ? Math.max(0, Date.now() - new Date(currentTask.created_at).getTime())
+      : null;
+
     // 更新任务
     const updateSql = `
       UPDATE user_tasks 
@@ -95,8 +113,9 @@ tasksRouter.post('/tasks/:id/update-status', requireAuth, async (req: Request, r
           progress = COALESCE($2, progress),
           output_payload = COALESCE($3, output_payload),
           error_message = $4,
+          duration_ms = COALESCE($5, duration_ms),
           updated_at = NOW()
-      WHERE id = $5
+      WHERE id = $6
       RETURNING *
     `;
     const updatedRes = await query(updateSql, [
@@ -104,6 +123,7 @@ tasksRouter.post('/tasks/:id/update-status', requireAuth, async (req: Request, r
       progress !== undefined ? progress : null,
       outputPayload ? JSON.stringify(outputPayload) : null,
       errorMessage || null,
+      durationMs,
       taskId,
     ]);
 
@@ -206,7 +226,34 @@ tasksRouter.delete('/tasks/:id', requireAuth, async (req: Request, res: Response
   }
 });
 
-// 6. 查询当前用户的配额流水。余额快照在 GET /api/auth/profile，这里是流水。
+// 6. 查询指定任务详情（含输入Prompt、输出交付物及执行指标）
+tasksRouter.get('/tasks/:id', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const taskId = req.params.id;
+    if (!UUID_REGEX.test(taskId)) {
+      return res.status(400).json({ error: 'invalid_task_id', message: '任务ID格式无效' });
+    }
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === 'admin';
+
+    const sql = isAdmin
+      ? `SELECT t.*, u.email, u.phone, u.nickname FROM user_tasks t LEFT JOIN users u ON t.user_id = u.id WHERE t.id = $1`
+      : `SELECT t.*, u.email, u.phone, u.nickname FROM user_tasks t LEFT JOIN users u ON t.user_id = u.id WHERE t.id = $1 AND t.user_id = $2`;
+    const params = isAdmin ? [taskId] : [taskId, userId];
+
+    const result = await query(sql, params);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'task_not_found', message: '任务不存在或无权查看' });
+    }
+
+    return res.json({ success: true, task: result.rows[0] });
+  } catch (err: any) {
+    console.error('[Get Task Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取任务详情' });
+  }
+});
+
+// 7. 查询当前用户的配额流水。余额快照在 GET /api/auth/profile，这里是流水。
 // 规范路径 GET /api/auth/quota/logs，兼容 GET /api/quota/logs。
 const listQuotaLogs = async (req: Request, res: Response) => {
   try {

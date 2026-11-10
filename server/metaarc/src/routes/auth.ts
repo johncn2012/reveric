@@ -4,6 +4,35 @@ import crypto from 'crypto';
 import { query } from '../db.js';
 import { signJwt, requireAuth } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
+import { getClientIp, resolveIpLocation } from '../utils/ip_helper.js';
+
+async function recordLoginLog(params: {
+  userId?: string;
+  account: string;
+  ip: string;
+  location?: string;
+  userAgent?: string;
+  status: 'success' | 'failed';
+  failReason?: string;
+}) {
+  try {
+    await query(
+      `INSERT INTO login_logs (user_id, account, ip, ip_location, user_agent, status, fail_reason)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        params.userId || null,
+        params.account,
+        params.ip,
+        params.location || '未知归属地',
+        params.userAgent || null,
+        params.status,
+        params.failReason || null,
+      ]
+    );
+  } catch (err) {
+    console.warn('[Record Login Log Warning]', err);
+  }
+}
 
 /**
  * 账号路径以 /api/auth/* 为规范。桌面端和同域 /account 使用这组路径。
@@ -147,22 +176,66 @@ const loginAccount = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'missing_fields', message: '请输入账号与密码' });
     }
 
+    const clientIp = getClientIp(req);
+    const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
+    const location = resolveIpLocation(clientIp, req.headers);
+
     // 支持手机号或邮箱登录
     const sql = 'SELECT * FROM users WHERE email = $1 OR phone = $1 LIMIT 1';
     const userRes = await query(sql, [cleanAccount]);
     if (userRes.rows.length === 0) {
+      await recordLoginLog({
+        account: cleanAccount,
+        ip: clientIp,
+        location,
+        userAgent,
+        status: 'failed',
+        failReason: 'account_not_found',
+      });
       return res.status(401).json({ error: 'invalid_credentials', message: '账号或密码错误' });
     }
 
     const user = userRes.rows[0];
     if (user.status === 'suspended') {
+      await recordLoginLog({
+        userId: user.id,
+        account: cleanAccount,
+        ip: clientIp,
+        location,
+        userAgent,
+        status: 'failed',
+        failReason: 'account_suspended',
+      });
       return res.status(403).json({ error: 'account_suspended', message: '账号已被封禁，请联系管理员' });
     }
 
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
+      await recordLoginLog({
+        userId: user.id,
+        account: cleanAccount,
+        ip: clientIp,
+        location,
+        userAgent,
+        status: 'failed',
+        failReason: 'wrong_password',
+      });
       return res.status(401).json({ error: 'invalid_credentials', message: '账号或密码错误' });
     }
+
+    await recordLoginLog({
+      userId: user.id,
+      account: cleanAccount,
+      ip: clientIp,
+      location,
+      userAgent,
+      status: 'success',
+    });
+
+    await query(
+      'UPDATE users SET last_login_at = NOW(), last_login_ip = $1, last_login_location = $2, updated_at = NOW() WHERE id = $3',
+      [clientIp, location, user.id]
+    );
 
     const token = signJwt({
       userId: user.id,
@@ -185,6 +258,9 @@ const loginAccount = async (req: Request, res: Response) => {
         total_quota: parseFloat(user.total_quota),
         new_api_key: user.new_api_key || '',
         new_api_base_url: publicNewApiBaseUrl(),
+        last_login_at: new Date().toISOString(),
+        last_login_ip: clientIp,
+        last_login_location: location,
         expires_at: user.expires_at,
       },
     });
@@ -232,6 +308,9 @@ const readProfile = async (req: Request, res: Response) => {
         total_quota: parseFloat(user.total_quota),
         new_api_key: user.new_api_key || '',
         new_api_base_url: publicNewApiBaseUrl(),
+        last_login_at: user.last_login_at,
+        last_login_ip: user.last_login_ip,
+        last_login_location: user.last_login_location,
         expires_at: user.expires_at,
       },
     });
@@ -353,4 +432,21 @@ authRouter.post('/auth/change-password', requireAuth, (req, res) => {
 });
 authRouter.post('/auth/reset-api-key', requireAuth, (req, res) => {
   void resetApiKey(req, res);
+});
+authRouter.get('/auth/login-logs', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const result = await query(
+      `SELECT id, ip, ip_location, user_agent, status, fail_reason, created_at
+       FROM login_logs
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 30`,
+      [userId]
+    );
+    return res.json({ success: true, data: result.rows });
+  } catch (err: any) {
+    console.error('[Login Logs Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取登录日志' });
+  }
 });

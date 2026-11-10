@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { pool } from './db.js';
+import { pool, initDbSchema } from './db.js';
 import { authRouter } from './routes/auth.js';
 import { plansRouter } from './routes/plans.js';
 import { ordersRouter } from './routes/orders.js';
@@ -81,6 +81,7 @@ function isDirectRun() {
 }
 
 if (isDirectRun()) {
+  void initDbSchema();
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {
     console.log(`=================================================`);

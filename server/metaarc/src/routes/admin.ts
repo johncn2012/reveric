@@ -40,7 +40,7 @@ adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
 adminRouter.get('/admin/users', async (req: Request, res: Response) => {
   try {
     const { keyword, plan, status, limit = '50', offset = '0' } = req.query;
-    let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, expires_at, created_at, updated_at FROM users';
+    let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location, expires_at, created_at, updated_at FROM users';
     const params: any[] = [];
     const whereClauses: string[] = [];
 
@@ -367,7 +367,9 @@ adminRouter.get('/admin/tasks', async (req: Request, res: Response) => {
     const take = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 100);
 
     let sql = `
-      SELECT t.id, t.user_id, t.task_type, t.status, t.progress, t.error_message, t.created_at, t.updated_at,
+      SELECT t.id, t.user_id, t.task_type, t.status, t.progress, t.prompt, t.client_ip,
+             t.duration_ms, t.input_payload, t.output_payload, t.error_message,
+             t.created_at, t.updated_at,
              u.email, u.phone, u.nickname
       FROM user_tasks t
       LEFT JOIN users u ON t.user_id = u.id
@@ -562,5 +564,61 @@ adminRouter.post('/admin/plans/:id/toggle', async (req: Request, res: Response) 
   } catch (err: any) {
     console.error('[Admin Toggle Plan Error]', err);
     return res.status(500).json({ error: 'server_error', message: '操作套餐状态失败' });
+  }
+});
+
+// 17. 管理员查看指定用户的登录审计日志
+adminRouter.get('/admin/users/:id/login-logs', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '用户 ID 格式不正确' });
+    }
+
+    const result = await query(
+      `SELECT id, ip, ip_location, user_agent, status, fail_reason, created_at
+       FROM login_logs
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [id]
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err: any) {
+    console.error('[Admin User Login Logs Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取登录审计日志' });
+  }
+});
+
+// 18. 管理员获取任务详情与提示词透视
+adminRouter.get('/admin/tasks/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '任务 ID 格式不正确' });
+    }
+
+    const sql = `
+      SELECT t.*, u.email, u.phone, u.nickname
+      FROM user_tasks t
+      LEFT JOIN users u ON t.user_id = u.id
+      WHERE t.id = $1
+    `;
+    const result = await query(sql, [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'task_not_found', message: '任务不存在' });
+    }
+
+    return res.json({
+      success: true,
+      task: result.rows[0],
+    });
+  } catch (err: any) {
+    console.error('[Admin Get Task Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取任务详情' });
   }
 });

@@ -114,6 +114,14 @@ test('profile, orders and quota logs share auth failures across aliases', async 
     assert.equal(unauthAdminPlans.status, 401);
     const unauthTogglePlan = await postJson(`${base}/api/admin/plans/invalid-id/toggle`, {});
     assert.equal(unauthTogglePlan.status, 401);
+    const unauthLoginLogs = await fetch(`${base}/api/auth/login-logs`);
+    assert.equal(unauthLoginLogs.status, 401);
+    const unauthAdminUserLoginLogs = await fetch(`${base}/api/admin/users/invalid-id/login-logs`);
+    assert.equal(unauthAdminUserLoginLogs.status, 401);
+    const unauthGetTask = await fetch(`${base}/api/tasks/invalid-id`);
+    assert.equal(unauthGetTask.status, 401);
+    const unauthAdminGetTask = await fetch(`${base}/api/admin/tasks/invalid-id`);
+    assert.equal(unauthAdminGetTask.status, 401);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
@@ -191,6 +199,7 @@ test('account page is same-origin and has no demo quota', async () => {
     assert.match(source, /\/api\/tasks\/list/);
     assert.match(source, /\/api\/media\/list/);
     assert.match(source, /\/api\/auth\/reset-api-key/);
+    assert.match(source, /\/api\/auth\/login-logs/);
     assert.doesNotMatch(source, /\/orders\/.+\/pay|管理后台|演示配额|成交额/);
 
     const home = await fetch(`${base}/`);

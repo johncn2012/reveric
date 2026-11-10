@@ -224,6 +224,11 @@
     addField(dl, '角色', roleLabel(user.role));
     addField(dl, '套餐', user.plan);
     addField(dl, '到期', formatWhen(user.expires_at));
+    if (user.last_login_at) {
+      const loc = user.last_login_location ? ' (' + user.last_login_location + ')' : '';
+      const ip = user.last_login_ip ? ' · ' + user.last_login_ip : '';
+      addField(dl, '最后登录', formatWhen(user.last_login_at) + ip + loc);
+    }
     document.getElementById('who-name').textContent = user.nickname || user.email || user.phone || '已登录';
     document.getElementById('who-role').textContent = roleLabel(user.role);
   }
@@ -716,8 +721,49 @@
             addField(dl, '可用算力', formatNumber(row.quota) || cell(row.quota));
             addField(dl, '累计配额', formatNumber(row.total_quota) || cell(row.total_quota));
             if (row.new_api_key) addField(dl, '算力 Key', row.new_api_key.substring(0, 12) + '******');
+            if (row.last_login_at) {
+              const loc = row.last_login_location ? ' (' + row.last_login_location + ')' : '';
+              const ip = row.last_login_ip ? ' · ' + row.last_login_ip : '';
+              addField(dl, '最后登录', formatWhen(row.last_login_at) + ip + loc);
+            }
             addField(dl, '注册时间', formatWhen(row.created_at));
             wrap.append(dl);
+
+            const btnLoginAudit = document.createElement('button');
+            btnLoginAudit.className = 'action-btn';
+            btnLoginAudit.type = 'button';
+            btnLoginAudit.style.marginTop = '12px';
+            btnLoginAudit.textContent = '查看登录审计日志';
+            btnLoginAudit.addEventListener('click', async function () {
+              const res = await request('/api/admin/users/' + row.id + '/login-logs');
+              if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
+                notify(errorMessage(res, '无法读取登录日志'), 'error');
+                return;
+              }
+              const userLogs = res.data.data;
+              if (!userLogs.length) {
+                notify('该用户暂无登录日志', 'info');
+                return;
+              }
+              const auditWrap = document.createElement('div');
+              renderTable(auditWrap, [
+                { label: '登录时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
+                { label: 'IP 地址', fill: function (td, r) { td.textContent = r.ip; } },
+                { label: '地理位置', fill: function (td, r) { td.textContent = r.ip_location || '—'; } },
+                { label: '设备/环境', fill: function (td, r) { td.textContent = (r.user_agent || '').substring(0, 32) + '…'; } },
+                {
+                  label: '状态',
+                  fill: function (td, r) {
+                    const dot = document.createElement('i');
+                    dot.className = r.status === 'success' ? 'dot' : 'dot warn';
+                    td.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
+                  },
+                },
+              ], userLogs);
+              openModal('用户登录审计 — ' + (personLabel(row) || row.id), auditWrap);
+            });
+            wrap.append(btnLoginAudit);
+
             openModal('创作者档案 — ' + (personLabel(row) || row.id), wrap);
           });
 
@@ -896,6 +942,65 @@
             });
             td.append(btnDel);
           }
+          const btnDetail = document.createElement('button');
+          btnDetail.className = 'action-btn';
+          btnDetail.type = 'button';
+          btnDetail.textContent = '透视';
+          btnDetail.addEventListener('click', function () {
+            const wrap = document.createElement('div');
+            const dl = document.createElement('dl');
+            addField(dl, '任务 ID', row.id);
+            addField(dl, '任务类型', taskTypeLabel(row.task_type));
+            addField(dl, '状态', taskStatusLabel(row.status));
+            addField(dl, '进度', row.progress + '%');
+            if (row.duration_ms) {
+              addField(dl, '执行耗时', (row.duration_ms / 1000).toFixed(1) + ' 秒');
+            }
+            if (row.prompt) {
+              const dt = document.createElement('dt');
+              dt.textContent = 'AI 提示词';
+              const dd = document.createElement('dd');
+              const pre = document.createElement('pre');
+              pre.style.whiteSpace = 'pre-wrap';
+              pre.style.background = 'rgba(0,0,0,0.3)';
+              pre.style.padding = '8px';
+              pre.style.borderRadius = '4px';
+              pre.textContent = row.prompt;
+              const copyPromptBtn = document.createElement('button');
+              copyPromptBtn.className = 'action-btn';
+              copyPromptBtn.type = 'button';
+              copyPromptBtn.textContent = '复制提示词';
+              copyPromptBtn.style.marginTop = '6px';
+              copyPromptBtn.addEventListener('click', function () {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(row.prompt);
+                  copyPromptBtn.textContent = '已复制！';
+                  setTimeout(function () { copyPromptBtn.textContent = '复制提示词'; }, 2000);
+                } else {
+                  prompt('请复制提示词：', row.prompt);
+                }
+              });
+              dd.append(pre, copyPromptBtn);
+              dl.append(dt, dd);
+            }
+            if (row.output_payload && Object.keys(row.output_payload).length > 0) {
+              const dtOut = document.createElement('dt');
+              dtOut.textContent = '产出交付物';
+              const ddOut = document.createElement('dd');
+              const preOut = document.createElement('pre');
+              preOut.style.whiteSpace = 'pre-wrap';
+              preOut.style.background = 'rgba(0,0,0,0.3)';
+              preOut.style.padding = '8px';
+              preOut.style.borderRadius = '4px';
+              preOut.textContent = JSON.stringify(row.output_payload, null, 2);
+              ddOut.append(preOut);
+              dl.append(dtOut, ddOut);
+            }
+            wrap.append(dl);
+            openModal('任务透视详情 — ' + row.id, wrap);
+          });
+          td.append(btnDetail);
+
           if (row.error_message) {
             const btnErr = document.createElement('button');
             btnErr.className = 'action-btn';
@@ -1002,6 +1107,80 @@
             }
           });
           td.append(btnDel);
+
+          const btnDetail = document.createElement('button');
+          btnDetail.className = 'action-btn';
+          btnDetail.type = 'button';
+          btnDetail.textContent = '透视';
+          btnDetail.addEventListener('click', function () {
+            const wrap = document.createElement('div');
+            const dl = document.createElement('dl');
+            addField(dl, '任务 ID', row.id);
+            addField(dl, '所属用户', personLabel(row) || row.user_id);
+            addField(dl, '客户端 IP', row.client_ip || '—');
+            addField(dl, '任务类型', taskTypeLabel(row.task_type));
+            addField(dl, '状态', taskStatusLabel(row.status));
+            addField(dl, '当前进度', row.progress + '%');
+            if (row.duration_ms) {
+              addField(dl, '执行耗时', (row.duration_ms / 1000).toFixed(1) + ' 秒');
+            }
+            if (row.prompt) {
+              const dt = document.createElement('dt');
+              dt.textContent = 'AI 提示词 (Prompt)';
+              const dd = document.createElement('dd');
+              const pre = document.createElement('pre');
+              pre.style.whiteSpace = 'pre-wrap';
+              pre.style.background = 'rgba(0,0,0,0.3)';
+              pre.style.padding = '8px';
+              pre.style.borderRadius = '4px';
+              pre.textContent = row.prompt;
+              const copyPromptBtn = document.createElement('button');
+              copyPromptBtn.className = 'action-btn';
+              copyPromptBtn.type = 'button';
+              copyPromptBtn.textContent = '复制提示词';
+              copyPromptBtn.style.marginTop = '6px';
+              copyPromptBtn.addEventListener('click', function () {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(row.prompt);
+                  copyPromptBtn.textContent = '已复制！';
+                  setTimeout(function () { copyPromptBtn.textContent = '复制提示词'; }, 2000);
+                } else {
+                  prompt('请复制提示词：', row.prompt);
+                }
+              });
+              dd.append(pre, copyPromptBtn);
+              dl.append(dt, dd);
+            }
+            if (row.input_payload && Object.keys(row.input_payload).length > 0) {
+              const dtIn = document.createElement('dt');
+              dtIn.textContent = '请求参数 (Input Payload)';
+              const ddIn = document.createElement('dd');
+              const preIn = document.createElement('pre');
+              preIn.style.whiteSpace = 'pre-wrap';
+              preIn.style.background = 'rgba(0,0,0,0.3)';
+              preIn.style.padding = '8px';
+              preIn.style.borderRadius = '4px';
+              preIn.textContent = JSON.stringify(row.input_payload, null, 2);
+              ddIn.append(preIn);
+              dl.append(dtIn, ddIn);
+            }
+            if (row.output_payload && Object.keys(row.output_payload).length > 0) {
+              const dtOut = document.createElement('dt');
+              dtOut.textContent = '产出交付物 (Output Payload)';
+              const ddOut = document.createElement('dd');
+              const preOut = document.createElement('pre');
+              preOut.style.whiteSpace = 'pre-wrap';
+              preOut.style.background = 'rgba(0,0,0,0.3)';
+              preOut.style.padding = '8px';
+              preOut.style.borderRadius = '4px';
+              preOut.textContent = JSON.stringify(row.output_payload, null, 2);
+              ddOut.append(preOut);
+              dl.append(dtOut, ddOut);
+            }
+            wrap.append(dl);
+            openModal('任务透视监控 — ' + row.id, wrap);
+          });
+          td.append(btnDetail);
 
           if (row.error_message) {
             const btnErr = document.createElement('button');
@@ -1538,6 +1717,38 @@
         b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
       });
       loadAdminOrders(btn.getAttribute('data-order-filter'));
+    });
+  }
+
+  const btnLoginLogs = document.getElementById('btn-login-logs');
+  if (btnLoginLogs) {
+    btnLoginLogs.addEventListener('click', async function () {
+      const res = await request('/api/auth/login-logs');
+      if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
+        notify(errorMessage(res, '无法获取登录日志'), 'error');
+        return;
+      }
+      const logs = res.data.data;
+      if (!logs.length) {
+        notify('暂无登录审计记录', 'info');
+        return;
+      }
+      const wrap = document.createElement('div');
+      renderTable(wrap, [
+        { label: '登录时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
+        { label: 'IP 地址', fill: function (td, r) { td.textContent = r.ip; } },
+        { label: '地理位置', fill: function (td, r) { td.textContent = r.ip_location || '—'; } },
+        { label: '客户端环境', fill: function (td, r) { td.textContent = (r.user_agent || '').substring(0, 36) + '…'; } },
+        {
+          label: '状态',
+          fill: function (td, r) {
+            const dot = document.createElement('i');
+            dot.className = r.status === 'success' ? 'dot' : 'dot warn';
+            td.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
+          },
+        },
+      ], logs);
+      openModal('账户登录审计日志', wrap);
     });
   }
 
