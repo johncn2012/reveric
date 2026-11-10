@@ -230,7 +230,13 @@
       addField(dl, '最后登录', formatWhen(user.last_login_at) + ip + loc);
     }
     document.getElementById('who-name').textContent = user.nickname || user.email || user.phone || '已登录';
-    document.getElementById('who-role').textContent = roleLabel(user.role);
+    const whoRoleEl = document.getElementById('who-role');
+    whoRoleEl.textContent = roleLabel(user.role);
+    if (user.role === 'admin') {
+      whoRoleEl.classList.add('who-role-admin');
+    } else {
+      whoRoleEl.classList.remove('who-role-admin');
+    }
   }
 
   function meter(label, value, total, detail) {
@@ -580,7 +586,7 @@
         fill: function (td, row) {
           const isSuspended = row.status === 'suspended';
           const dot = document.createElement('i');
-          dot.className = isSuspended ? 'dot warn' : (row.role === 'admin' ? 'dot warn' : 'dot');
+          dot.className = isSuspended ? 'dot danger' : (row.role === 'admin' ? 'dot warn' : 'dot');
           const statusPrefix = isSuspended ? '已封禁 · ' : '';
           td.append(dot, document.createTextNode(statusPrefix + roleLabel(row.role) + (row.plan ? ' · ' + row.plan : '')));
         },
@@ -755,7 +761,7 @@
                   label: '状态',
                   fill: function (td, r) {
                     const dot = document.createElement('i');
-                    dot.className = r.status === 'success' ? 'dot' : 'dot warn';
+                    dot.className = r.status === 'success' ? 'dot' : 'dot danger';
                     td.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
                   },
                 },
@@ -879,7 +885,7 @@
         label: '状态',
         fill: function (td, row) {
           const dot = document.createElement('i');
-          dot.className = row.status === 'failed' ? 'dot warn' : (row.status === 'completed' ? 'dot' : 'dot warn');
+          dot.className = row.status === 'failed' ? 'dot danger' : (row.status === 'completed' ? 'dot' : 'dot warn');
           td.append(dot, document.createTextNode(taskStatusLabel(row.status)));
         },
       },
@@ -1047,7 +1053,7 @@
         label: '状态',
         fill: function (td, row) {
           const dot = document.createElement('i');
-          dot.className = row.status === 'failed' ? 'dot warn' : (row.status === 'completed' ? 'dot' : 'dot warn');
+          dot.className = row.status === 'failed' ? 'dot danger' : (row.status === 'completed' ? 'dot' : 'dot warn');
           td.append(dot, document.createTextNode(taskStatusLabel(row.status)));
         },
       },
@@ -1743,7 +1749,7 @@
           label: '状态',
           fill: function (td, r) {
             const dot = document.createElement('i');
-            dot.className = r.status === 'success' ? 'dot' : 'dot warn';
+            dot.className = r.status === 'success' ? 'dot' : 'dot danger';
             td.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
           },
         },
