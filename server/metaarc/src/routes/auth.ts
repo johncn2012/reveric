@@ -154,6 +154,10 @@ const loginAccount = async (req: Request, res: Response) => {
     }
 
     const user = userRes.rows[0];
+    if (user.status === 'suspended') {
+      return res.status(403).json({ error: 'account_suspended', message: '账号已被封禁，请联系管理员' });
+    }
+
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
       return res.status(401).json({ error: 'invalid_credentials', message: '账号或密码错误' });
@@ -236,6 +240,59 @@ const readProfile = async (req: Request, res: Response) => {
   }
 };
 
+// 4. 修改个人资料（昵称、手机号）
+const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { nickname, phone } = req.body;
+    const cleanNickname = typeof nickname === 'string' ? nickname.trim() : null;
+    const cleanPhone = typeof phone === 'string' ? phone.trim() : null;
+
+    const userRes = await query(
+      'UPDATE users SET nickname = COALESCE($1, nickname), phone = COALESCE($2, phone), updated_at = NOW() WHERE id = $3 RETURNING id, email, phone, nickname, role, plan, quota, total_quota, created_at',
+      [cleanNickname, cleanPhone, userId]
+    );
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '用户不存在' });
+    }
+    return res.json({ success: true, message: '资料更新成功', user: userRes.rows[0] });
+  } catch (err: any) {
+    console.error('[Update Profile Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '更新资料失败' });
+  }
+};
+
+// 5. 修改登录密码
+const changePassword = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const oldPassword = req.body.oldPassword || req.body.old_password;
+    const newPassword = req.body.newPassword || req.body.new_password;
+    if (!oldPassword || !newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ error: 'invalid_password', message: '新密码长度至少为 6 位' });
+    }
+
+    const userRes = await query('SELECT password_hash FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '用户不存在' });
+    }
+
+    const match = await bcrypt.compare(oldPassword, userRes.rows[0].password_hash);
+    if (!match) {
+      return res.status(400).json({ error: 'wrong_password', message: '当前原密码不正确' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const newHash = await bcrypt.hash(newPassword, salt);
+    await query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [newHash, userId]);
+
+    return res.json({ success: true, message: '密码修改成功' });
+  } catch (err: any) {
+    console.error('[Change Password Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '修改密码失败' });
+  }
+};
+
 mount('post', ['/auth/register', '/register'], registerAccount);
 mount('post', ['/auth/login', '/login'], loginAccount);
 for (const path of ['/auth/profile', '/auth/user/profile', '/user/profile']) {
@@ -243,3 +300,9 @@ for (const path of ['/auth/profile', '/auth/user/profile', '/user/profile']) {
     void readProfile(req, res);
   });
 }
+authRouter.post('/auth/update-profile', requireAuth, (req, res) => {
+  void updateProfile(req, res);
+});
+authRouter.post('/auth/change-password', requireAuth, (req, res) => {
+  void changePassword(req, res);
+});

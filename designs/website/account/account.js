@@ -384,6 +384,31 @@
     note.textContent = '';
   }
 
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody = document.getElementById('modal-body');
+  const modalClose = document.getElementById('modal-close');
+
+  function openModal(title, contentNode) {
+    if (!modalOverlay || !modalTitle || !modalBody) return;
+    modalTitle.textContent = title;
+    modalBody.replaceChildren(contentNode);
+    modalOverlay.hidden = false;
+  }
+
+  function closeModal() {
+    if (!modalOverlay || !modalBody) return;
+    modalOverlay.hidden = true;
+    modalBody.replaceChildren();
+  }
+
+  if (modalClose) modalClose.addEventListener('click', closeModal);
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', function (e) {
+      if (e.target === modalOverlay) closeModal();
+    });
+  }
+
   function renderUsers(result) {
     const slot = document.getElementById('users-slot');
     slot.replaceChildren();
@@ -402,13 +427,15 @@
       return;
     }
     renderTable(slot, [
-      { label: '邮箱', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
+      { label: '用户标识', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
       {
-        label: '状态',
+        label: '角色/状态',
         fill: function (td, row) {
+          const isSuspended = row.status === 'suspended';
           const dot = document.createElement('i');
-          dot.className = row.role === 'admin' ? 'dot warn' : 'dot';
-          td.append(dot, document.createTextNode(roleLabel(row.role) + (row.plan ? ' · ' + row.plan : '')));
+          dot.className = isSuspended ? 'dot warn' : (row.role === 'admin' ? 'dot warn' : 'dot');
+          const statusPrefix = isSuspended ? '已封禁 · ' : '';
+          td.append(dot, document.createTextNode(statusPrefix + roleLabel(row.role) + (row.plan ? ' · ' + row.plan : '')));
         },
       },
       { label: '配额', fill: function (td, row) { td.textContent = formatNumber(row.quota) || cell(row.quota); } },
@@ -444,7 +471,7 @@
           const btnPlan = document.createElement('button');
           btnPlan.className = 'action-btn';
           btnPlan.type = 'button';
-          btnPlan.textContent = '设置套餐';
+          btnPlan.textContent = '套餐';
           btnPlan.addEventListener('click', async function () {
             const rawPlan = prompt('请选择新套餐（free / creator / pro / studio）：', row.plan || 'free');
             if (!rawPlan) return;
@@ -465,20 +492,100 @@
             }
           });
 
-          td.append(btnQuota, btnPlan);
+          const btnLogs = document.createElement('button');
+          btnLogs.className = 'action-btn';
+          btnLogs.type = 'button';
+          btnLogs.textContent = '流水';
+          btnLogs.addEventListener('click', async function () {
+            const res = await request('/api/admin/users/' + row.id + '/quota-logs');
+            if (!res.res.ok || !res.data || !res.data.success) {
+              showAlert(errorMessage(res, '无法获取流水记录'));
+              return;
+            }
+            const logs = Array.isArray(res.data.data) ? res.data.data : [];
+            const container = document.createElement('div');
+            if (!logs.length) {
+              const p = document.createElement('p');
+              p.className = 'empty';
+              p.textContent = '该用户暂无配额流水记录。';
+              container.append(p);
+            } else {
+              renderTable(container, [
+                { label: '变动点数', fill: function (td, log) { td.textContent = formatNumber(log.amount) || cell(log.amount); } },
+                { label: '变动后余额', fill: function (td, log) { td.textContent = formatNumber(log.balance_after) || cell(log.balance_after); } },
+                { label: '类型', fill: function (td, log) { td.textContent = cell(log.type); } },
+                { label: '备注', fill: function (td, log) { td.textContent = cell(log.remark); } },
+                { label: '时间', fill: function (td, log) { td.textContent = formatWhen(log.created_at); } },
+              ], logs);
+            }
+            openModal('用户算力流水 — ' + (personLabel(row) || row.id), container);
+          });
+
+          const btnReset = document.createElement('button');
+          btnReset.className = 'action-btn';
+          btnReset.type = 'button';
+          btnReset.textContent = '重置密码';
+          btnReset.addEventListener('click', async function () {
+            if (!confirm('确定要重置用户「' + (personLabel(row) || row.id) + '」的密码吗？')) return;
+            const res = await request('/api/admin/users/' + row.id + '/reset-password', { method: 'POST' });
+            if (res.res.ok && res.data && res.data.success) {
+              const tempPwd = res.data.temporary_password || res.data.newPassword;
+              prompt('密码已重置！请妥善保存临时密码并通知用户：', tempPwd);
+            } else {
+              showAlert(errorMessage(res, '密码重置失败'));
+            }
+          });
+
+          const isSuspended = row.status === 'suspended';
+          const btnStatus = document.createElement('button');
+          btnStatus.className = isSuspended ? 'action-btn primary' : 'action-btn';
+          btnStatus.type = 'button';
+          btnStatus.textContent = isSuspended ? '解封' : '封禁';
+          btnStatus.addEventListener('click', async function () {
+            const nextStatus = isSuspended ? 'active' : 'suspended';
+            const actionText = isSuspended ? '解封' : '封禁';
+            if (!confirm('确定要' + actionText + '用户「' + (personLabel(row) || row.id) + '」吗？')) return;
+            const res = await request('/api/admin/users/' + row.id + '/set-status', {
+              method: 'POST',
+              body: { status: nextStatus },
+            });
+            if (res.res.ok && res.data && res.data.success) {
+              showAlert('用户状态已变更为：' + (nextStatus === 'active' ? '正常' : '已封禁'));
+              loadUsers(document.getElementById('user-keyword').value.trim());
+            } else {
+              showAlert(errorMessage(res, '更新用户状态失败'));
+            }
+          });
+
+          td.append(btnQuota, btnPlan, btnLogs, btnReset, btnStatus);
         },
       },
     ], result.data.data);
   }
 
-  function renderHealth(result) {
+  function renderHealth(healthResult, sysResult) {
     const slot = document.getElementById('health-slot');
     slot.replaceChildren();
-    const ok = result.res.ok && result.data && result.data.status === 'ok';
+    const ok = healthResult && healthResult.res.ok && healthResult.data && healthResult.data.status === 'ok';
     const dl = document.createElement('dl');
-    addField(dl, '服务', ok ? '可用' : '不可用');
-    addField(dl, '数据库', ok && result.data.db === 'connected' ? '已连接' : '未连接');
-    if (result.data && result.data.timestamp) addField(dl, '时间', formatWhen(result.data.timestamp));
+    addField(dl, '基础服务', ok ? '正常运行' : '不可用');
+    addField(dl, '数据库连接', ok && healthResult.data.db === 'connected' ? '已连接' : '未连接');
+    if (healthResult && healthResult.data && healthResult.data.timestamp) {
+      addField(dl, '探针时间', formatWhen(healthResult.data.timestamp));
+    }
+
+    if (sysResult && sysResult.res.ok && sysResult.data && sysResult.data.success && sysResult.data.data) {
+      const sys = sysResult.data.data;
+      addField(dl, '主机平台', (sys.platform || '') + ' ' + (sys.arch || '') + ' (Node ' + (sys.node_version || '') + ')');
+      addField(dl, '运行时间', sys.uptime_formatted);
+      if (sys.memory_mb) {
+        addField(dl, '内存使用', '物理占用 ' + sys.memory_mb.rss + ' MB / 堆内存已用 ' + sys.memory_mb.heap_used + ' MB');
+      }
+      if (sys.db_pool) {
+        addField(dl, '连接池状态', '总计 ' + sys.db_pool.total + ' / 空闲 ' + sys.db_pool.idle + ' / 等待 ' + sys.db_pool.waiting);
+      }
+    }
+
     slot.append(dl);
     if (!ok) {
       const note = document.createElement('p');
@@ -512,11 +619,12 @@
   }
 
   async function loadAdmin() {
-    const [overview, users, orders, health, windows, mac, android] = await Promise.all([
+    const [overview, users, orders, health, sysStatus, windows, mac, android] = await Promise.all([
       request('/api/admin/overview'),
       request('/api/admin/users'),
       request('/api/admin/orders'),
       request('/api/health'),
+      request('/api/admin/system-status'),
       request('/api/updates/latest?platform=windows&arch=x64'),
       request('/api/updates/latest?platform=macos&arch=arm64'),
       request('/api/updates/latest?platform=android&arch=arm64'),
@@ -524,7 +632,7 @@
     renderOverview(overview);
     renderUsers(users);
     renderOrders(document.getElementById('admin-orders-slot'), orders, true);
-    renderHealth(health);
+    renderHealth(health, sysStatus);
     renderUpdates([
       { name: 'Windows', ok: windows.res.ok, data: windows.data },
       { name: 'macOS', ok: mac.res.ok, data: mac.data },
@@ -662,6 +770,64 @@
     if (!currentUser || currentUser.role !== 'admin') return;
     loadUsers(document.getElementById('user-keyword').value.trim());
   });
+
+  const updateProfileForm = document.getElementById('form-update-profile');
+  if (updateProfileForm) {
+    updateProfileForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const nicknameInput = document.getElementById('profile-nickname-input');
+      const nickname = nicknameInput ? nicknameInput.value.trim() : '';
+      if (!nickname) {
+        showAlert('请输入新的创作者昵称');
+        return;
+      }
+      showAlert('');
+      const res = await request('/api/auth/update-profile', {
+        method: 'POST',
+        body: { nickname: nickname },
+      });
+      if (res.res.ok && res.data && res.data.success) {
+        showAlert('昵称已成功更新为：' + res.data.user.nickname);
+        if (currentUser) {
+          currentUser.nickname = res.data.user.nickname;
+          renderProfile(currentUser);
+        }
+      } else {
+        showAlert(errorMessage(res, '修改昵称失败'));
+      }
+    });
+  }
+
+  const changePasswordForm = document.getElementById('form-change-password');
+  if (changePasswordForm) {
+    changePasswordForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const oldPwdInput = document.getElementById('old-pwd-input');
+      const newPwdInput = document.getElementById('new-pwd-input');
+      const oldPassword = oldPwdInput ? oldPwdInput.value : '';
+      const newPassword = newPwdInput ? newPwdInput.value : '';
+      if (!oldPassword || !newPassword) {
+        showAlert('请输入当前密码和新密码');
+        return;
+      }
+      if (newPassword.length < 6) {
+        showAlert('新密码长度至少为 6 位');
+        return;
+      }
+      showAlert('');
+      const res = await request('/api/auth/change-password', {
+        method: 'POST',
+        body: { old_password: oldPassword, new_password: newPassword },
+      });
+      if (res.res.ok && res.data && res.data.success) {
+        showAlert('登录密码修改成功，请妥善保存新密码');
+        if (oldPwdInput) oldPwdInput.value = '';
+        if (newPwdInput) newPwdInput.value = '';
+      } else {
+        showAlert(errorMessage(res, '修改密码失败'));
+      }
+    });
+  }
 
   showGateMode('login');
   if (token()) loadSession();

@@ -75,11 +75,23 @@ test('profile, orders and quota logs share auth failures across aliases', async 
     assert.equal(plansAlias.status, 401);
     assert.notEqual((await plansAlias.json()).success, true);
 
-    // 管理员端点未经授权均返回 401
+    // 管理员及需鉴权端点未经授权均返回 401
     const unauthAdjust = await postJson(`${base}/api/admin/users/invalid-id/adjust-quota`, { amount: 100 });
     assert.equal(unauthAdjust.status, 401);
     const unauthSetPlan = await postJson(`${base}/api/admin/users/invalid-id/set-plan`, { plan: 'pro' });
     assert.equal(unauthSetPlan.status, 401);
+    const unauthResetPwd = await postJson(`${base}/api/admin/users/invalid-id/reset-password`, {});
+    assert.equal(unauthResetPwd.status, 401);
+    const unauthSetStatus = await postJson(`${base}/api/admin/users/invalid-id/set-status`, { status: 'suspended' });
+    assert.equal(unauthSetStatus.status, 401);
+    const unauthQuotaLogs = await fetch(`${base}/api/admin/users/invalid-id/quota-logs`);
+    assert.equal(unauthQuotaLogs.status, 401);
+    const unauthSysStatus = await fetch(`${base}/api/admin/system-status`);
+    assert.equal(unauthSysStatus.status, 401);
+    const unauthUpdateProfile = await postJson(`${base}/api/auth/update-profile`, { nickname: 'test' });
+    assert.equal(unauthUpdateProfile.status, 401);
+    const unauthChangePwd = await postJson(`${base}/api/auth/change-password`, { oldPassword: 'a', newPassword: 'b' });
+    assert.equal(unauthChangePwd.status, 401);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));

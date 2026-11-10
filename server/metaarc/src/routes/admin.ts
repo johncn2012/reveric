@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { query } from '../db.js';
+import bcrypt from 'bcryptjs';
+import { query, pool } from '../db.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
 
@@ -178,5 +179,135 @@ adminRouter.get('/admin/orders', async (_req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[Admin Orders Error]', err);
     return res.status(500).json({ error: 'server_error', message: '订单列表获取失败' });
+  }
+});
+
+// 6. 管理员查询指定用户的算力流水
+adminRouter.get('/admin/users/:id/quota-logs', async (req: Request, res: Response) => {
+  try {
+    const targetUserId = req.params.id;
+    if (!UUID_REGEX.test(targetUserId)) {
+      return res.status(400).json({ error: 'invalid_user_id', message: '用户ID格式无效' });
+    }
+
+    const sql = `
+      SELECT id, amount, balance_after, type, reference_id, remark, created_at
+      FROM quota_transactions
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT 100
+    `;
+    const result = await query(sql, [targetUserId]);
+    return res.json({ success: true, data: result.rows });
+  } catch (err: any) {
+    console.error('[Admin User Quota Logs Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '获取用户算力流水失败' });
+  }
+});
+
+// 7. 管理员重置用户密码
+adminRouter.post('/admin/users/:id/reset-password', async (req: Request, res: Response) => {
+  try {
+    const targetUserId = req.params.id;
+    if (!UUID_REGEX.test(targetUserId)) {
+      return res.status(400).json({ error: 'invalid_user_id', message: '用户ID格式无效' });
+    }
+
+    const newPassword = req.body.newPassword || req.body.new_password;
+    const pwd = (typeof newPassword === 'string' && newPassword.trim().length >= 6)
+      ? newPassword.trim()
+      : `MetaArc@${Math.random().toString(36).substring(2, 8).toUpperCase()}!`;
+
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(pwd, salt);
+    const userRes = await query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname',
+      [hash, targetUserId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
+    }
+
+    return res.json({
+      success: true,
+      message: '密码重置成功',
+      temporary_password: pwd,
+      newPassword: pwd,
+      user: userRes.rows[0],
+    });
+  } catch (err: any) {
+    console.error('[Admin Reset Password Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '重置密码失败' });
+  }
+});
+
+// 8. 管理员变更用户账号状态（正常/封禁）
+adminRouter.post('/admin/users/:id/set-status', async (req: Request, res: Response) => {
+  try {
+    const targetUserId = req.params.id;
+    if (!UUID_REGEX.test(targetUserId)) {
+      return res.status(400).json({ error: 'invalid_user_id', message: '用户ID格式无效' });
+    }
+
+    const { status } = req.body;
+    if (status !== 'active' && status !== 'suspended') {
+      return res.status(400).json({ error: 'invalid_status', message: '状态只能为 active 或 suspended' });
+    }
+
+    const userRes = await query(
+      'UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname, status',
+      [status, targetUserId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
+    }
+
+    return res.json({
+      success: true,
+      message: `用户状态已更新为 ${status === 'active' ? '正常' : '已封禁'}`,
+      user: userRes.rows[0],
+    });
+  } catch (err: any) {
+    console.error('[Admin Set Status Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '更新用户状态失败' });
+  }
+});
+
+// 9. 系统运行环境与健康监控指标
+adminRouter.get('/admin/system-status', async (_req: Request, res: Response) => {
+  try {
+    const mem = process.memoryUsage();
+    const uptimeSec = Math.floor(process.uptime());
+    const uptimeDays = Math.floor(uptimeSec / 86400);
+    const uptimeHours = Math.floor((uptimeSec % 86400) / 3600);
+    const uptimeMinutes = Math.floor((uptimeSec % 3600) / 60);
+
+    const dbStats = {
+      total: (pool as any).totalCount ?? 0,
+      idle: (pool as any).idleCount ?? 0,
+      waiting: (pool as any).waitingCount ?? 0,
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        node_version: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        uptime_seconds: uptimeSec,
+        uptime_formatted: `${uptimeDays}天 ${uptimeHours}小时 ${uptimeMinutes}分`,
+        memory_mb: {
+          rss: Math.round(mem.rss / 1024 / 1024),
+          heap_total: Math.round(mem.heapTotal / 1024 / 1024),
+          heap_used: Math.round(mem.heapUsed / 1024 / 1024),
+        },
+        db_pool: dbStats,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Admin System Status Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取系统监控指标' });
   }
 });

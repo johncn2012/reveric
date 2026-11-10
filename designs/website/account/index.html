@@ -106,6 +106,26 @@
           <p class="empty">作品保存在本机创作台。这里没有云端项目，也不放示例。</p>
         </div>
       </div>
+      <div class="panel settings-panel">
+        <h3>账号与安全设置</h3>
+        <div class="settings-grid">
+          <form id="form-update-profile" class="inline-form">
+            <label for="profile-nickname-input">修改昵称</label>
+            <div class="form-row">
+              <input id="profile-nickname-input" type="text" placeholder="新的创作者昵称" autocomplete="nickname">
+              <button class="action-btn primary" type="submit">保存昵称</button>
+            </div>
+          </form>
+          <form id="form-change-password" class="inline-form">
+            <label for="old-pwd-input">修改登录密码</label>
+            <div class="form-row">
+              <input id="old-pwd-input" type="password" placeholder="当前原密码" autocomplete="current-password" required>
+              <input id="new-pwd-input" type="password" placeholder="新密码（至少 6 位）" autocomplete="new-password" minlength="6" required>
+              <button class="action-btn primary" type="submit">修改密码</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </section>
 
     <section data-panel="projects" hidden>
@@ -191,6 +211,16 @@
         <div id="updates-slot"><p class="empty">尚未读取更新清单。</p></div>
       </div>
     </section>
+  </div>
+</div>
+
+<div id="modal-overlay" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="modal-title">详情</h3>
+      <button id="modal-close" class="action-btn" type="button">关闭</button>
+    </div>
+    <div id="modal-body" class="modal-body"></div>
   </div>
 </div>
 
