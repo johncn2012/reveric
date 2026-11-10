@@ -132,9 +132,9 @@ adminRouter.post('/admin/users/create', async (req: Request, res: Response) => {
 
     if (initQuota > 0) {
       await query(
-        `INSERT INTO quota_transactions (user_id, delta_quota, balance_after, reason, type, remarks, operator_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [newUser.id, initQuota, initQuota, '管理员开户初始配额', 'admin_gift', '管理员手工新建创作者账号并划拨配额', (req as any).user?.userId || null]
+        `INSERT INTO quota_transactions (user_id, amount, balance_after, type, remark)
+         VALUES ($1, $2, $3, 'admin_grant', $4)`,
+        [newUser.id, initQuota, initQuota, '管理员新建账号初始配额']
       );
     }
 
@@ -294,9 +294,9 @@ adminRouter.post('/admin/users/batch', async (req: Request, res: Response) => {
             const nxt = Math.max(0, cur + delta);
             await client.query('UPDATE users SET quota = $1, updated_at = NOW() WHERE id = $2', [nxt, uid]);
             await client.query(
-              `INSERT INTO quota_transactions (user_id, delta_quota, balance_after, reason, type, remarks, operator_id)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-              [uid, delta, nxt, reason || '批量管理员调账', delta > 0 ? 'admin_add' : 'admin_deduct', '批量操作调账', (req as any).user?.userId || null]
+              `INSERT INTO quota_transactions (user_id, amount, balance_after, type, remark)
+               VALUES ($1, $2, $3, 'admin_grant', $4)`,
+              [uid, delta, nxt, `批量管理员调账：${reason || '批量调整'}`]
             );
           }
         }
