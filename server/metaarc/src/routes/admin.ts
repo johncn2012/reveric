@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
 import { query, pool } from '../db.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
@@ -80,6 +81,239 @@ adminRouter.get('/admin/users', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[Admin Users Error]', err);
     return res.status(500).json({ error: 'server_error', message: '用户列表获取失败' });
+  }
+});
+
+// 2.1 管理员新建创作者账号
+adminRouter.post('/admin/users/create', async (req: Request, res: Response) => {
+  try {
+    const { email, password, nickname, phone, plan = 'free', quota = 500, role = 'user' } = req.body;
+    const cleanEmail = typeof email === 'string' ? email.trim() : '';
+    const cleanPassword = typeof password === 'string' ? password.trim() : '';
+    const cleanNickname = typeof nickname === 'string' ? nickname.trim() : '';
+    const cleanPhone = typeof phone === 'string' ? phone.trim() : '';
+    const cleanPlan = ['free', 'creator', 'pro', 'studio'].includes(plan) ? plan : 'free';
+    const cleanRole = ['user', 'admin'].includes(role) ? role : 'user';
+    const initQuota = Math.max(0, parseFloat(quota) || 500);
+
+    if (!cleanEmail || cleanPassword.length < 6) {
+      return res.status(400).json({ error: 'invalid_fields', message: '请输入有效邮箱和至少 6 位初始密码' });
+    }
+
+    const checkSql = 'SELECT id FROM users WHERE email = $1' + (cleanPhone ? ' OR phone = $2' : '') + ' LIMIT 1';
+    const checkParams = cleanPhone ? [cleanEmail, cleanPhone] : [cleanEmail];
+    const exists = await query(checkSql, checkParams);
+    if (exists.rows.length > 0) {
+      return res.status(409).json({ error: 'conflict', message: '该邮箱或手机号已被占用' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(cleanPassword, salt);
+    const apiKey = 'sk-metaarc-' + crypto.randomBytes(16).toString('hex');
+
+    const insertSql = `
+      INSERT INTO users (email, phone, password_hash, nickname, role, status, plan, quota, total_quota, new_api_key)
+      VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9)
+      RETURNING id, email, phone, nickname, role, status, plan, quota, total_quota, new_api_key, created_at
+    `;
+    const inserted = await query(insertSql, [
+      cleanEmail,
+      cleanPhone || null,
+      hash,
+      cleanNickname || null,
+      cleanRole,
+      cleanPlan,
+      initQuota,
+      initQuota,
+      apiKey,
+    ]);
+
+    const newUser = inserted.rows[0];
+
+    if (initQuota > 0) {
+      await query(
+        `INSERT INTO quota_transactions (user_id, delta_quota, balance_after, reason, type, remarks, operator_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [newUser.id, initQuota, initQuota, '管理员开户初始配额', 'admin_gift', '管理员手工新建创作者账号并划拨配额', (req as any).user?.userId || null]
+      );
+    }
+
+    return res.status(201).json({ success: true, user: newUser });
+  } catch (err: any) {
+    console.error('[Admin Create User Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '创建用户失败' });
+  }
+});
+
+// 2.2 管理员更新创作者基本资料（昵称、手机、邮箱）
+adminRouter.post('/admin/users/:id/update-profile', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '用户 ID 格式不正确' });
+    }
+    const { nickname, phone, email } = req.body;
+    const cleanNickname = typeof nickname === 'string' ? nickname.trim() : undefined;
+    const cleanPhone = typeof phone === 'string' ? phone.trim() : undefined;
+    const cleanEmail = typeof email === 'string' ? email.trim() : undefined;
+
+    if (cleanEmail || cleanPhone) {
+      const dupRes = await query(
+        `SELECT id FROM users WHERE (email = $1 OR (phone IS NOT NULL AND phone = $2)) AND id != $3 LIMIT 1`,
+        [cleanEmail || '', cleanPhone || '', id]
+      );
+      if (dupRes.rows.length > 0) {
+        return res.status(409).json({ error: 'conflict', message: '更新的邮箱或手机号已被占用' });
+      }
+    }
+
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (cleanNickname !== undefined) {
+      params.push(cleanNickname);
+      updates.push(`nickname = $${params.length}`);
+    }
+    if (cleanPhone !== undefined) {
+      params.push(cleanPhone || null);
+      updates.push(`phone = $${params.length}`);
+    }
+    if (cleanEmail !== undefined && cleanEmail) {
+      params.push(cleanEmail);
+      updates.push(`email = $${params.length}`);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'no_changes', message: '没有需要更新的字段' });
+    }
+
+    updates.push('updated_at = NOW()');
+    params.push(id);
+    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${params.length} RETURNING id, email, phone, nickname, role, status, plan, quota`;
+    const result = await query(sql, params);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '用户不存在' });
+    }
+    return res.json({ success: true, user: result.rows[0] });
+  } catch (err: any) {
+    console.error('[Admin Update User Profile Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '更新用户信息失败' });
+  }
+});
+
+// 2.3 管理员变更用户权限（设为管理员 / 取消管理员）
+adminRouter.post('/admin/users/:id/set-role', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '用户 ID 格式不正确' });
+    }
+    const { role } = req.body;
+    if (role !== 'admin' && role !== 'user') {
+      return res.status(400).json({ error: 'invalid_role', message: '角色只能为 admin 或 user' });
+    }
+
+    const currentAdminId = (req as any).user?.userId;
+    if (currentAdminId === id && role === 'user') {
+      return res.status(400).json({ error: 'forbidden', message: '不能降级当前登录管理员自身' });
+    }
+
+    const result = await query('UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, role', [role, id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '用户不存在' });
+    }
+    return res.json({ success: true, user: result.rows[0] });
+  } catch (err: any) {
+    console.error('[Admin Set Role Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '变更角色失败' });
+  }
+});
+
+// 2.4 管理员为用户轮换重置算力 Key
+adminRouter.post('/admin/users/:id/reset-api-key', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '用户 ID 格式不正确' });
+    }
+    const newApiKey = 'sk-metaarc-' + crypto.randomBytes(16).toString('hex');
+    const result = await query(
+      'UPDATE users SET new_api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, new_api_key',
+      [newApiKey, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '用户不存在' });
+    }
+    return res.json({ success: true, apiKey: newApiKey });
+  } catch (err: any) {
+    console.error('[Admin Reset User API Key Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '重置算力Key失败' });
+  }
+});
+
+// 2.5 管理员批量操作用户（批量封禁、批量解封、批量调账、批量设套餐）
+adminRouter.post('/admin/users/batch', async (req: Request, res: Response) => {
+  try {
+    const { userIds, action, amount, status, plan, reason } = req.body;
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ error: 'invalid_input', message: '请提供要批量操作的用户 ID 列表' });
+    }
+    const validIds = userIds.filter((id: string) => UUID_REGEX.test(id));
+    if (validIds.length === 0) {
+      return res.status(400).json({ error: 'invalid_input', message: '未包含有效的用户 ID' });
+    }
+
+    if (action === 'set_status') {
+      if (status !== 'active' && status !== 'suspended') {
+        return res.status(400).json({ error: 'invalid_status', message: '状态只能为 active 或 suspended' });
+      }
+      await query(`UPDATE users SET status = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`, [status, validIds]);
+      return res.json({ success: true, updatedCount: validIds.length });
+    }
+
+    if (action === 'set_plan') {
+      if (!['free', 'creator', 'pro', 'studio'].includes(plan)) {
+        return res.status(400).json({ error: 'invalid_plan', message: '无效的套餐类型' });
+      }
+      await query(`UPDATE users SET plan = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`, [plan, validIds]);
+      return res.json({ success: true, updatedCount: validIds.length });
+    }
+
+    if (action === 'adjust_quota') {
+      const delta = parseFloat(amount);
+      if (!Number.isFinite(delta) || delta === 0) {
+        return res.status(400).json({ error: 'invalid_amount', message: '请输入有效的调账点数' });
+      }
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (const uid of validIds) {
+          const uRes = await client.query('SELECT quota FROM users WHERE id = $1 FOR UPDATE', [uid]);
+          if (uRes.rows.length > 0) {
+            const cur = parseFloat(uRes.rows[0].quota);
+            const nxt = Math.max(0, cur + delta);
+            await client.query('UPDATE users SET quota = $1, updated_at = NOW() WHERE id = $2', [nxt, uid]);
+            await client.query(
+              `INSERT INTO quota_transactions (user_id, delta_quota, balance_after, reason, type, remarks, operator_id)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [uid, delta, nxt, reason || '批量管理员调账', delta > 0 ? 'admin_add' : 'admin_deduct', '批量操作调账', (req as any).user?.userId || null]
+            );
+          }
+        }
+        await client.query('COMMIT');
+        return res.json({ success: true, updatedCount: validIds.length });
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
+    }
+
+    return res.status(400).json({ error: 'unknown_action', message: '未知的批量操作动作' });
+  } catch (err: any) {
+    console.error('[Admin Batch Users Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '批量操作失败' });
   }
 });
 
@@ -186,7 +420,7 @@ adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response
 // 5. 全站订单列表
 adminRouter.get('/admin/orders', async (req: Request, res: Response) => {
   try {
-    const { status, limit = '100' } = req.query;
+    const { status, userId, limit = '100' } = req.query;
     let sql = `
       SELECT o.id, o.user_id, o.amount_cents, o.pay_channel, o.status, o.created_at, o.paid_at,
              u.email, u.phone, u.nickname, p.name as plan_name, p.quota_points
@@ -195,10 +429,21 @@ adminRouter.get('/admin/orders', async (req: Request, res: Response) => {
       LEFT JOIN plans p ON o.plan_id = p.id
     `;
     const params: any[] = [];
+    const whereClauses: string[] = [];
+
     if (status && typeof status === 'string' && status.trim()) {
       params.push(status.trim());
-      sql += ` WHERE o.status = $1`;
+      whereClauses.push(`o.status = $${params.length}`);
     }
+    if (userId && typeof userId === 'string' && UUID_REGEX.test(userId.trim())) {
+      params.push(userId.trim());
+      whereClauses.push(`o.user_id = $${params.length}`);
+    }
+
+    if (whereClauses.length > 0) {
+      sql += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
     const take = Math.min(Math.max(parseInt(limit as string, 10) || 100, 1), 200);
     sql += ` ORDER BY o.created_at DESC LIMIT $${params.length + 1}`;
     params.push(take);
@@ -369,7 +614,7 @@ adminRouter.get('/admin/system-status', async (_req: Request, res: Response) => 
 // 10. 管理员获取全平台任务调度队列
 adminRouter.get('/admin/tasks', async (req: Request, res: Response) => {
   try {
-    const { status, limit } = req.query;
+    const { status, userId, limit } = req.query;
     const take = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 100);
 
     let sql = `
@@ -381,10 +626,21 @@ adminRouter.get('/admin/tasks', async (req: Request, res: Response) => {
       LEFT JOIN users u ON t.user_id = u.id
     `;
     const params: any[] = [];
-    if (status && typeof status === 'string') {
+    const whereClauses: string[] = [];
+
+    if (status && typeof status === 'string' && status.trim()) {
       params.push(status.trim());
-      sql += ` WHERE t.status = $1`;
+      whereClauses.push(`t.status = $${params.length}`);
     }
+    if (userId && typeof userId === 'string' && UUID_REGEX.test(userId.trim())) {
+      params.push(userId.trim());
+      whereClauses.push(`t.user_id = $${params.length}`);
+    }
+
+    if (whereClauses.length > 0) {
+      sql += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
     sql += ` ORDER BY t.created_at DESC LIMIT $${params.length + 1}`;
     params.push(take);
 
@@ -427,7 +683,7 @@ adminRouter.post('/admin/tasks/:id/cancel', async (req: Request, res: Response) 
 // 12. 管理员查看云端媒体资源与存储统计
 adminRouter.get('/admin/media', async (req: Request, res: Response) => {
   try {
-    const { assetType, limit } = req.query;
+    const { assetType, userId, limit } = req.query;
     const take = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 100);
 
     const statsRes = await query(`
@@ -445,10 +701,21 @@ adminRouter.get('/admin/media', async (req: Request, res: Response) => {
       LEFT JOIN users u ON m.user_id = u.id
     `;
     const params: any[] = [];
-    if (assetType && typeof assetType === 'string') {
+    const whereClauses: string[] = [];
+
+    if (assetType && typeof assetType === 'string' && assetType.trim()) {
       params.push(assetType.trim());
-      listSql += ` WHERE m.asset_type = $1`;
+      whereClauses.push(`m.asset_type = $${params.length}`);
     }
+    if (userId && typeof userId === 'string' && UUID_REGEX.test(userId.trim())) {
+      params.push(userId.trim());
+      whereClauses.push(`m.user_id = $${params.length}`);
+    }
+
+    if (whereClauses.length > 0) {
+      listSql += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
     listSql += ` ORDER BY m.created_at DESC LIMIT $${params.length + 1}`;
     params.push(take);
 

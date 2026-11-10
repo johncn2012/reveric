@@ -205,7 +205,11 @@
       <div id="subview-users-roster">
         <div class="panel">
           <div class="panel-head">
-            <h3>创作者账号</h3>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h3>创作者账号</h3>
+              <button class="action-btn primary" id="btn-create-user" type="button">+ 新建创作者</button>
+              <button class="action-btn" id="btn-export-users" type="button">导出 CSV</button>
+            </div>
             <form id="user-search" class="user-search">
               <input id="user-keyword" type="search" placeholder="邮箱、手机、昵称、登录IP或地理位置" autocomplete="off">
               <button type="submit">查找</button>
@@ -219,6 +223,14 @@
             <button class="action-btn" type="button" data-user-filter="plan:studio">工作室版</button>
             <button class="action-btn" type="button" data-user-filter="status:suspended">已封禁</button>
             <button class="action-btn" type="button" data-user-filter="filter:active_24h">24小时活跃</button>
+          </div>
+          <div id="users-batch-bar" class="batch-bar" hidden>
+            <span id="batch-selected-count">已选 0 项</span>
+            <button type="button" class="action-btn" id="batch-btn-quota">批量调账</button>
+            <button type="button" class="action-btn" id="batch-btn-plan">批量设套餐</button>
+            <button type="button" class="action-btn" id="batch-btn-suspend">批量封禁</button>
+            <button type="button" class="action-btn" id="batch-btn-activate">批量解封</button>
+            <button type="button" class="action-btn" id="batch-btn-clear">取消选择</button>
           </div>
           <div id="users-slot"><p class="empty">尚未读取用户列表。</p></div>
         </div>

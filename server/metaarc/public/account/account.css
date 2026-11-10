@@ -1456,6 +1456,39 @@ tbody tr:last-child td {
   border: 1px solid rgba(244, 63, 94, 0.25);
 }
 
+.batch-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--ma-bg-surface-elevated);
+  border: 1px solid rgba(255, 87, 51, 0.4);
+  border-radius: var(--ma-radius-sm);
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--ma-ink-high);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.batch-bar span {
+  font-weight: 600;
+  color: #fff;
+  margin-right: 4px;
+}
+
+.table-check-col {
+  width: 32px;
+  text-align: center;
+}
+
+.table-check-col input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #ff5733;
+  width: 14px;
+  height: 14px;
+}
+
 @media (max-width: 1100px) {
   .panels, .kpi-row {
     grid-template-columns: 1fr 1fr;
