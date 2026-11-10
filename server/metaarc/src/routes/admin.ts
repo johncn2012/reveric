@@ -311,3 +311,59 @@ adminRouter.get('/admin/system-status', async (_req: Request, res: Response) => 
     return res.status(500).json({ error: 'server_error', message: '无法获取系统监控指标' });
   }
 });
+
+// 10. 管理员获取全平台任务调度队列
+adminRouter.get('/admin/tasks', async (req: Request, res: Response) => {
+  try {
+    const { status, limit } = req.query;
+    const take = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 100);
+
+    let sql = `
+      SELECT t.id, t.user_id, t.task_type, t.status, t.progress, t.error_message, t.created_at, t.updated_at,
+             u.email, u.phone, u.nickname
+      FROM user_tasks t
+      LEFT JOIN users u ON t.user_id = u.id
+    `;
+    const params: any[] = [];
+    if (status && typeof status === 'string') {
+      params.push(status.trim());
+      sql += ` WHERE t.status = $1`;
+    }
+    sql += ` ORDER BY t.created_at DESC LIMIT $${params.length + 1}`;
+    params.push(take);
+
+    const result = await query(sql, params);
+    return res.json({ success: true, data: result.rows });
+  } catch (err: any) {
+    console.error('[Admin Tasks Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取任务调度队列' });
+  }
+});
+
+// 11. 管理员终止/取消指定任务
+adminRouter.post('/admin/tasks/:id/cancel', async (req: Request, res: Response) => {
+  try {
+    const taskId = req.params.id;
+    if (!UUID_REGEX.test(taskId)) {
+      return res.status(400).json({ error: 'invalid_task_id', message: '任务ID格式无效' });
+    }
+
+    const sql = `
+      UPDATE user_tasks
+      SET status = 'failed',
+          error_message = COALESCE(error_message, '管理员手动终止任务'),
+          updated_at = NOW()
+      WHERE id = $1 AND status IN ('pending', 'running', 'processing')
+      RETURNING *
+    `;
+    const result = await query(sql, [taskId]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'cannot_cancel', message: '任务不存在或已处于终态，无法终止' });
+    }
+
+    return res.json({ success: true, message: '任务已成功终止', task: result.rows[0] });
+  } catch (err: any) {
+    console.error('[Admin Cancel Task Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '终止任务失败' });
+  }
+});

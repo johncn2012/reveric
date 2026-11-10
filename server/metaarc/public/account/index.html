@@ -70,6 +70,7 @@
     <nav class="rail-nav" id="admin-nav" data-kicker="管理后台" aria-label="管理后台" hidden>
       <p class="rail-label">管理后台</p>
       <button type="button" data-view="users"><span>用户</span></button>
+      <button type="button" data-view="tasks"><span>任务</span></button>
       <button type="button" data-view="orders"><span>订单</span></button>
       <button type="button" data-view="health"><span>健康</span></button>
       <button type="button" data-view="updates"><span>更新</span></button>
@@ -133,6 +134,11 @@
         <h3>最近项目</h3>
         <p class="empty">作品保存在本机创作台。账号中心没有项目列表，这里不展示虚构作品。</p>
       </div>
+      <div class="panel">
+        <h3>创作与调度队列</h3>
+        <p class="fine">本机创作台发起的云端 AI 渲染与批量任务。</p>
+        <div id="user-tasks-slot"><p class="empty">暂无创作任务记录。</p></div>
+      </div>
     </section>
 
     <section data-panel="quota" hidden>
@@ -183,6 +189,22 @@
           </form>
         </div>
         <div id="users-slot"><p class="empty">尚未读取用户列表。</p></div>
+      </div>
+    </section>
+
+    <section data-panel="tasks" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>任务调度队列</h3>
+          <div class="task-filters" id="admin-task-filters">
+            <button class="action-btn primary" type="button" data-filter="">全部</button>
+            <button class="action-btn" type="button" data-filter="pending">排队中</button>
+            <button class="action-btn" type="button" data-filter="running">运行中</button>
+            <button class="action-btn" type="button" data-filter="completed">已完成</button>
+            <button class="action-btn" type="button" data-filter="failed">已失败</button>
+          </div>
+        </div>
+        <div id="admin-tasks-slot"><p class="empty">尚未读取任务调度队列。</p></div>
       </div>
     </section>
 

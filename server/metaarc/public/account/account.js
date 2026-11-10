@@ -8,7 +8,7 @@
 (function () {
   const TOKEN_KEY = 'metaarc_account_token';
   const USER_VIEWS = ['overview', 'projects', 'quota', 'billing'];
-  const ADMIN_VIEWS = ['users', 'orders', 'health', 'updates'];
+  const ADMIN_VIEWS = ['users', 'tasks', 'orders', 'health', 'updates'];
   const alertEl = document.getElementById('alert');
   const gate = document.getElementById('gate');
   const consoleEl = document.getElementById('console');
@@ -133,6 +133,41 @@
     if (status === 'pending') return '未完成';
     if (status === 'failed' || status === 'cancelled' || status === 'canceled') return '未完成';
     return status ? String(status) : '';
+  }
+
+  function taskTypeLabel(type) {
+    if (type === 'chapter_illustrations') return '章节绘图';
+    if (type === 'batch_dubbing') return '批量配音';
+    if (type === 'video_render') return '分镜渲染';
+    if (type === 'character_profile') return '角色肖像';
+    return type ? String(type) : '通用任务';
+  }
+
+  function taskStatusLabel(status) {
+    if (status === 'pending') return '排队中';
+    if (status === 'running' || status === 'processing') return '运行中';
+    if (status === 'completed') return '已完成';
+    if (status === 'failed') return '失败';
+    if (status === 'cancelled') return '已取消';
+    return status ? String(status) : '未知';
+  }
+
+  function progressBar(percent) {
+    const val = Math.max(0, Math.min(100, Number(percent) || 0));
+    const wrap = document.createElement('div');
+    wrap.className = 'progress-bar-inline';
+    const track = document.createElement('div');
+    track.className = 'progress-track-mini';
+    const fill = document.createElement('div');
+    fill.className = 'progress-fill-mini';
+    fill.style.width = val + '%';
+    track.append(fill);
+    const span = document.createElement('span');
+    span.style.fontSize = '12px';
+    span.style.color = '#c4c6ce';
+    span.textContent = val + '%';
+    wrap.append(track, span);
+    return wrap;
   }
 
   function personLabel(row) {
@@ -612,6 +647,118 @@
     slot.append(dl);
   }
 
+  function renderUserTasks(result) {
+    const slot = document.getElementById('user-tasks-slot');
+    if (!slot) return;
+    slot.replaceChildren();
+    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = errorMessage(result, '无法获取创作任务记录');
+      slot.append(note);
+      return;
+    }
+    if (!result.data.data.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = '暂无云端 AI 渲染任务，在桌面端发起生成后将在此展示进度。';
+      slot.append(empty);
+      return;
+    }
+    renderTable(slot, [
+      { label: '任务类型', fill: function (td, row) { td.textContent = taskTypeLabel(row.task_type); } },
+      { label: '进度', fill: function (td, row) { td.append(progressBar(row.progress)); } },
+      {
+        label: '状态',
+        fill: function (td, row) {
+          const dot = document.createElement('i');
+          dot.className = row.status === 'failed' ? 'dot warn' : (row.status === 'completed' ? 'dot' : 'dot warn');
+          td.append(dot, document.createTextNode(taskStatusLabel(row.status)));
+        },
+      },
+      { label: '创建时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+    ], result.data.data);
+  }
+
+  function renderAdminTasks(result) {
+    const slot = document.getElementById('admin-tasks-slot');
+    if (!slot) return;
+    slot.replaceChildren();
+    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = errorMessage(result, '无法获取任务调度队列');
+      slot.append(note);
+      return;
+    }
+    if (!result.data.data.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = '当前没有匹配的任务。';
+      slot.append(empty);
+      return;
+    }
+    renderTable(slot, [
+      { label: '任务类型', fill: function (td, row) { td.textContent = taskTypeLabel(row.task_type); } },
+      { label: '所属用户', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
+      { label: '进度', fill: function (td, row) { td.append(progressBar(row.progress)); } },
+      {
+        label: '状态',
+        fill: function (td, row) {
+          const dot = document.createElement('i');
+          dot.className = row.status === 'failed' ? 'dot warn' : (row.status === 'completed' ? 'dot' : 'dot warn');
+          td.append(dot, document.createTextNode(taskStatusLabel(row.status)));
+        },
+      },
+      { label: '创建时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      {
+        label: '操作',
+        fill: function (td, row) {
+          if (row.status === 'pending' || row.status === 'running' || row.status === 'processing') {
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'action-btn danger';
+            btnCancel.type = 'button';
+            btnCancel.textContent = '终止';
+            btnCancel.addEventListener('click', async function () {
+              if (!confirm('确定要终止任务「' + row.id + '」吗？')) return;
+              const res = await request('/api/admin/tasks/' + row.id + '/cancel', { method: 'POST' });
+              if (res.res.ok && res.data && res.data.success) {
+                showAlert('任务已成功终止');
+                loadAdminTasks(currentTaskFilter);
+              } else {
+                showAlert(errorMessage(res, '终止任务失败'));
+              }
+            });
+            td.append(btnCancel);
+          } else if (row.error_message) {
+            const btnErr = document.createElement('button');
+            btnErr.className = 'action-btn';
+            btnErr.type = 'button';
+            btnErr.textContent = '查看原因';
+            btnErr.addEventListener('click', function () {
+              const p = document.createElement('p');
+              p.style.whiteSpace = 'pre-wrap';
+              p.style.color = '#ff8566';
+              p.textContent = row.error_message;
+              openModal('任务异常信息 — ' + row.id, p);
+            });
+            td.append(btnErr);
+          } else {
+            td.textContent = '—';
+          }
+        },
+      },
+    ], result.data.data);
+  }
+
+  let currentTaskFilter = '';
+  async function loadAdminTasks(status) {
+    currentTaskFilter = status || '';
+    const query = currentTaskFilter ? '?status=' + encodeURIComponent(currentTaskFilter) : '';
+    const result = await request('/api/admin/tasks' + query);
+    renderAdminTasks(result);
+  }
+
   async function loadUsers(keyword) {
     const query = keyword ? '?keyword=' + encodeURIComponent(keyword) : '';
     const result = await request('/api/admin/users' + query);
@@ -619,9 +766,10 @@
   }
 
   async function loadAdmin() {
-    const [overview, users, orders, health, sysStatus, windows, mac, android] = await Promise.all([
+    const [overview, users, tasks, orders, health, sysStatus, windows, mac, android] = await Promise.all([
       request('/api/admin/overview'),
       request('/api/admin/users'),
+      request('/api/admin/tasks'),
       request('/api/admin/orders'),
       request('/api/health'),
       request('/api/admin/system-status'),
@@ -631,6 +779,7 @@
     ]);
     renderOverview(overview);
     renderUsers(users);
+    renderAdminTasks(tasks);
     renderOrders(document.getElementById('admin-orders-slot'), orders, true);
     renderHealth(health, sysStatus);
     renderUpdates([
@@ -686,9 +835,11 @@
     const plans = await request('/api/plans');
     const orders = await request('/api/auth/orders');
     const ledger = await request('/api/auth/quota/logs');
+    const userTasks = await request('/api/tasks/list');
     renderPlan(user, plans);
     renderOrders(document.getElementById('orders-slot'), orders, false);
     renderLedger(ledger);
+    renderUserTasks(userTasks);
     if (user.role === 'admin') await loadAdmin();
     const hash = (location.hash || '').replace('#', '');
     showView(viewAllowed(hash) ? hash : 'overview');
@@ -826,6 +977,18 @@
       } else {
         showAlert(errorMessage(res, '修改密码失败'));
       }
+    });
+  }
+
+  const taskFilterGroup = document.getElementById('admin-task-filters');
+  if (taskFilterGroup) {
+    taskFilterGroup.addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-filter]');
+      if (!btn) return;
+      taskFilterGroup.querySelectorAll('button').forEach(function (b) {
+        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
+      });
+      loadAdminTasks(btn.getAttribute('data-filter'));
     });
   }
 

@@ -331,6 +331,31 @@ img { display: block; max-width: 100%; }
   overflow-y: auto;
 }
 
+.task-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.progress-bar-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 100px;
+}
+.progress-track-mini {
+  flex: 1;
+  height: 6px;
+  background: var(--line, #2a2e36);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill-mini {
+  height: 100%;
+  background: #ff8566;
+  border-radius: 3px;
+}
+
 .banner, .panel, .kpi {
   background: var(--surface, #121418);
   border: 1px solid var(--line, #2a2e36);
