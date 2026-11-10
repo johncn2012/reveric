@@ -1377,6 +1377,85 @@ tbody tr:last-child td {
 }
 
 /* ---------- 响应式断点控制 ---------- */
+/* ---------- 子导航 Tabs 与 IP 安全审计单元格 ---------- */
+.subnav-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--ma-border-subtle);
+  padding-bottom: 8px;
+}
+
+.subnav-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ma-ink-muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--ma-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.subnav-tab:hover {
+  color: var(--ma-ink-high);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.subnav-tab.active {
+  color: #fff;
+  background: var(--ma-bg-surface-elevated);
+  border-color: rgba(255, 87, 51, 0.35);
+  box-shadow: 0 1px 6px rgba(255, 87, 51, 0.15);
+}
+
+.cell-ip-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.25;
+}
+
+.cell-ip-addr {
+  font-family: var(--ma-font-mono);
+  font-size: 11.5px;
+  color: #38bdf8;
+  font-weight: 500;
+}
+
+.cell-ip-loc {
+  font-size: 11px;
+  color: var(--ma-ink-muted);
+}
+
+.cell-ip-time {
+  font-size: 11px;
+  color: var(--ma-ink-subtle);
+}
+
+.badge-risk {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.badge-risk.success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.badge-risk.danger {
+  background: rgba(244, 63, 94, 0.12);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
 @media (max-width: 1100px) {
   .panels, .kpi-row {
     grid-template-columns: 1fr 1fr;

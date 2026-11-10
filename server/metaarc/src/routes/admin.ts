@@ -39,14 +39,14 @@ adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
 // 2. 用户管理列表
 adminRouter.get('/admin/users', async (req: Request, res: Response) => {
   try {
-    const { keyword, plan, status, limit = '50', offset = '0' } = req.query;
+    const { keyword, plan, status, filter, limit = '50', offset = '0' } = req.query;
     let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location, expires_at, created_at, updated_at FROM users';
     const params: any[] = [];
     const whereClauses: string[] = [];
 
     if (keyword && typeof keyword === 'string' && keyword.trim()) {
       params.push(`%${keyword.trim()}%`);
-      whereClauses.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length})`);
+      whereClauses.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length} OR last_login_ip ILIKE $${params.length} OR last_login_location ILIKE $${params.length})`);
     }
 
     if (plan && typeof plan === 'string' && plan.trim()) {
@@ -57,6 +57,12 @@ adminRouter.get('/admin/users', async (req: Request, res: Response) => {
     if (status && typeof status === 'string' && status.trim()) {
       params.push(status.trim());
       whereClauses.push(`status = $${params.length}`);
+    }
+
+    if (filter === 'active_24h') {
+      whereClauses.push(`last_login_at >= NOW() - INTERVAL '24 hours'`);
+    } else if (filter === 'never_logged_in') {
+      whereClauses.push(`last_login_at IS NULL`);
     }
 
     if (whereClauses.length > 0) {
@@ -620,5 +626,78 @@ adminRouter.get('/admin/tasks/:id', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[Admin Get Task Error]', err);
     return res.status(500).json({ error: 'server_error', message: '无法获取任务详情' });
+  }
+});
+
+// 19. 管理员获取全平台登录与安全审计日志
+adminRouter.get('/admin/login-logs', async (req: Request, res: Response) => {
+  try {
+    const { status, keyword, limit = '50', offset = '0' } = req.query;
+    let sql = `
+      SELECT l.id, l.user_id, l.account, l.ip, l.ip_location, l.user_agent, l.status, l.fail_reason, l.created_at,
+             u.email, u.phone, u.nickname, u.role
+      FROM login_logs l
+      LEFT JOIN users u ON l.user_id = u.id
+    `;
+    const params: any[] = [];
+    const whereClauses: string[] = [];
+
+    if (status && typeof status === 'string' && (status === 'success' || status === 'failed')) {
+      params.push(status);
+      whereClauses.push(`l.status = $${params.length}`);
+    }
+
+    if (keyword && typeof keyword === 'string' && keyword.trim()) {
+      params.push(`%${keyword.trim()}%`);
+      whereClauses.push(`(l.account ILIKE $${params.length} OR l.ip ILIKE $${params.length} OR l.ip_location ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`);
+    }
+
+    if (whereClauses.length > 0) {
+      sql += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    const parsedLimit = Math.max(1, Math.min(200, parseInt(limit as string, 10) || 50));
+    const parsedOffset = Math.max(0, parseInt(offset as string, 10) || 0);
+    params.push(parsedLimit);
+    params.push(parsedOffset);
+    sql += ` ORDER BY l.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+
+    const result = await query(sql, params);
+    return res.json({ success: true, data: result.rows });
+  } catch (err: any) {
+    console.error('[Admin Login Logs Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取全局登录审计日志' });
+  }
+});
+
+// 20. 安全风控大盘指标
+adminRouter.get('/admin/security/stats', async (_req: Request, res: Response) => {
+  try {
+    const todaySql = `
+      SELECT 
+        COUNT(*) FILTER (WHERE status = 'success' AND created_at >= CURRENT_DATE) as today_logins,
+        COUNT(*) FILTER (WHERE status = 'failed' AND created_at >= CURRENT_DATE) as today_failed,
+        COUNT(DISTINCT ip) FILTER (WHERE created_at >= CURRENT_DATE) as today_ips
+      FROM login_logs
+    `;
+    const userStatsSql = `
+      SELECT COUNT(*) as suspended_count FROM users WHERE status = 'suspended'
+    `;
+    const [todayRes, userRes] = await Promise.all([query(todaySql), query(userStatsSql)]);
+    const stats = todayRes.rows[0] || {};
+    const suspended = userRes.rows[0] || {};
+
+    return res.json({
+      success: true,
+      data: {
+        today_logins: parseInt(stats.today_logins || '0', 10),
+        today_failed: parseInt(stats.today_failed || '0', 10),
+        today_ips: parseInt(stats.today_ips || '0', 10),
+        suspended_users: parseInt(suspended.suspended_count || '0', 10),
+      },
+    });
+  } catch (err: any) {
+    console.error('[Admin Security Stats Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取安全风控统计' });
   }
 });

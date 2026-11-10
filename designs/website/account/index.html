@@ -197,23 +197,55 @@
         <div class="kpi"><span>支付</span><b class="kpi-quiet">尚未开通</b><em>不展示金额</em></div>
       </div>
       <p class="fine" id="kpi-note" hidden></p>
-      <div class="panel">
-        <div class="panel-head">
-          <h3>用户</h3>
-          <form id="user-search" class="user-search">
-            <input id="user-keyword" type="search" placeholder="邮箱、手机或昵称" autocomplete="off">
-            <button type="submit">查找</button>
-          </form>
+      <div class="subnav-tabs" id="users-subnav">
+        <button type="button" class="subnav-tab active" id="tab-users-roster">创作者名录与档案</button>
+        <button type="button" class="subnav-tab" id="tab-users-security">全平台登录与安全审计</button>
+      </div>
+
+      <div id="subview-users-roster">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>创作者账号</h3>
+            <form id="user-search" class="user-search">
+              <input id="user-keyword" type="search" placeholder="邮箱、手机、昵称、登录IP或地理位置" autocomplete="off">
+              <button type="submit">查找</button>
+            </form>
+          </div>
+          <div class="task-filters" id="admin-user-filters">
+            <button class="action-btn primary" type="button" data-user-filter="">全部</button>
+            <button class="action-btn" type="button" data-user-filter="plan:free">基础版</button>
+            <button class="action-btn" type="button" data-user-filter="plan:creator">创作者版</button>
+            <button class="action-btn" type="button" data-user-filter="plan:pro">专业版</button>
+            <button class="action-btn" type="button" data-user-filter="plan:studio">工作室版</button>
+            <button class="action-btn" type="button" data-user-filter="status:suspended">已封禁</button>
+            <button class="action-btn" type="button" data-user-filter="filter:active_24h">24小时活跃</button>
+          </div>
+          <div id="users-slot"><p class="empty">尚未读取用户列表。</p></div>
         </div>
-        <div class="task-filters" id="admin-user-filters">
-          <button class="action-btn primary" type="button" data-user-filter="">全部</button>
-          <button class="action-btn" type="button" data-user-filter="plan:free">基础版</button>
-          <button class="action-btn" type="button" data-user-filter="plan:creator">创作者版</button>
-          <button class="action-btn" type="button" data-user-filter="plan:pro">专业版</button>
-          <button class="action-btn" type="button" data-user-filter="plan:studio">工作室版</button>
-          <button class="action-btn" type="button" data-user-filter="status:suspended">已封禁</button>
+      </div>
+
+      <div id="subview-users-security" hidden>
+        <div class="kpi-row" id="kpi-sec-row">
+          <div class="kpi"><span>今日登录</span><b id="kpi-sec-logins">—</b><em>成功会话</em></div>
+          <div class="kpi"><span>异常拦截</span><b id="kpi-sec-failed">—</b><em>登录失败/阻断</em></div>
+          <div class="kpi"><span>活跃 IP</span><b id="kpi-sec-ips">—</b><em>来源节点数</em></div>
+          <div class="kpi"><span>受限账号</span><b id="kpi-sec-suspended">—</b><em>已封禁管控</em></div>
         </div>
-        <div id="users-slot"><p class="empty">尚未读取用户列表。</p></div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>全平台登录安全审计日志</h3>
+            <form id="sec-search" class="user-search">
+              <input id="sec-keyword" type="search" placeholder="搜索账号、IP 或 拦截原因" autocomplete="off">
+              <button type="submit">检索</button>
+            </form>
+          </div>
+          <div class="task-filters" id="admin-sec-filters">
+            <button class="action-btn primary" type="button" data-sec-filter="">全部记录</button>
+            <button class="action-btn" type="button" data-sec-filter="success">仅成功登录</button>
+            <button class="action-btn" type="button" data-sec-filter="failed">仅异常/失败拦截</button>
+          </div>
+          <div id="global-audit-slot"><p class="empty">正在读取安全审计日志…</p></div>
+        </div>
       </div>
     </section>
 

@@ -604,7 +604,33 @@
         },
       },
       { label: '配额', fill: function (td, row) { td.textContent = formatNumber(row.quota) || cell(row.quota); } },
-      { label: '注册时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      {
+        label: '最近登录与 IP 归属',
+        fill: function (td, row) {
+          if (!row.last_login_at && !row.last_login_ip) {
+            td.textContent = '尚未登录';
+            td.className = 'col-truncate fine';
+            return;
+          }
+          const wrap = document.createElement('div');
+          wrap.className = 'cell-ip-wrap';
+
+          const ipSpan = document.createElement('span');
+          ipSpan.className = 'cell-ip-addr';
+          ipSpan.textContent = row.last_login_ip || '未知 IP';
+
+          const locSpan = document.createElement('span');
+          locSpan.className = 'cell-ip-loc';
+          locSpan.textContent = row.last_login_location || '未解析节点';
+
+          const timeSpan = document.createElement('span');
+          timeSpan.className = 'cell-ip-time';
+          timeSpan.textContent = formatWhen(row.last_login_at);
+
+          wrap.append(ipSpan, locSpan, timeSpan);
+          td.append(wrap);
+        },
+      },
       {
         label: '管理操作',
         fill: function (td, row) {
@@ -761,19 +787,15 @@
             mBtnStatus.textContent = isSuspended ? '解封账号' : '封禁账号';
             mBtnStatus.addEventListener('click', onToggleStatus);
 
-            const btnLoginAudit = document.createElement('button');
-            btnLoginAudit.className = 'action-btn';
-            btnLoginAudit.type = 'button';
-            btnLoginAudit.textContent = '登录日志';
-            btnLoginAudit.addEventListener('click', async function () {
+            const onShowLoginAudit = async function () {
               const res = await request('/api/admin/users/' + row.id + '/login-logs');
               if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
-                notify(errorMessage(res, '无法读取登录日志'), 'error');
+                showAlert(errorMessage(res, '无法读取登录日志'));
                 return;
               }
               const userLogs = res.data.data;
               if (!userLogs.length) {
-                notify('该用户暂无登录日志', 'info');
+                showAlert('该用户暂无登录审计记录');
                 return;
               }
               const auditWrap = document.createElement('div');
@@ -791,13 +813,55 @@
                 { label: '地理位置', fill: function (t, r) { t.textContent = r.ip_location || '—'; } },
                 { label: '客户端', fill: function (t, r) { t.textContent = r.user_agent ? (r.user_agent.substring(0, 30) + '…') : '—'; } },
               ], userLogs);
-              openModal('登录审计历史 — ' + (personLabel(row) || row.id), auditWrap);
-            });
+              openModal('登录安全审计历史 — ' + (personLabel(row) || row.id), auditWrap);
+            };
+
+            const btnLoginAudit = document.createElement('button');
+            btnLoginAudit.className = 'action-btn';
+            btnLoginAudit.type = 'button';
+            btnLoginAudit.textContent = '登录日志';
+            btnLoginAudit.addEventListener('click', onShowLoginAudit);
 
             modalActions.append(mBtnPlan, mBtnLogs, mBtnReset, mBtnStatus, btnLoginAudit);
             wrap.append(modalActions);
             openModal('创作者档案详情 — ' + (personLabel(row) || row.id), wrap);
           });
+
+          const onShowLoginAuditRow = async function () {
+            const res = await request('/api/admin/users/' + row.id + '/login-logs');
+            if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
+              showAlert(errorMessage(res, '无法读取登录日志'));
+              return;
+            }
+            const userLogs = res.data.data;
+            if (!userLogs.length) {
+              showAlert('该用户暂无登录审计记录');
+              return;
+            }
+            const auditWrap = document.createElement('div');
+            renderTable(auditWrap, [
+              { label: '登录时间', fill: function (t, r) { t.textContent = formatWhen(r.created_at); } },
+              {
+                label: '状态',
+                fill: function (t, r) {
+                  const dot = document.createElement('i');
+                  dot.className = r.status === 'success' ? 'dot' : 'dot danger';
+                  t.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
+                },
+              },
+              { label: 'IP', fill: function (t, r) { t.textContent = r.ip || '—'; } },
+              { label: '地理位置', fill: function (t, r) { t.textContent = r.ip_location || '—'; } },
+              { label: '客户端', fill: function (t, r) { t.textContent = r.user_agent ? (r.user_agent.substring(0, 30) + '…') : '—'; } },
+            ], userLogs);
+            openModal('登录安全审计历史 — ' + (personLabel(row) || row.id), auditWrap);
+          };
+
+          const btnAudit = document.createElement('button');
+          btnAudit.className = 'action-btn';
+          btnAudit.type = 'button';
+          btnAudit.textContent = '审计';
+          btnAudit.title = '查看登录安全与IP审计历史';
+          btnAudit.addEventListener('click', onShowLoginAuditRow);
 
           // 更多操作下拉菜单
           const moreWrap = document.createElement('div');
@@ -818,6 +882,15 @@
               if (m !== menu) m.classList.remove('show');
             });
             menu.classList.toggle('show');
+          });
+
+          const itemAudit = document.createElement('button');
+          itemAudit.className = 'dropdown-item';
+          itemAudit.type = 'button';
+          itemAudit.textContent = '登录审计';
+          itemAudit.addEventListener('click', function () {
+            menu.classList.remove('show');
+            onShowLoginAuditRow();
           });
 
           const itemPlan = document.createElement('button');
@@ -856,10 +929,10 @@
             onToggleStatus();
           });
 
-          menu.append(itemPlan, itemLogs, itemReset, itemStatus);
+          menu.append(itemAudit, itemPlan, itemLogs, itemReset, itemStatus);
           moreWrap.append(btnMore, menu);
 
-          td.append(btnQuota, btnDetails, moreWrap);
+          td.append(btnQuota, btnAudit, btnDetails, moreWrap);
         },
       },
     ], result.data.data);
@@ -1468,11 +1541,101 @@
         params.push('plan=' + encodeURIComponent(currentUserFilter.replace('plan:', '')));
       } else if (currentUserFilter.indexOf('status:') === 0) {
         params.push('status=' + encodeURIComponent(currentUserFilter.replace('status:', '')));
+      } else if (currentUserFilter.indexOf('filter:') === 0) {
+        params.push('filter=' + encodeURIComponent(currentUserFilter.replace('filter:', '')));
       }
     }
     const query = params.length ? '?' + params.join('&') : '';
     const result = await request('/api/admin/users' + query);
     renderUsers(result);
+  }
+
+  let currentSecStatus = '';
+  let currentSecKeyword = '';
+  async function loadGlobalAuditLogs(keyword, status) {
+    if (keyword !== undefined) currentSecKeyword = keyword;
+    if (status !== undefined) currentSecStatus = status;
+    const params = [];
+    if (currentSecKeyword) params.push('keyword=' + encodeURIComponent(currentSecKeyword));
+    if (currentSecStatus) params.push('status=' + encodeURIComponent(currentSecStatus));
+    const query = params.length ? '?' + params.join('&') : '';
+    const [logsRes, statsRes] = await Promise.all([
+      request('/api/admin/login-logs' + query),
+      request('/api/admin/security/stats'),
+    ]);
+
+    if (statsRes && statsRes.res.ok && statsRes.data && statsRes.data.success && statsRes.data.data) {
+      const s = statsRes.data.data;
+      setKpi('kpi-sec-logins', formatNumber(s.today_logins) || '0');
+      setKpi('kpi-sec-failed', formatNumber(s.today_failed) || '0');
+      setKpi('kpi-sec-ips', formatNumber(s.today_ips) || '0');
+      setKpi('kpi-sec-suspended', formatNumber(s.suspended_users) || '0');
+    }
+
+    renderGlobalAuditLogs(logsRes);
+  }
+
+  function renderGlobalAuditLogs(result) {
+    const slot = document.getElementById('global-audit-slot');
+    if (!slot) return;
+    slot.replaceChildren();
+    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
+      const p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = errorMessage(result, '无法读取全局登录审计日志');
+      slot.append(p);
+      return;
+    }
+    const logs = result.data.data;
+    if (!logs.length) {
+      const p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = '暂无符合条件的安全审计日志。';
+      slot.append(p);
+      return;
+    }
+
+    renderTable(slot, [
+      { label: '登录时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
+      {
+        label: '账号 / 用户',
+        fill: function (td, r) {
+          const name = r.nickname ? (r.nickname + ' (' + (r.email || r.account) + ')') : (r.email || r.account || '—');
+          td.textContent = name;
+        },
+      },
+      {
+        label: '登录 IP',
+        fill: function (td, r) {
+          td.className = 'mono';
+          td.textContent = r.ip || '—';
+        },
+      },
+      {
+        label: '地理归属',
+        fill: function (td, r) {
+          td.textContent = r.ip_location || '未解析节点';
+        },
+      },
+      {
+        label: '状态 / 审计结论',
+        fill: function (td, r) {
+          const dot = document.createElement('i');
+          const isSuccess = r.status === 'success';
+          dot.className = isSuccess ? 'dot' : 'dot danger';
+          const label = isSuccess ? '成功' : ('拦截: ' + (r.fail_reason || '异常登录'));
+          td.append(dot, document.createTextNode(label));
+        },
+      },
+      {
+        label: '客户端环境',
+        fill: function (td, r) {
+          td.className = 'col-truncate';
+          td.title = r.user_agent || '';
+          td.textContent = r.user_agent ? (r.user_agent.substring(0, 32) + '…') : '—';
+        },
+      },
+    ], logs);
   }
 
   let currentOrderFilter = '';
@@ -1805,6 +1968,51 @@
         b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
       });
       loadUsers(undefined, btn.getAttribute('data-user-filter'));
+    });
+  }
+
+  const tabUsersRoster = document.getElementById('tab-users-roster');
+  const tabUsersSecurity = document.getElementById('tab-users-security');
+  const subviewRoster = document.getElementById('subview-users-roster');
+  const subviewSecurity = document.getElementById('subview-users-security');
+
+  if (tabUsersRoster && tabUsersSecurity) {
+    tabUsersRoster.addEventListener('click', function () {
+      tabUsersRoster.classList.add('active');
+      tabUsersSecurity.classList.remove('active');
+      if (subviewRoster) subviewRoster.hidden = false;
+      if (subviewSecurity) subviewSecurity.hidden = true;
+      loadUsers();
+    });
+
+    tabUsersSecurity.addEventListener('click', function () {
+      tabUsersSecurity.classList.add('active');
+      tabUsersRoster.classList.remove('active');
+      if (subviewRoster) subviewRoster.hidden = true;
+      if (subviewSecurity) subviewSecurity.hidden = false;
+      loadGlobalAuditLogs();
+    });
+  }
+
+  const secSearchForm = document.getElementById('sec-search');
+  if (secSearchForm) {
+    secSearchForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const kwInput = document.getElementById('sec-keyword');
+      const kw = kwInput ? kwInput.value.trim() : '';
+      loadGlobalAuditLogs(kw);
+    });
+  }
+
+  const secFilterGroup = document.getElementById('admin-sec-filters');
+  if (secFilterGroup) {
+    secFilterGroup.addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-sec-filter]');
+      if (!btn) return;
+      secFilterGroup.querySelectorAll('button').forEach(function (b) {
+        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
+      });
+      loadGlobalAuditLogs(undefined, btn.getAttribute('data-sec-filter'));
     });
   }
 
