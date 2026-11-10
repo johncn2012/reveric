@@ -134,7 +134,79 @@ tasksRouter.post('/tasks/:id/update-status', requireAuth, async (req: Request, r
   }
 });
 
-// 4. 查询当前用户的配额流水。余额快照在 GET /api/auth/profile，这里是流水。
+// 4. 用户取消自己的异步任务
+tasksRouter.post('/tasks/:id/cancel', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const taskId = req.params.id;
+    if (!UUID_REGEX.test(taskId)) {
+      return res.status(400).json({ error: 'invalid_task_id', message: '任务ID格式无效' });
+    }
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === 'admin';
+
+    const checkSql = isAdmin
+      ? 'SELECT id, status FROM user_tasks WHERE id = $1'
+      : 'SELECT id, status FROM user_tasks WHERE id = $1 AND user_id = $2';
+    const checkParams = isAdmin ? [taskId] : [taskId, userId];
+    const taskRes = await query(checkSql, checkParams);
+
+    if (taskRes.rows.length === 0) {
+      return res.status(404).json({ error: 'task_not_found', message: '任务不存在或无权操作' });
+    }
+
+    const task = taskRes.rows[0];
+    if (task.status === 'completed' || task.status === 'cancelled') {
+      return res.status(400).json({ error: 'invalid_status', message: `当前任务处于 ${task.status} 状态，无法取消` });
+    }
+
+    const updateRes = await query(
+      "UPDATE user_tasks SET status = 'cancelled', updated_at = NOW() WHERE id = $1 RETURNING *",
+      [taskId]
+    );
+
+    return res.json({
+      success: true,
+      message: '任务已取消',
+      task: updateRes.rows[0],
+    });
+  } catch (err: any) {
+    console.error('[User Cancel Task Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '取消任务失败' });
+  }
+});
+
+// 5. 用户删除自己的任务记录（管理员可删除任何人的）
+tasksRouter.delete('/tasks/:id', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const taskId = req.params.id;
+    if (!UUID_REGEX.test(taskId)) {
+      return res.status(400).json({ error: 'invalid_task_id', message: '任务ID格式无效' });
+    }
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === 'admin';
+
+    const delSql = isAdmin
+      ? 'DELETE FROM user_tasks WHERE id = $1 RETURNING id'
+      : 'DELETE FROM user_tasks WHERE id = $1 AND user_id = $2 RETURNING id';
+    const delParams = isAdmin ? [taskId] : [taskId, userId];
+    const delRes = await query(delSql, delParams);
+
+    if (delRes.rows.length === 0) {
+      return res.status(404).json({ error: 'task_not_found', message: '任务不存在或无权删除' });
+    }
+
+    return res.json({
+      success: true,
+      message: '任务记录已删除',
+      id: delRes.rows[0].id,
+    });
+  } catch (err: any) {
+    console.error('[Delete Task Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '删除任务失败' });
+  }
+});
+
+// 6. 查询当前用户的配额流水。余额快照在 GET /api/auth/profile，这里是流水。
 // 规范路径 GET /api/auth/quota/logs，兼容 GET /api/quota/logs。
 const listQuotaLogs = async (req: Request, res: Response) => {
   try {

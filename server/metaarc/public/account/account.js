@@ -838,6 +838,81 @@
         },
       },
       { label: '创建时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      {
+        label: '操作',
+        fill: function (td, row) {
+          if (row.status === 'pending' || row.status === 'running' || row.status === 'processing') {
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'action-btn danger';
+            btnCancel.type = 'button';
+            btnCancel.textContent = '取消';
+            btnCancel.addEventListener('click', async function () {
+              if (!confirm('确定要取消该任务吗？')) return;
+              btnCancel.disabled = true;
+              btnCancel.textContent = '取消中…';
+              try {
+                const res = await request('/api/tasks/' + encodeURIComponent(row.id) + '/cancel', { method: 'POST' });
+                if (res.res.ok && res.data && res.data.success) {
+                  notify('任务已取消', 'success');
+                  const refreshed = await request('/api/tasks/list');
+                  renderUserTasks(refreshed);
+                } else {
+                  notify(errorMessage(res, '取消任务失败'), 'error');
+                  btnCancel.disabled = false;
+                  btnCancel.textContent = '取消';
+                }
+              } catch (_) {
+                notify('网络异常，请稍后重试', 'error');
+                btnCancel.disabled = false;
+                btnCancel.textContent = '取消';
+              }
+            });
+            td.append(btnCancel);
+          } else {
+            const btnDel = document.createElement('button');
+            btnDel.className = 'action-btn';
+            btnDel.type = 'button';
+            btnDel.textContent = '清除';
+            btnDel.addEventListener('click', async function () {
+              if (!confirm('确定清除该任务历史记录吗？')) return;
+              btnDel.disabled = true;
+              btnDel.textContent = '清除中…';
+              try {
+                const res = await request('/api/tasks/' + encodeURIComponent(row.id), { method: 'DELETE' });
+                if (res.res.ok && res.data && res.data.success) {
+                  notify('任务记录已清除', 'success');
+                  const refreshed = await request('/api/tasks/list');
+                  renderUserTasks(refreshed);
+                } else {
+                  notify(errorMessage(res, '清除失败'), 'error');
+                  btnDel.disabled = false;
+                  btnDel.textContent = '清除';
+                }
+              } catch (_) {
+                notify('网络异常，请稍后重试', 'error');
+                btnDel.disabled = false;
+                btnDel.textContent = '清除';
+              }
+            });
+            td.append(btnDel);
+          }
+          if (row.error_message) {
+            const btnErr = document.createElement('button');
+            btnErr.className = 'action-btn';
+            btnErr.type = 'button';
+            btnErr.textContent = '原因';
+            btnErr.style.marginLeft = '4px';
+            btnErr.addEventListener('click', function () {
+              const p = document.createElement('p');
+              p.style.whiteSpace = 'pre-wrap';
+              p.style.color = '#ff8566';
+              p.textContent = row.error_message;
+              openModal('任务异常信息 — ' + row.id, p);
+            });
+            td.append(btnErr);
+          }
+        },
+      },
     ], result.data.data);
   }
 
@@ -882,16 +957,53 @@
             btnCancel.textContent = '终止';
             btnCancel.addEventListener('click', async function () {
               if (!confirm('确定要终止任务「' + row.id + '」吗？')) return;
-              const res = await request('/api/admin/tasks/' + row.id + '/cancel', { method: 'POST' });
-              if (res.res.ok && res.data && res.data.success) {
-                showAlert('任务已成功终止');
-                loadAdminTasks(currentTaskFilter);
-              } else {
-                showAlert(errorMessage(res, '终止任务失败'));
+              btnCancel.disabled = true;
+              btnCancel.textContent = '终止中…';
+              try {
+                const res = await request('/api/admin/tasks/' + encodeURIComponent(row.id) + '/cancel', { method: 'POST' });
+                if (res.res.ok && res.data && res.data.success) {
+                  notify('任务已成功终止', 'success');
+                  await loadAdminTasks(currentTaskFilter);
+                } else {
+                  notify(errorMessage(res, '终止任务失败'), 'error');
+                  btnCancel.disabled = false;
+                  btnCancel.textContent = '终止';
+                }
+              } catch (_) {
+                notify('网络异常，请稍后重试', 'error');
+                btnCancel.disabled = false;
+                btnCancel.textContent = '终止';
               }
             });
             td.append(btnCancel);
-          } else if (row.error_message) {
+          }
+          const btnDel = document.createElement('button');
+          btnDel.className = 'action-btn danger';
+          btnDel.type = 'button';
+          btnDel.textContent = '删除';
+          btnDel.addEventListener('click', async function () {
+            if (!confirm('确定从全平台删除任务记录「' + row.id + '」吗？')) return;
+            btnDel.disabled = true;
+            btnDel.textContent = '删除中…';
+            try {
+              const res = await request('/api/admin/tasks/' + encodeURIComponent(row.id), { method: 'DELETE' });
+              if (res.res.ok && res.data && res.data.success) {
+                notify('任务记录已删除', 'success');
+                await loadAdminTasks(currentTaskFilter);
+              } else {
+                notify(errorMessage(res, '删除任务失败'), 'error');
+                btnDel.disabled = false;
+                btnDel.textContent = '删除';
+              }
+            } catch (_) {
+              notify('网络异常，请稍后重试', 'error');
+              btnDel.disabled = false;
+              btnDel.textContent = '删除';
+            }
+          });
+          td.append(btnDel);
+
+          if (row.error_message) {
             const btnErr = document.createElement('button');
             btnErr.className = 'action-btn';
             btnErr.type = 'button';
@@ -904,8 +1016,6 @@
               openModal('任务异常信息 — ' + row.id, p);
             });
             td.append(btnErr);
-          } else {
-            td.textContent = '—';
           }
         },
       },

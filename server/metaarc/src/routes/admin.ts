@@ -485,3 +485,28 @@ adminRouter.delete('/admin/media/:id', async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'server_error', message: '删除媒体资源失败' });
   }
 });
+
+// 14. 管理员删除任务调度记录
+adminRouter.delete('/admin/tasks/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!id || !uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '任务 ID 格式不正确' });
+    }
+
+    const delRes = await query('DELETE FROM user_tasks WHERE id = $1 RETURNING id', [id]);
+    if (delRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '任务记录不存在或已被删除' });
+    }
+
+    return res.json({
+      success: true,
+      message: '任务记录已从调度队列中删除',
+      id: delRes.rows[0].id,
+    });
+  } catch (err: any) {
+    console.error('[Admin Delete Task Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '删除任务记录失败' });
+  }
+});

@@ -104,6 +104,12 @@ test('profile, orders and quota logs share auth failures across aliases', async 
     assert.equal(unauthDeleteMedia.status, 401);
     const unauthAdminDeleteMedia = await fetch(`${base}/api/admin/media/invalid-id`, { method: 'DELETE' });
     assert.equal(unauthAdminDeleteMedia.status, 401);
+    const unauthCancelUserTask = await postJson(`${base}/api/tasks/invalid-id/cancel`, {});
+    assert.equal(unauthCancelUserTask.status, 401);
+    const unauthDeleteUserTask = await fetch(`${base}/api/tasks/invalid-id`, { method: 'DELETE' });
+    assert.equal(unauthDeleteUserTask.status, 401);
+    const unauthAdminDeleteTask = await fetch(`${base}/api/admin/tasks/invalid-id`, { method: 'DELETE' });
+    assert.equal(unauthAdminDeleteTask.status, 401);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
