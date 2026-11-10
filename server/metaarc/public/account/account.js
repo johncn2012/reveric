@@ -434,6 +434,9 @@
     columns.forEach(function (column) {
       const th = document.createElement('th');
       th.textContent = column.label;
+      if (column.label && column.label.includes('操作')) {
+        th.className = 'action-col';
+      }
       head.append(th);
     });
     const thead = document.createElement('thead');
@@ -443,6 +446,9 @@
       const tr = document.createElement('tr');
       columns.forEach(function (column) {
         const td = document.createElement('td');
+        if (column.label && column.label.includes('操作')) {
+          td.className = 'action-col';
+        }
         column.fill(td, row);
         tr.append(td);
       });
@@ -677,7 +683,8 @@
           const btnReset = document.createElement('button');
           btnReset.className = 'action-btn';
           btnReset.type = 'button';
-          btnReset.textContent = '重置密码';
+          btnReset.textContent = '重置';
+          btnReset.title = '重置用户登录密码';
           btnReset.addEventListener('click', async function () {
             if (!confirm('确定要重置用户「' + (personLabel(row) || row.id) + '」的密码吗？')) return;
             const res = await request('/api/admin/users/' + row.id + '/reset-password', { method: 'POST' });
@@ -1302,7 +1309,14 @@
       { label: '资产类型', fill: function (td, row) { td.textContent = assetTypeLabel(row.asset_type); } },
       { label: '归属创作者', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
       { label: '文件大小', fill: function (td, row) { td.textContent = formatBytes(row.byte_size); } },
-      { label: '存储 Key', fill: function (td, row) { td.textContent = cell(row.storage_key); } },
+      {
+        label: '存储 Key',
+        fill: function (td, row) {
+          td.className = 'mono col-truncate';
+          td.title = row.storage_key || '';
+          td.textContent = cell(row.storage_key);
+        },
+      },
       { label: '上传时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
       {
         label: '操作',
@@ -1313,7 +1327,8 @@
             link.href = row.cdn_url;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
-            link.textContent = '访问 CDN';
+            link.textContent = 'CDN';
+            link.title = '在新标签页打开 CDN 资源';
             td.append(link);
           }
           const delBtn = document.createElement('button');
