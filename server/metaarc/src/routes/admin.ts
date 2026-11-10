@@ -290,6 +290,18 @@ adminRouter.get('/admin/system-status', async (_req: Request, res: Response) => 
       waiting: (pool as any).waitingCount ?? 0,
     };
 
+    let aiGatewayStatus = 'unconfigured';
+    if (process.env.NEW_API_BASE_URL) {
+      try {
+        const pingRes = await fetch(`${process.env.NEW_API_BASE_URL.replace(/\/$/, '')}/api/status`, {
+          signal: AbortSignal.timeout(2000),
+        });
+        aiGatewayStatus = pingRes.ok ? 'connected' : `http_${pingRes.status}`;
+      } catch {
+        aiGatewayStatus = 'unreachable';
+      }
+    }
+
     return res.json({
       success: true,
       data: {
@@ -304,6 +316,10 @@ adminRouter.get('/admin/system-status', async (_req: Request, res: Response) => 
           heap_used: Math.round(mem.heapUsed / 1024 / 1024),
         },
         db_pool: dbStats,
+        ai_gateway: {
+          configured: !!process.env.NEW_API_BASE_URL,
+          status: aiGatewayStatus,
+        },
       },
     });
   } catch (err: any) {
@@ -365,5 +381,50 @@ adminRouter.post('/admin/tasks/:id/cancel', async (req: Request, res: Response) 
   } catch (err: any) {
     console.error('[Admin Cancel Task Error]', err);
     return res.status(500).json({ error: 'server_error', message: err.message || '终止任务失败' });
+  }
+});
+
+// 12. 管理员查看云端媒体资源与存储统计
+adminRouter.get('/admin/media', async (req: Request, res: Response) => {
+  try {
+    const { assetType, limit } = req.query;
+    const take = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 100);
+
+    const statsRes = await query(`
+      SELECT COUNT(*) as total_assets,
+             COALESCE(SUM(byte_size), 0) as total_bytes,
+             COUNT(DISTINCT user_id) as total_users
+      FROM media_assets
+    `);
+
+    let listSql = `
+      SELECT m.id, m.user_id, m.project_id, m.asset_type, m.storage_key, m.cdn_url,
+             m.byte_size, m.mime_type, m.created_at,
+             u.email, u.phone, u.nickname
+      FROM media_assets m
+      LEFT JOIN users u ON m.user_id = u.id
+    `;
+    const params: any[] = [];
+    if (assetType && typeof assetType === 'string') {
+      params.push(assetType.trim());
+      listSql += ` WHERE m.asset_type = $1`;
+    }
+    listSql += ` ORDER BY m.created_at DESC LIMIT $${params.length + 1}`;
+    params.push(take);
+
+    const listRes = await query(listSql, params);
+
+    return res.json({
+      success: true,
+      stats: {
+        total_assets: parseInt(statsRes.rows[0].total_assets, 10) || 0,
+        total_bytes: parseInt(statsRes.rows[0].total_bytes, 10) || 0,
+        total_users: parseInt(statsRes.rows[0].total_users, 10) || 0,
+      },
+      data: listRes.rows,
+    });
+  } catch (err: any) {
+    console.error('[Admin Media Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取媒体资源列表' });
   }
 });

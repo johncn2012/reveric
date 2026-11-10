@@ -8,7 +8,7 @@
 (function () {
   const TOKEN_KEY = 'metaarc_account_token';
   const USER_VIEWS = ['overview', 'projects', 'quota', 'billing'];
-  const ADMIN_VIEWS = ['users', 'tasks', 'orders', 'health', 'updates'];
+  const ADMIN_VIEWS = ['users', 'tasks', 'media', 'orders', 'health', 'updates'];
   const alertEl = document.getElementById('alert');
   const gate = document.getElementById('gate');
   const consoleEl = document.getElementById('console');
@@ -135,6 +135,23 @@
     return status ? String(status) : '';
   }
 
+  function formatBytes(bytes) {
+    const b = Number(bytes);
+    if (!Number.isFinite(b) || b <= 0) return '0 B';
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + ' MB';
+    return (b / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  }
+
+  function assetTypeLabel(type) {
+    if (type === 'image') return '图片/分镜';
+    if (type === 'video') return '成片视频';
+    if (type === 'audio') return '音频/配音';
+    if (type === 'export') return '交付导出包';
+    return type ? String(type) : '媒体';
+  }
+
   function taskTypeLabel(type) {
     if (type === 'chapter_illustrations') return '章节绘图';
     if (type === 'batch_dubbing') return '批量配音';
@@ -247,10 +264,30 @@
       note.textContent = '算力通道尚未开通，接口没有返回可用密钥。';
       slot.append(note);
     } else {
+      const codeRow = document.createElement('div');
+      codeRow.className = 'form-row';
       const code = document.createElement('p');
       code.className = 'mono';
       code.textContent = key;
-      slot.append(code);
+      code.style.margin = '0';
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'action-btn';
+      copyBtn.type = 'button';
+      copyBtn.textContent = '复制密钥';
+      copyBtn.addEventListener('click', function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(key).then(function () {
+            copyBtn.textContent = '已复制！';
+            setTimeout(function () { copyBtn.textContent = '复制密钥'; }, 2000);
+          }).catch(function () {
+            prompt('请手动复制密钥：', key);
+          });
+        } else {
+          prompt('请手动复制密钥：', key);
+        }
+      });
+      codeRow.append(code, copyBtn);
+      slot.append(codeRow);
     }
     if (base) {
       const line = document.createElement('p');
@@ -619,6 +656,12 @@
       if (sys.db_pool) {
         addField(dl, '连接池状态', '总计 ' + sys.db_pool.total + ' / 空闲 ' + sys.db_pool.idle + ' / 等待 ' + sys.db_pool.waiting);
       }
+      if (sys.ai_gateway) {
+        const gwText = sys.ai_gateway.status === 'connected'
+          ? '正常 (已连接)'
+          : (sys.ai_gateway.configured ? '离线 (' + sys.ai_gateway.status + ')' : '未配置');
+        addField(dl, 'AI 算力通道', gwText);
+      }
     }
 
     slot.append(dl);
@@ -751,6 +794,106 @@
     ], result.data.data);
   }
 
+  function renderUserMedia(result) {
+    const slot = document.getElementById('user-media-slot');
+    if (!slot) return;
+    slot.replaceChildren();
+    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = errorMessage(result, '无法获取媒体交付物列表');
+      slot.append(note);
+      return;
+    }
+    if (!result.data.data.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = '暂无云端媒体交付物。小说分镜成片导出后将归档至此。';
+      slot.append(empty);
+      return;
+    }
+    renderTable(slot, [
+      { label: '交付物类型', fill: function (td, row) { td.textContent = assetTypeLabel(row.asset_type); } },
+      { label: '格式/类型', fill: function (td, row) { td.textContent = cell(row.mime_type || row.asset_type); } },
+      { label: '大小', fill: function (td, row) { td.textContent = formatBytes(row.byte_size); } },
+      { label: '归档时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      {
+        label: '操作',
+        fill: function (td, row) {
+          if (row.cdn_url) {
+            const link = document.createElement('a');
+            link.className = 'action-btn';
+            link.href = row.cdn_url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = '查看/下载';
+            td.append(link);
+          } else {
+            td.textContent = '—';
+          }
+        },
+      },
+    ], result.data.data);
+  }
+
+  function renderAdminMedia(result) {
+    const slot = document.getElementById('admin-media-slot');
+    if (!slot) return;
+    slot.replaceChildren();
+    if (!result.res.ok || !result.data || result.data.success !== true) {
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = errorMessage(result, '无法获取媒体资源列表');
+      slot.append(note);
+      return;
+    }
+    const stats = result.data.stats || {};
+    const rows = Array.isArray(result.data.data) ? result.data.data : [];
+
+    setKpi('kpi-media-count', formatNumber(stats.total_assets) || '0');
+    setKpi('kpi-media-size', formatBytes(stats.total_bytes));
+    setKpi('kpi-media-users', formatNumber(stats.total_users) || '0');
+
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = '当前没有匹配的媒体资产。';
+      slot.append(empty);
+      return;
+    }
+    renderTable(slot, [
+      { label: '资产类型', fill: function (td, row) { td.textContent = assetTypeLabel(row.asset_type); } },
+      { label: '归属创作者', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
+      { label: '文件大小', fill: function (td, row) { td.textContent = formatBytes(row.byte_size); } },
+      { label: '存储 Key', fill: function (td, row) { td.textContent = cell(row.storage_key); } },
+      { label: '上传时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      {
+        label: '操作',
+        fill: function (td, row) {
+          if (row.cdn_url) {
+            const link = document.createElement('a');
+            link.className = 'action-btn';
+            link.href = row.cdn_url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = '访问 CDN';
+            td.append(link);
+          } else {
+            td.textContent = '—';
+          }
+        },
+      },
+    ], rows);
+  }
+
+  let currentMediaFilter = '';
+  async function loadAdminMedia(type) {
+    currentMediaFilter = type || '';
+    const query = currentMediaFilter ? '?assetType=' + encodeURIComponent(currentMediaFilter) : '';
+    const result = await request('/api/admin/media' + query);
+    renderAdminMedia(result);
+  }
+
   let currentTaskFilter = '';
   async function loadAdminTasks(status) {
     currentTaskFilter = status || '';
@@ -766,10 +909,11 @@
   }
 
   async function loadAdmin() {
-    const [overview, users, tasks, orders, health, sysStatus, windows, mac, android] = await Promise.all([
+    const [overview, users, tasks, media, orders, health, sysStatus, windows, mac, android] = await Promise.all([
       request('/api/admin/overview'),
       request('/api/admin/users'),
       request('/api/admin/tasks'),
+      request('/api/admin/media'),
       request('/api/admin/orders'),
       request('/api/health'),
       request('/api/admin/system-status'),
@@ -780,6 +924,7 @@
     renderOverview(overview);
     renderUsers(users);
     renderAdminTasks(tasks);
+    renderAdminMedia(media);
     renderOrders(document.getElementById('admin-orders-slot'), orders, true);
     renderHealth(health, sysStatus);
     renderUpdates([
@@ -836,10 +981,12 @@
     const orders = await request('/api/auth/orders');
     const ledger = await request('/api/auth/quota/logs');
     const userTasks = await request('/api/tasks/list');
+    const userMedia = await request('/api/media/list');
     renderPlan(user, plans);
     renderOrders(document.getElementById('orders-slot'), orders, false);
     renderLedger(ledger);
     renderUserTasks(userTasks);
+    renderUserMedia(userMedia);
     if (user.role === 'admin') await loadAdmin();
     const hash = (location.hash || '').replace('#', '');
     showView(viewAllowed(hash) ? hash : 'overview');
@@ -989,6 +1136,18 @@
         b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
       });
       loadAdminTasks(btn.getAttribute('data-filter'));
+    });
+  }
+
+  const mediaFilterGroup = document.getElementById('admin-media-filters');
+  if (mediaFilterGroup) {
+    mediaFilterGroup.addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-media-filter]');
+      if (!btn) return;
+      mediaFilterGroup.querySelectorAll('button').forEach(function (b) {
+        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
+      });
+      loadAdminMedia(btn.getAttribute('data-media-filter'));
     });
   }
 

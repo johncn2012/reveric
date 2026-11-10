@@ -96,6 +96,8 @@ test('profile, orders and quota logs share auth failures across aliases', async 
     assert.equal(unauthAdminTasks.status, 401);
     const unauthCancelTask = await postJson(`${base}/api/admin/tasks/invalid-id/cancel`, {});
     assert.equal(unauthCancelTask.status, 401);
+    const unauthAdminMedia = await fetch(`${base}/api/admin/media`);
+    assert.equal(unauthAdminMedia.status, 401);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
@@ -167,8 +169,10 @@ test('account page is same-origin and has no demo quota', async () => {
     assert.match(source, /\/api\/auth\/quota\/logs/);
     assert.match(source, /\/api\/admin\/users/);
     assert.match(source, /\/api\/admin\/tasks/);
+    assert.match(source, /\/api\/admin\/media/);
     assert.match(source, /\/api\/admin\/orders/);
     assert.match(source, /\/api\/tasks\/list/);
+    assert.match(source, /\/api\/media\/list/);
     assert.doesNotMatch(source, /\/orders\/.+\/pay|管理后台|演示配额|成交额/);
 
     const home = await fetch(`${base}/`);

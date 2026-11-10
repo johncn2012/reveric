@@ -71,6 +71,7 @@
       <p class="rail-label">管理后台</p>
       <button type="button" data-view="users"><span>用户</span></button>
       <button type="button" data-view="tasks"><span>任务</span></button>
+      <button type="button" data-view="media"><span>存储</span></button>
       <button type="button" data-view="orders"><span>订单</span></button>
       <button type="button" data-view="health"><span>健康</span></button>
       <button type="button" data-view="updates"><span>更新</span></button>
@@ -139,6 +140,11 @@
         <p class="fine">本机创作台发起的云端 AI 渲染与批量任务。</p>
         <div id="user-tasks-slot"><p class="empty">暂无创作任务记录。</p></div>
       </div>
+      <div class="panel">
+        <h3>云端交付物资产</h3>
+        <p class="fine">小说成片、批量插图及音视频合成导出归档。</p>
+        <div id="user-media-slot"><p class="empty">暂无云端媒体交付物。</p></div>
+      </div>
     </section>
 
     <section data-panel="quota" hidden>
@@ -205,6 +211,27 @@
           </div>
         </div>
         <div id="admin-tasks-slot"><p class="empty">尚未读取任务调度队列。</p></div>
+      </div>
+    </section>
+
+    <section data-panel="media" hidden>
+      <div class="kpi-row">
+        <div class="kpi"><span>媒体文件总数</span><b id="kpi-media-count">—</b><em>云端对象存储</em></div>
+        <div class="kpi"><span>已用空间</span><b id="kpi-media-size">—</b><em>S3/OSS 空间</em></div>
+        <div class="kpi"><span>归属创作者</span><b id="kpi-media-users">—</b><em>已上传用户数</em></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>对象存储资产列表</h3>
+          <div class="task-filters" id="admin-media-filters">
+            <button class="action-btn primary" type="button" data-media-filter="">全部</button>
+            <button class="action-btn" type="button" data-media-filter="image">图片</button>
+            <button class="action-btn" type="button" data-media-filter="video">视频</button>
+            <button class="action-btn" type="button" data-media-filter="audio">音频</button>
+            <button class="action-btn" type="button" data-media-filter="export">导出包</button>
+          </div>
+        </div>
+        <div id="admin-media-slot"><p class="empty">尚未读取媒体资源列表。</p></div>
       </div>
     </section>
 
