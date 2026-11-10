@@ -1204,13 +1204,82 @@
     renderOrders(document.getElementById('admin-orders-slot'), orders, true);
   }
 
+  function renderAdminPlans(result) {
+    const slot = document.getElementById('admin-plans-slot');
+    if (!slot) return;
+    slot.replaceChildren();
+    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
+      const note = document.createElement('p');
+      note.className = 'empty';
+      note.textContent = errorMessage(result, '无法获取套餐方案配置');
+      slot.append(note);
+      return;
+    }
+    const rows = result.data.data;
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = '暂无套餐方案配置。';
+      slot.append(empty);
+      return;
+    }
+    renderTable(slot, [
+      { label: '方案名称', fill: function (td, row) { td.textContent = row.name; } },
+      { label: '标识', fill: function (td, row) { td.textContent = cell(row.slug); } },
+      { label: '价格', fill: function (td, row) { td.textContent = row.price_cents > 0 ? '¥' + (row.price_cents / 100) + ' / 月' : '免费体验'; } },
+      { label: '包含算力', fill: function (td, row) { td.textContent = formatNumber(row.quota_points) || cell(row.quota_points); } },
+      { label: '并发/存储', fill: function (td, row) { td.textContent = row.max_concurrency + ' 任务 · ' + (row.storage_limit_mb >= 1024 ? (row.storage_limit_mb / 1024) + 'GB' : row.storage_limit_mb + 'MB'); } },
+      {
+        label: '上架状态',
+        fill: function (td, row) {
+          const dot = document.createElement('i');
+          dot.className = row.is_active ? 'dot' : 'dot warn';
+          td.append(dot, document.createTextNode(row.is_active ? '已上架' : '已下架'));
+        },
+      },
+      {
+        label: '操作',
+        fill: function (td, row) {
+          const btnToggle = document.createElement('button');
+          btnToggle.className = row.is_active ? 'action-btn danger' : 'action-btn primary';
+          btnToggle.type = 'button';
+          btnToggle.textContent = row.is_active ? '下架' : '上架';
+          btnToggle.addEventListener('click', async function () {
+            const actionText = row.is_active ? '下架' : '上架';
+            if (!confirm('确定要' + actionText + '套餐方案「' + row.name + '」吗？')) return;
+            btnToggle.disabled = true;
+            btnToggle.textContent = '处理中…';
+            try {
+              const res = await request('/api/admin/plans/' + encodeURIComponent(row.id) + '/toggle', { method: 'POST' });
+              if (res.res.ok && res.data && res.data.success) {
+                notify(res.data.message || '操作成功', 'success');
+                const refreshed = await request('/api/admin/plans');
+                renderAdminPlans(refreshed);
+              } else {
+                notify(errorMessage(res, '操作失败'), 'error');
+                btnToggle.disabled = false;
+                btnToggle.textContent = actionText;
+              }
+            } catch (_) {
+              notify('网络异常，请稍后重试', 'error');
+              btnToggle.disabled = false;
+              btnToggle.textContent = actionText;
+            }
+          });
+          td.append(btnToggle);
+        },
+      },
+    ], rows);
+  }
+
   async function loadAdmin() {
-    const [overview, users, tasks, media, orders, health, sysStatus, windows, mac, android] = await Promise.all([
+    const [overview, users, tasks, media, orders, plans, health, sysStatus, windows, mac, android] = await Promise.all([
       request('/api/admin/overview'),
       request('/api/admin/users'),
       request('/api/admin/tasks'),
       request('/api/admin/media'),
       request('/api/admin/orders'),
+      request('/api/admin/plans'),
       request('/api/health'),
       request('/api/admin/system-status'),
       request('/api/updates/latest?platform=windows&arch=x64'),
@@ -1222,6 +1291,7 @@
     renderAdminTasks(tasks);
     renderAdminMedia(media);
     renderOrders(document.getElementById('admin-orders-slot'), orders, true);
+    renderAdminPlans(plans);
     renderHealth(health, sysStatus);
     renderUpdates([
       { name: 'Windows', ok: windows.res.ok, data: windows.data },

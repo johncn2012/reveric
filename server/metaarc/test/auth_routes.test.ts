@@ -110,6 +110,10 @@ test('profile, orders and quota logs share auth failures across aliases', async 
     assert.equal(unauthDeleteUserTask.status, 401);
     const unauthAdminDeleteTask = await fetch(`${base}/api/admin/tasks/invalid-id`, { method: 'DELETE' });
     assert.equal(unauthAdminDeleteTask.status, 401);
+    const unauthAdminPlans = await fetch(`${base}/api/admin/plans`);
+    assert.equal(unauthAdminPlans.status, 401);
+    const unauthTogglePlan = await postJson(`${base}/api/admin/plans/invalid-id/toggle`, {});
+    assert.equal(unauthTogglePlan.status, 401);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
@@ -183,6 +187,7 @@ test('account page is same-origin and has no demo quota', async () => {
     assert.match(source, /\/api\/admin\/tasks/);
     assert.match(source, /\/api\/admin\/media/);
     assert.match(source, /\/api\/admin\/orders/);
+    assert.match(source, /\/api\/admin\/plans/);
     assert.match(source, /\/api\/tasks\/list/);
     assert.match(source, /\/api\/media\/list/);
     assert.match(source, /\/api\/auth\/reset-api-key/);

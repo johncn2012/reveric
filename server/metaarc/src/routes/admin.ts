@@ -510,3 +510,57 @@ adminRouter.delete('/admin/tasks/:id', async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'server_error', message: '删除任务记录失败' });
   }
 });
+
+// 15. 管理员获取全量套餐配置列表（含上下架状态与订单统计）
+adminRouter.get('/admin/plans', async (_req: Request, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT p.id, p.name, p.slug, p.description, p.price_cents, p.billing_cycle,
+             p.quota_points, p.storage_limit_mb, p.max_concurrency, p.duration_days,
+             p.features, p.sort_order, p.is_active, p.created_at,
+             COUNT(o.id)::int as total_orders,
+             COUNT(CASE WHEN o.status = 'paid' THEN 1 END)::int as paid_orders
+      FROM plans p
+      LEFT JOIN orders o ON p.id = o.plan_id
+      GROUP BY p.id
+      ORDER BY p.sort_order ASC
+    `);
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err: any) {
+    console.error('[Admin Plans Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取套餐列表' });
+  }
+});
+
+// 16. 管理员启停指定套餐上架状态
+adminRouter.post('/admin/plans/:id/toggle', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'invalid_id', message: '套餐 ID 格式无效' });
+    }
+
+    const updateRes = await query(
+      'UPDATE plans SET is_active = NOT is_active WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (updateRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '套餐不存在' });
+    }
+
+    const updated = updateRes.rows[0];
+    return res.json({
+      success: true,
+      message: `套餐「${updated.name}」已${updated.is_active ? '上架启用' : '下架停用'}`,
+      plan: updated,
+    });
+  } catch (err: any) {
+    console.error('[Admin Toggle Plan Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '操作套餐状态失败' });
+  }
+});
