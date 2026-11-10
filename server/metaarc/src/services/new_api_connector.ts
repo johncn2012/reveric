@@ -46,7 +46,13 @@ export class NewApiConnector {
     };
 
     const res = await fetch(url, { ...options, headers });
-    const json = await res.json() as { success?: boolean; message?: string; data?: T };
+    const text = await res.text();
+    let json: { success?: boolean; message?: string; data?: T };
+    try {
+      json = JSON.parse(text) as { success?: boolean; message?: string; data?: T };
+    } catch {
+      throw new Error(`[NewApiConnector Error] ${path}: HTTP ${res.status}: ${text.slice(0, 160)}`);
+    }
 
     if (!res.ok || json.success === false) {
       const errMsg = json.message || `HTTP ${res.status}: ${res.statusText}`;

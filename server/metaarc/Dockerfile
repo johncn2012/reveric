@@ -22,6 +22,8 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY migrations ./migrations
 COPY public ./public
+COPY updates ./updates
+COPY downloads ./downloads
 
 EXPOSE 8080
 
