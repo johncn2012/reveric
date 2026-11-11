@@ -644,12 +644,13 @@
         },
       },
       { label: '配额', fill: function (td, row) { td.textContent = formatNumber(row.quota) || cell(row.quota); } },
+      { label: '注册时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
       {
         label: '最近登录与 IP 归属',
         fill: function (td, row) {
           if (!row.last_login_at && !row.last_login_ip) {
             td.textContent = '尚未登录';
-            td.className = 'col-truncate fine';
+            td.className = 'fine';
             return;
           }
           const wrap = document.createElement('div');
@@ -1095,7 +1096,46 @@
             openModal('创作者档案详情 — ' + (personLabel(row) || row.id), wrap);
           });
 
-          // 审计按钮
+          // 1. 调账按钮（核心直接操作）
+          const btnQuota = document.createElement('button');
+          btnQuota.className = 'action-btn primary';
+          btnQuota.type = 'button';
+          btnQuota.textContent = '调账';
+          btnQuota.addEventListener('click', onAdjustQuota);
+
+          // 2. 套餐按钮（直接显示在表格行上）
+          const btnPlan = document.createElement('button');
+          btnPlan.className = 'action-btn';
+          btnPlan.type = 'button';
+          btnPlan.textContent = '套餐';
+          btnPlan.title = '修改用户套餐方案';
+          btnPlan.addEventListener('click', onSetPlan);
+
+          // 3. 流水按钮（直接显示在表格行上）
+          const btnLogs = document.createElement('button');
+          btnLogs.className = 'action-btn';
+          btnLogs.type = 'button';
+          btnLogs.textContent = '流水';
+          btnLogs.title = '查看用户算力流水记录';
+          btnLogs.addEventListener('click', onShowLogs);
+
+          // 4. 重置密码按钮（直接显示在表格行上）
+          const btnReset = document.createElement('button');
+          btnReset.className = 'action-btn';
+          btnReset.type = 'button';
+          btnReset.textContent = '重置';
+          btnReset.title = '重置用户密码';
+          btnReset.addEventListener('click', onResetPwd);
+
+          // 5. 封禁/解封按钮（直接显示在表格行上）
+          const btnStatus = document.createElement('button');
+          btnStatus.className = isSuspended ? 'action-btn primary' : 'action-btn danger';
+          btnStatus.type = 'button';
+          btnStatus.textContent = isSuspended ? '解封' : '封禁';
+          btnStatus.title = isSuspended ? '解封账号' : '封禁账号';
+          btnStatus.addEventListener('click', onToggleStatus);
+
+          // 6. 审计按钮（直接显示在表格行上）
           const btnAudit = document.createElement('button');
           btnAudit.className = 'action-btn';
           btnAudit.type = 'button';
@@ -1103,14 +1143,7 @@
           btnAudit.title = '查看登录安全与IP审计历史';
           btnAudit.addEventListener('click', onShowLoginAuditRow);
 
-          // 调账按钮
-          const btnQuota = document.createElement('button');
-          btnQuota.className = 'action-btn primary';
-          btnQuota.type = 'button';
-          btnQuota.textContent = '调账';
-          btnQuota.addEventListener('click', onAdjustQuota);
-
-          // 更多操作下拉菜单
+          // 更多操作下拉菜单（收纳编辑资料、变更角色、换Key、任务与资产深钻）
           const moreWrap = document.createElement('div');
           moreWrap.className = 'action-more-wrap';
 
@@ -1118,7 +1151,7 @@
           btnMore.className = 'action-btn';
           btnMore.type = 'button';
           btnMore.textContent = '更多 ▾';
-          btnMore.title = '更多管理操作';
+          btnMore.title = '编辑资料、权限变更、换Key、查看生成任务与资产交付物';
 
           const menu = document.createElement('div');
           menu.className = 'action-dropdown-menu';
@@ -1138,24 +1171,6 @@
           itemEdit.addEventListener('click', function () {
             menu.classList.remove('show');
             onEditProfile();
-          });
-
-          const itemAudit = document.createElement('button');
-          itemAudit.className = 'dropdown-item';
-          itemAudit.type = 'button';
-          itemAudit.textContent = '登录审计';
-          itemAudit.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onShowLoginAuditRow();
-          });
-
-          const itemPlan = document.createElement('button');
-          itemPlan.className = 'dropdown-item';
-          itemPlan.type = 'button';
-          itemPlan.textContent = '变更套餐';
-          itemPlan.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onSetPlan();
           });
 
           const itemRole = document.createElement('button');
@@ -1194,48 +1209,16 @@
             onShowUserMedia();
           });
 
-          const itemLogs = document.createElement('button');
-          itemLogs.className = 'dropdown-item';
-          itemLogs.type = 'button';
-          itemLogs.textContent = '算力流水';
-          itemLogs.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onShowLogs();
-          });
-
-          const itemReset = document.createElement('button');
-          itemReset.className = 'dropdown-item';
-          itemReset.type = 'button';
-          itemReset.textContent = '重置密码';
-          itemReset.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onResetPwd();
-          });
-
-          const itemStatus = document.createElement('button');
-          itemStatus.className = isSuspended ? 'dropdown-item' : 'dropdown-item danger';
-          itemStatus.type = 'button';
-          itemStatus.textContent = isSuspended ? '解封账号' : '封禁账号';
-          itemStatus.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onToggleStatus();
-          });
-
           menu.append(
             itemEdit,
-            itemPlan,
             itemRole,
             itemResetKey,
             itemTasks,
-            itemMedia,
-            itemLogs,
-            itemAudit,
-            itemReset,
-            itemStatus
+            itemMedia
           );
           moreWrap.append(btnMore, menu);
 
-          td.append(btnQuota, btnAudit, btnDetails, moreWrap);
+          td.append(btnDetails, btnQuota, btnPlan, btnLogs, btnReset, btnStatus, btnAudit, moreWrap);
         },
       },
     ], latestLoadedUsers);
