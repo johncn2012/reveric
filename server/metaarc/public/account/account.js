@@ -326,14 +326,19 @@
       });
       slot.append(note, genBtn);
     } else {
-      const codeRow = document.createElement('div');
-      codeRow.className = 'form-row';
-      const code = document.createElement('p');
-      code.className = 'mono';
+      const card = document.createElement('div');
+      card.className = 'key-display-card';
+
+      const code = document.createElement('span');
+      code.className = 'key-val';
       code.textContent = key;
-      code.style.margin = '0';
+      code.title = key;
+
+      const actGroup = document.createElement('div');
+      actGroup.className = 'key-actions';
+
       const copyBtn = document.createElement('button');
-      copyBtn.className = 'action-btn';
+      copyBtn.className = 'action-btn primary';
       copyBtn.type = 'button';
       copyBtn.textContent = '复制密钥';
       copyBtn.addEventListener('click', function () {
@@ -348,6 +353,7 @@
           prompt('请手动复制密钥：', key);
         }
       });
+
       const resetBtn = document.createElement('button');
       resetBtn.className = 'action-btn';
       resetBtn.type = 'button';
@@ -373,8 +379,10 @@
           resetBtn.textContent = '重置密钥';
         }
       });
-      codeRow.append(code, copyBtn, resetBtn);
-      slot.append(codeRow);
+
+      actGroup.append(copyBtn, resetBtn);
+      card.append(code, actGroup);
+      slot.append(card);
     }
     if (base) {
       const line = document.createElement('p');
@@ -637,10 +645,25 @@
         label: '角色/状态',
         fill: function (td, row) {
           const isSuspended = row.status === 'suspended';
+          const isAdmin = row.role === 'admin';
+          const badge = document.createElement('span');
+          badge.className = 'badge-status' + (isSuspended ? ' status-suspended' : (isAdmin ? ' role-admin' : ''));
+
           const dot = document.createElement('i');
-          dot.className = isSuspended ? 'dot danger' : (row.role === 'admin' ? 'dot warn' : 'dot');
-          const statusPrefix = isSuspended ? '已封禁 · ' : '';
-          td.append(dot, document.createTextNode(statusPrefix + roleLabel(row.role) + (row.plan ? ' · ' + row.plan : '')));
+          dot.className = isSuspended ? 'dot danger' : (isAdmin ? 'dot warn' : 'dot');
+          dot.style.marginRight = '0';
+
+          const labelText = (isSuspended ? '已封禁 · ' : '') + roleLabel(row.role);
+          badge.append(dot, document.createTextNode(labelText));
+
+          if (row.plan) {
+            const planTag = document.createElement('span');
+            planTag.className = 'badge-plan-tag';
+            planTag.textContent = row.plan;
+            badge.append(planTag);
+          }
+
+          td.append(badge);
         },
       },
       { label: '配额', fill: function (td, row) { td.textContent = formatNumber(row.quota) || cell(row.quota); } },
@@ -1218,7 +1241,10 @@
           );
           moreWrap.append(btnMore, menu);
 
-          td.append(btnDetails, btnQuota, btnPlan, btnLogs, btnReset, btnStatus, btnAudit, moreWrap);
+          const actionWrap = document.createElement('div');
+          actionWrap.className = 'action-cell-wrap';
+          actionWrap.append(btnDetails, btnQuota, btnPlan, btnLogs, btnReset, btnStatus, btnAudit, moreWrap);
+          td.append(actionWrap);
         },
       },
     ], latestLoadedUsers);
