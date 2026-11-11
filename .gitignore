@@ -89,3 +89,7 @@ site/screenshots/
 
 .wrangler/
 site/.cache/
+
+# Deployment temporary files and credentials
+askpass.bat
+server-*.tar.gz
