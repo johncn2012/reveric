@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="/assets/icon-180.png" sizes="180x180">
 <meta name="theme-color" content="#000000">
 <link rel="stylesheet" href="/metaarc.css">
-<link rel="stylesheet" href="/account/account.css?v=20261111_0955">
+<link rel="stylesheet" href="/account/account.css?v=20261111_1020">
 </head>
 <body>
 <p class="alert" id="alert" data-alert hidden></p>
@@ -110,22 +110,41 @@
 
   <div class="console-main">
     <header class="console-top">
-      <div>
+      <div class="console-title-wrap">
         <p class="kicker" id="console-kicker">用户中心</p>
         <h1 id="console-title">概览</h1>
       </div>
       <div class="who">
-        <span id="who-name"></span>
-        <span id="who-role" class="who-role"></span>
-        <button id="btn-refresh" type="button">刷新</button>
-        <button id="btn-logout" type="button">退出</button>
+        <div class="live-status-pill" title="云端算力调度集群正常">
+          <span class="pulse-dot"></span>
+          <span>服务正常</span>
+        </div>
+        <div class="who-profile">
+          <span class="who-avatar" id="who-avatar">M</span>
+          <div class="who-details">
+            <span id="who-name"></span>
+            <span id="who-role" class="who-role"></span>
+          </div>
+        </div>
+        <button id="btn-refresh" type="button" title="刷新数据">
+          <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <span>刷新</span>
+        </button>
+        <button id="btn-logout" type="button" title="退出登录">退出</button>
       </div>
     </header>
 
     <section data-panel="overview">
       <div class="banner">
-        <h2>支付尚未开通</h2>
-        <p>账户和配额可以在这里看。支付还没接入，不能下单或充值。</p>
+        <div class="banner-content">
+          <div class="banner-title-row">
+            <span class="banner-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </span>
+            <h2>支付尚未开通</h2>
+          </div>
+          <p>账户和配额可以在这里看。支付还没接入，不能下单或充值。</p>
+        </div>
       </div>
       <dl id="profile-fields" class="profile-strip"></dl>
       <div class="panels">
@@ -205,8 +224,15 @@
 
     <section data-panel="billing" hidden>
       <div class="banner banner-slim">
-        <h2>支付尚未开通</h2>
-        <p>不能在这里下单或充值。没有订单时保持空态。</p>
+        <div class="banner-content">
+          <div class="banner-title-row">
+            <span class="banner-icon">
+              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </span>
+            <h2>支付尚未开通</h2>
+          </div>
+          <p>不能在这里下单或充值。没有订单时保持空态。</p>
+        </div>
       </div>
       <div class="panel">
         <h3>订单</h3>
@@ -241,7 +267,10 @@
               <button class="action-btn" id="btn-export-users" type="button">导出 CSV</button>
             </div>
             <form id="user-search" class="user-search">
-              <input id="user-keyword" type="search" placeholder="邮箱、手机、昵称、登录IP或地理位置" autocomplete="off">
+              <div class="search-input-wrap">
+                <svg class="search-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input id="user-keyword" type="search" placeholder="邮箱、手机、昵称、IP或地理位置…" autocomplete="off">
+              </div>
               <button type="submit">查找</button>
             </form>
           </div>
@@ -277,7 +306,10 @@
           <div class="panel-head">
             <h3>全平台登录安全审计日志</h3>
             <form id="sec-search" class="user-search">
-              <input id="sec-keyword" type="search" placeholder="搜索账号、IP 或 拦截原因" autocomplete="off">
+              <div class="search-input-wrap">
+                <svg class="search-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input id="sec-keyword" type="search" placeholder="搜索账号、IP 或 拦截原因…" autocomplete="off">
+              </div>
               <button type="submit">检索</button>
             </form>
           </div>
@@ -330,8 +362,15 @@
 
     <section data-panel="orders" hidden>
       <div class="banner banner-slim">
-        <h2>支付尚未开通</h2>
-        <p>订单区只列出接口实际返回的记录，不汇总金额。</p>
+        <div class="banner-content">
+          <div class="banner-title-row">
+            <span class="banner-icon">
+              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </span>
+            <h2>支付尚未开通</h2>
+          </div>
+          <p>订单区只列出接口实际返回的记录，不汇总金额。</p>
+        </div>
       </div>
       <div class="panel">
         <div class="panel-head">
@@ -380,6 +419,6 @@
 </div>
 
 <noscript><p class="gate-foot">登录和注册需要浏览器脚本。未登录时这里没有配额数字。</p></noscript>
-<script src="/account/account.js?v=20261111_0955"></script>
+<script src="/account/account.js?v=20261111_1020"></script>
 </body>
 </html>

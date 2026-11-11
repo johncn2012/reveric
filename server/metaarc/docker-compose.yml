@@ -59,6 +59,7 @@ services:
     volumes:
       - ./downloads:/app/downloads
       - ./updates:/app/updates
+      - ./public:/app/public
 
 volumes:
   postgres_data:

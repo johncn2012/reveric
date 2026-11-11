@@ -236,6 +236,11 @@
       addField(dl, '最后登录', formatWhen(user.last_login_at) + ip + loc);
     }
     document.getElementById('who-name').textContent = user.nickname || user.email || user.phone || '已登录';
+    const whoAvatarEl = document.getElementById('who-avatar');
+    if (whoAvatarEl) {
+      const charStr = user.nickname || user.email || user.phone || 'M';
+      whoAvatarEl.textContent = charStr.charAt(0).toUpperCase();
+    }
     const whoRoleEl = document.getElementById('who-role');
     whoRoleEl.textContent = roleLabel(user.role);
     if (user.role === 'admin') {
@@ -640,7 +645,36 @@
           td.append(cb);
         },
       },
-      { label: '用户标识', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
+      {
+        label: '用户标识',
+        fill: function (td, row) {
+          const wrap = document.createElement('div');
+          wrap.className = 'cell-user-profile';
+
+          const avatar = document.createElement('span');
+          avatar.className = 'user-avatar-mini';
+          const nameStr = row.nickname || row.email || row.phone || '创';
+          avatar.textContent = nameStr.charAt(0).toUpperCase();
+
+          const meta = document.createElement('div');
+          meta.className = 'user-meta-wrap';
+
+          const title = document.createElement('span');
+          title.className = 'user-primary-name';
+          title.textContent = personLabel(row) || '—';
+
+          if (row.nickname && (row.email || row.phone)) {
+            const sub = document.createElement('span');
+            sub.className = 'user-sub-id';
+            sub.textContent = row.email || row.phone;
+            meta.append(title, sub);
+          } else {
+            meta.append(title);
+          }
+          wrap.append(avatar, meta);
+          td.append(wrap);
+        },
+      },
       {
         label: '角色/状态',
         fill: function (td, row) {

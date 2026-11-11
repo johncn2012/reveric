@@ -51,3 +51,8 @@
    - 套餐采用等宽 Mono 标签，保持清爽视觉节奏。
 4. **代码规范约束（绝对禁止违规词）**：
    - 在 `account.js` 及其配套文件中，**绝不写入字面量 `管理后台`、`演示配额`、`成交额`**（需使用 `adminNav.getAttribute('data-kicker')` 或变量动态拼接），否则会被自动化规则拦截。
+5. **设计规范与排版铁律 (Impeccable & Product UI Laws)**：
+   - **禁止侧边强调条 (No Side-stripe borders)**：禁止在 Banner、Card 或 Alert 边缘使用 3px/4px 粗边条。采用完整微光边框、平滑渐变背景和语义化图标。
+   - **呼吸状态指示与多维头像胶囊**：顶栏与数据行采用动态呼吸光斑 (`.pulse-dot`) 和双层创作者资料单元格 (`.cell-user-profile` 含首字母渐变微头像)，摆脱冰冷单调的文本列表感。
+   - **分段控制器微质感**：子导航采用圆角药丸浮动胶囊控制器 (`.subnav-tabs`)，消除廉价选项卡突兀感。
+   - **生产静态目录直接映射**：在 `docker-compose.yml` 中配置 `./public:/app/public` 挂载，使得宿主机 `git pull` 后前端静态资源能够即时生效，避免重复编译镜像。
