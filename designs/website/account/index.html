@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="/assets/icon-180.png" sizes="180x180">
 <meta name="theme-color" content="#000000">
 <link rel="stylesheet" href="/metaarc.css">
-<link rel="stylesheet" href="/account/account.css">
+<link rel="stylesheet" href="/account/account.css?v=20261111_0928">
 </head>
 <body>
 <p class="alert" id="alert" data-alert hidden></p>
@@ -62,19 +62,49 @@
   <aside class="rail">
     <a class="rail-brand" href="/"><img class="brand-mark" src="/assets/mark.svg" alt="" width="28" height="28"><span class="brand-lockup"><span class="brand-en">MetaArc</span><span class="brand-zh">元弧</span></span></a>
     <nav class="rail-nav" aria-label="用户中心">
-      <button type="button" data-view="overview" aria-current="true"><span>概览</span></button>
-      <button type="button" data-view="projects"><span>项目</span></button>
-      <button type="button" data-view="quota"><span>配额</span></button>
-      <button type="button" data-view="billing"><span>账单</span></button>
+      <button type="button" data-view="overview" aria-current="true">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        <span>概览</span>
+      </button>
+      <button type="button" data-view="projects">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+        <span>项目</span>
+      </button>
+      <button type="button" data-view="quota">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span>配额</span>
+      </button>
+      <button type="button" data-view="billing">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+        <span>账单</span>
+      </button>
     </nav>
     <nav class="rail-nav" id="admin-nav" data-kicker="管理后台" aria-label="管理后台" hidden>
       <p class="rail-label">管理后台</p>
-      <button type="button" data-view="users"><span>用户</span></button>
-      <button type="button" data-view="tasks"><span>任务</span></button>
-      <button type="button" data-view="media"><span>存储</span></button>
-      <button type="button" data-view="orders"><span>订单</span></button>
-      <button type="button" data-view="health"><span>健康</span></button>
-      <button type="button" data-view="updates"><span>更新</span></button>
+      <button type="button" data-view="users">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>用户</span>
+      </button>
+      <button type="button" data-view="tasks">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        <span>任务</span>
+      </button>
+      <button type="button" data-view="media">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <span>存储</span>
+      </button>
+      <button type="button" data-view="orders">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+        <span>订单</span>
+      </button>
+      <button type="button" data-view="health">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+        <span>健康</span>
+      </button>
+      <button type="button" data-view="updates">
+        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 12 12 8 8 12"></polyline><line x1="12" y1="16" x2="12" y2="8"></line></svg>
+        <span>更新</span>
+      </button>
     </nav>
   </aside>
 
@@ -350,6 +380,6 @@
 </div>
 
 <noscript><p class="gate-foot">登录和注册需要浏览器脚本。未登录时这里没有配额数字。</p></noscript>
-<script src="/account/account.js"></script>
+<script src="/account/account.js?v=20261111_0928"></script>
 </body>
 </html>
