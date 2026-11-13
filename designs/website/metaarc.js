@@ -1,16 +1,12 @@
 /**
- * MetaArc (元弧) 门户交互脚本
- * 品牌域名: MetaArc.COM.CN
- * 职责: 按 /api/plans 渲染套餐，并在 Windows 清单给出本域安装包时替换下载卡片。
- * 接口没有推荐字段。slug 为 creator，或名称以「创作者版」开头时，页面标为推荐。
- * 不请求账号或后台接口，也不发起支付。没有清单时下载区保持尚未发布。
+ * MetaArc 元弧门户脚本。
+ * 套餐只渲染 GET /api/plans。下载只在更新清单给出允许的安装包地址时变成链接。
+ * 不请求账号接口，也不发起支付。
  */
-
 class MetaArcPortal {
   constructor() {
-    this.plans = [];
     this.loadPlans();
-    this.loadWindowsDownload();
+    this.loadDownloads();
   }
 
   async loadPlans() {
@@ -28,7 +24,6 @@ class MetaArcPortal {
         this.renderPlansUnavailable(grid, status, '当前没有可展示的套餐。');
         return;
       }
-      this.plans = plans;
       this.renderPlans(grid, status, plans);
     } catch (e) {
       console.warn('[Plans fetch failed]', e);
@@ -39,7 +34,7 @@ class MetaArcPortal {
   renderPlansUnavailable(grid, status, message) {
     if (grid) {
       grid.hidden = true;
-      grid.innerHTML = '';
+      grid.replaceChildren();
     }
     if (status) {
       status.hidden = false;
@@ -68,35 +63,21 @@ class MetaArcPortal {
     const period = this.formatBillingCycle(plan.billing_cycle);
     const features = this.planFeatures(plan.features);
     const featureHtml = features.length
-      ? `<ul class="plan-features">${features.map((item) => `<li>${this.checkIcon()}<span>${this.escapeHtml(item)}</span></li>`).join('')}</ul>`
+      ? `<ul class="plan-features">${features.map((item) => `<li><span>${this.escapeHtml(item)}</span></li>`).join('')}</ul>`
       : '';
     const priceHtml = price
-      ? `<div class="plan-price"><span class="plan-amount">${this.escapeHtml(price)}</span>${period ? `<span class="plan-period">${this.escapeHtml(period)}</span>` : ''}</div>`
+      ? `<p class="plan-price"><span class="plan-amount">${this.escapeHtml(price)}</span>${period ? `<span class="plan-period">${this.escapeHtml(period)}</span>` : ''}</p>`
       : '';
-    const pointsHtml = points
-      ? `<p class="plan-points">${this.escapeHtml(points)} 点</p>`
-      : '';
-    const offerHtml = (priceHtml || pointsHtml)
-      ? `<div class="plan-offer">${priceHtml}${pointsHtml}</div>`
-      : '';
-    const recommended = this.isRecommendedPlan(plan);
-    const badge = recommended ? '<span class="plan-badge">推荐</span>' : '';
+    const pointsHtml = points ? `<p class="plan-points">${this.escapeHtml(points)} 点</p>` : '';
     return `
-      <div class="plan-card${recommended ? ' featured' : ''}" data-plan-slug="${this.escapeHtml(slug)}">
-        ${badge}
-        <div class="plan-name">${this.escapeHtml(name)}</div>
-        ${offerHtml}
+      <article class="plan-card" data-plan-slug="${this.escapeHtml(slug)}">
+        <h3 class="plan-name">${this.escapeHtml(name)}</h3>
+        ${priceHtml}
+        ${pointsHtml}
         ${featureHtml}
-        <button class="btn-plan" type="button" disabled>支付尚未开通</button>
-      </div>
+        <p class="plan-closed">支付尚未开通</p>
+      </article>
     `;
-  }
-
-  isRecommendedPlan(plan) {
-    const slug = typeof plan?.slug === 'string' ? plan.slug.trim().toLowerCase() : '';
-    if (slug === 'creator') return true;
-    const name = typeof plan?.name === 'string' ? plan.name.trim() : '';
-    return name === '创作者版' || name.startsWith('创作者版');
   }
 
   readNumber(value) {
@@ -129,18 +110,10 @@ class MetaArcPortal {
   planFeatures(features) {
     let list = features;
     if (typeof list === 'string') {
-      try {
-        list = JSON.parse(list);
-      } catch (_) {
-        return [];
-      }
+      try { list = JSON.parse(list); } catch (_) { return []; }
     }
     if (!Array.isArray(list)) return [];
     return list.filter((item) => typeof item === 'string' && item.trim());
-  }
-
-  checkIcon() {
-    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
   }
 
   escapeHtml(value) {
@@ -151,60 +124,122 @@ class MetaArcPortal {
       .replace(/"/g, '&quot;');
   }
 
-  async loadWindowsDownload() {
-    const card = document.getElementById('download-windows');
-    if (!card) return;
+  async loadDownloads() {
+    const windowsCard = document.getElementById('download-windows');
     try {
-      const res = await fetch('/api/updates/latest?platform=windows&arch=x64');
-      if (!res.ok) return;
-      const data = await res.json();
-      const url = this.windowsDownloadUrl(data);
-      if (!url) return;
-      const link = document.createElement('a');
-      link.className = 'dl';
-      link.dataset.os = 'win';
-      link.href = url;
-      link.rel = 'noopener';
-      const unsigned = data.signed !== true;
-      const meta = unsigned ? '64 位 · 未签名' : '64 位';
-      const action = unsigned ? '下载内测包' : '下载';
-      link.innerHTML = `<span class="dl-os">Windows</span><span class="dl-meta mono">${meta}</span><span class="dl-go">${action}</span>`;
-      card.replaceWith(link);
-      const primary = document.getElementById('primary-dl');
-      if (primary) primary.href = url;
-      const lead = document.getElementById('download-lead');
-      if (lead) {
-        lead.textContent = data.channel === 'stable'
-          ? 'Windows 安装包可以下载。macOS 与 Android 尚未发布。'
-          : 'Windows 内测包可以下载。macOS 与 Android 尚未发布。';
-      }
+      const windowsRes = await fetch('/api/updates/latest?platform=windows&arch=x64');
+      const catalogRes = await fetch('/api/updates/catalog');
+      const windows = windowsRes.ok ? await windowsRes.json() : null;
+      const catalog = catalogRes.ok ? await catalogRes.json() : null;
+      const platforms = Array.isArray(catalog?.platforms) ? catalog.platforms : [];
+      const byName = {};
+      platforms.forEach((item) => {
+        if (item && typeof item.platform === 'string') byName[item.platform] = item;
+      });
+      if (windows) byName.windows = { ...byName.windows, ...windows, platform: 'windows' };
+      this.applyDownload('download-windows', byName.windows, 'windows');
+      this.applyDownload('download-macos', byName.macos, 'macos');
+      this.applyDownload('download-android', byName.android, 'android');
+      this.renderDownloadLead(byName.windows);
+      if (!windowsCard) return;
     } catch (e) {
-      console.warn('[Windows download manifest failed]', e);
+      console.warn('[Download manifest failed]', e);
     }
   }
 
-  windowsDownloadUrl(data) {
-    if (!data || data.has_update !== true) return '';
-    const raw = typeof data.download_url === 'string' ? data.download_url.trim() : '';
-    return this.isWindowsSetupUrl(raw) ? raw : '';
+  renderDownloadLead(windows) {
+    const lead = document.getElementById('download-lead');
+    const notes = document.getElementById('download-notes');
+    const primary = document.getElementById('primary-dl');
+    const available = windows && windows.has_update === true && this.packageUrl(windows, 'windows');
+    if (lead) {
+      if (!available) {
+        lead.textContent = '更新清单没有可下载的安装包。Windows、macOS 与 Android 保持尚未发布。';
+      } else {
+        const version = windows.version ? ` ${windows.version}` : '';
+        const signed = windows.signed === true ? '已签名' : '未签名内测';
+        lead.textContent = `Windows${version} ${signed}。macOS 与 Android 以各自清单为准，没有安装包时保持尚未发布。`;
+      }
+    }
+    if (primary) {
+      primary.textContent = available ? '查看 Windows 下载说明' : '查看下载状态';
+      primary.href = '#download';
+    }
+    if (notes) {
+      notes.replaceChildren();
+      if (available && windows.release_notes) {
+        const block = document.createElement('div');
+        block.className = 'note-block';
+        const title = document.createElement('strong');
+        title.textContent = '这份 Windows 包的说明';
+        const body = document.createElement('p');
+        body.textContent = String(windows.release_notes);
+        block.append(title, body);
+        notes.append(block);
+      }
+    }
   }
 
-  isWindowsSetupUrl(raw) {
+  applyDownload(id, data, platform) {
+    const card = document.getElementById(id);
+    if (!card || !data) return;
+    const url = data.has_update === true ? this.packageUrl(data, platform) : '';
+    const meta = this.releaseMeta(data, platform);
+    const go = url ? (data.signed === true ? '下载' : '下载内测包') : '尚未发布';
+    if (!url) {
+      const metaNode = card.querySelector('.dl-meta');
+      const goNode = card.querySelector('.dl-go');
+      if (metaNode) metaNode.textContent = meta;
+      if (goNode) goNode.textContent = go;
+      return;
+    }
+    const link = document.createElement('a');
+    link.className = 'dl';
+    link.href = url;
+    link.rel = 'noopener';
+    link.replaceChildren(
+      this.span('dl-os', card.querySelector('.dl-os')?.textContent || platform),
+      this.span('dl-meta', meta),
+      this.span('dl-go', go),
+    );
+    card.replaceWith(link);
+  }
+
+  span(className, text) {
+    const node = document.createElement('span');
+    node.className = className;
+    node.textContent = text;
+    return node;
+  }
+
+  releaseMeta(data, platform) {
+    const parts = [];
+    if (platform === 'windows') parts.push('64 位');
+    if (platform === 'macos') parts.push('Apple 芯片');
+    if (platform === 'android') parts.push('arm64');
+    if (data.version) parts.push(String(data.version));
+    if (data.has_update === true) parts.push(data.signed === true ? '已签名' : '未签名');
+    if (data.channel) parts.push(String(data.channel));
+    return parts.join(' · ');
+  }
+
+  packageUrl(data, platform) {
+    const raw = typeof data?.download_url === 'string' ? data.download_url.trim() : '';
+    if (!raw || !this.isAllowedPackageUrl(raw, platform)) return '';
+    return raw;
+  }
+
+  isAllowedPackageUrl(raw, platform) {
     let url;
-    try {
-      url = new URL(raw);
-    } catch (_) {
-      return false;
-    }
+    try { url = new URL(raw, window.location.origin); } catch (_) { return false; }
     if (url.username || url.password || url.hash) return false;
     let pathname = url.pathname;
-    try {
-      pathname = decodeURIComponent(url.pathname);
-    } catch (_) {
-      return false;
-    }
+    try { pathname = decodeURIComponent(url.pathname); } catch (_) { return false; }
     const path = pathname.toLowerCase();
-    if (!path.endsWith('.exe') || !path.includes('setup') || path.includes('..')) return false;
+    if (path.includes('..')) return false;
+    if (platform === 'windows' && !(path.endsWith('.exe') && path.includes('setup'))) return false;
+    if (platform === 'android' && !path.endsWith('.apk')) return false;
+    if ((platform === 'macos' || platform === 'linux') && !path.endsWith('.zip')) return false;
     const host = url.hostname.toLowerCase();
     if (host === 'github.com' || host.endsWith('.github.com') || host.endsWith('.githubusercontent.com') || host.includes('looplj')) {
       return false;

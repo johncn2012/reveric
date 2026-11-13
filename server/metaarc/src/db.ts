@@ -26,10 +26,14 @@ export async function query<T extends pg.QueryResultRow = any>(text: string, par
   return res;
 }
 
+const SCHEMA_LOCK = 714213;
+
 export async function initDbSchema(): Promise<void> {
+  const client = await pool.connect();
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS login_logs (
+    await client.query('SELECT pg_advisory_lock($1)', [SCHEMA_LOCK]);
+    const statements = [
+      `CREATE TABLE IF NOT EXISTS login_logs (
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
           user_id UUID REFERENCES users(id) ON DELETE CASCADE,
           account VARCHAR(255) NOT NULL,
@@ -39,19 +43,51 @@ export async function initDbSchema(): Promise<void> {
           status VARCHAR(16) NOT NULL,
           fail_reason TEXT,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_login_logs_user_created ON login_logs(user_id, created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_login_logs_ip ON login_logs(ip);
-
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip VARCHAR(64);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_location VARCHAR(128);
-
-      ALTER TABLE user_tasks ADD COLUMN IF NOT EXISTS prompt TEXT;
-      ALTER TABLE user_tasks ADD COLUMN IF NOT EXISTS client_ip VARCHAR(64);
-      ALTER TABLE user_tasks ADD COLUMN IF NOT EXISTS duration_ms INT;
-    `);
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_login_logs_user_created ON login_logs(user_id, created_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS idx_login_logs_ip ON login_logs(ip)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip VARCHAR(64)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_location VARCHAR(128)`,
+      `ALTER TABLE user_tasks ADD COLUMN IF NOT EXISTS prompt TEXT`,
+      `ALTER TABLE user_tasks ADD COLUMN IF NOT EXISTS client_ip VARCHAR(64)`,
+      `ALTER TABLE user_tasks ADD COLUMN IF NOT EXISTS duration_ms INT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INT NOT NULL DEFAULT 0`,
+      `CREATE TABLE IF NOT EXISTS admin_audit_logs (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          actor_id UUID,
+          action VARCHAR(64) NOT NULL,
+          target_type VARCHAR(32) NOT NULL,
+          target_id TEXT,
+          reason TEXT,
+          before_value JSONB,
+          after_value JSONB,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit_logs(created_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS idx_admin_audit_target ON admin_audit_logs(target_type, target_id)`,
+    ];
+    const failures: unknown[] = [];
+    for (const statement of statements) {
+      try {
+        await client.query(statement);
+      } catch (err) {
+        failures.push(err);
+        console.warn('[DB Schema Init]', err);
+      }
+    }
+    if (process.env.NODE_ENV === 'test' && failures.length > 0) {
+      throw failures[0];
+    }
   } catch (err) {
     console.warn('[DB Schema Init]', err);
+    if (process.env.NODE_ENV === 'test') throw err;
+  } finally {
+    try {
+      await client.query('SELECT pg_advisory_unlock($1)', [SCHEMA_LOCK]);
+    } catch {
+      // 解锁失败时连接释放后会话锁会一起消失。
+    }
+    client.release();
   }
 }

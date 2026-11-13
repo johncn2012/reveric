@@ -178,7 +178,7 @@ test('account page is same-origin and has no demo quota', async () => {
       assert.match(html, /从小说到成片/);
       assert.match(html, /MetaArc 元弧/);
       assert.match(html, /暂无订单 · 支付未开通/);
-      assert.match(html, /管理后台/);
+      assert.match(html, /管理员工作台/);
       assert.match(html, /\/account\/account\.js/);
       assert.doesNotMatch(html, /登录即将开放|演示配额|500000|微信登录|GitHub 登录/);
     }
@@ -208,7 +208,10 @@ test('account page is same-origin and has no demo quota', async () => {
     assert.match(homeHtml, /href="\/account"/);
     assert.match(homeHtml, /https:\/\/github.com\/looplj\/reveric/);
     assert.match(homeHtml, /AGPL-3.0/);
-    assert.doesNotMatch(homeHtml, /登录即将开放|管理后台|\/releases\/download\//);
+    assert.match(homeHtml, /story-ridge\.jpg/);
+    assert.match(homeHtml, /非产品成片/);
+    assert.match(homeHtml, /href="\/help\/"/);
+    assert.doesNotMatch(homeHtml, /登录即将开放|管理后台|\/releases\/download\/|New-API|s6_editing/);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));

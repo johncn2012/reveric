@@ -143,6 +143,7 @@ const registerAccount = async (req: Request, res: Response) => {
       email: newUser.email,
       phone: newUser.phone,
       role: newUser.role,
+      sv: 0,
     });
 
     return res.status(201).json({
@@ -242,6 +243,7 @@ const loginAccount = async (req: Request, res: Response) => {
       email: user.email,
       phone: user.phone,
       role: user.role,
+      sv: Number(user.session_version) || 0,
     });
 
     return res.json({
@@ -364,9 +366,23 @@ const changePassword = async (req: Request, res: Response) => {
 
     const salt = await bcrypt.genSalt(10);
     const newHash = await bcrypt.hash(newPassword, salt);
-    await query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [newHash, userId]);
+    const updated = await query(
+      `UPDATE users
+       SET password_hash = $1, session_version = session_version + 1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING email, phone, role, session_version`,
+      [newHash, userId],
+    );
+    const nextUser = updated.rows[0];
+    const token = signJwt({
+      userId,
+      email: nextUser.email,
+      phone: nextUser.phone,
+      role: nextUser.role,
+      sv: Number(nextUser.session_version) || 0,
+    });
 
-    return res.json({ success: true, message: '密码修改成功' });
+    return res.json({ success: true, message: '密码已更新，其他带会话版本的登录已退出', token });
   } catch (err: any) {
     console.error('[Change Password Error]', err);
     return res.status(500).json({ error: 'server_error', message: err.message || '修改密码失败' });
@@ -429,6 +445,43 @@ authRouter.post('/auth/update-profile', requireAuth, (req, res) => {
 });
 authRouter.post('/auth/change-password', requireAuth, (req, res) => {
   void changePassword(req, res);
+});
+authRouter.post('/auth/forgot-password', (_req, res) => {
+  res.status(501).json({
+    error: 'reset_unavailable',
+    message: '找回密码尚未开通。请写信到 contact@metaarc.com.cn。本次没有发送重置邮件。',
+  });
+});
+authRouter.post('/auth/logout-others', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const updated = await query(
+      `UPDATE users
+       SET session_version = session_version + 1, updated_at = NOW()
+       WHERE id = $1
+       RETURNING email, phone, role, session_version`,
+      [userId],
+    );
+    if (updated.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '用户不存在' });
+    }
+    const nextUser = updated.rows[0];
+    const token = signJwt({
+      userId,
+      email: nextUser.email,
+      phone: nextUser.phone,
+      role: nextUser.role,
+      sv: Number(nextUser.session_version) || 0,
+    });
+    return res.json({
+      success: true,
+      message: '其他带会话版本的网页登录已退出。更早签发、没有会话版本的客户端登录态会保持到过期。',
+      token,
+    });
+  } catch (err: any) {
+    console.error('[Logout Others Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '退出其他会话失败' });
+  }
 });
 authRouter.post('/auth/reset-api-key', requireAuth, (req, res) => {
   void resetApiKey(req, res);

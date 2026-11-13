@@ -9,16 +9,19 @@
 - 兼容别名：`POST /api/register`、`POST /api/login`、`GET /api/user/profile`、`GET /api/user/orders`、`GET /api/quota/logs`。别名和规范路径走同一处理函数
 - `GET /api/plans`
 - `GET /api/updates/latest?platform=windows&arch=x64&current=<版本>`。没有清单或安装包文件时返回 `has_update: false`、`status: "unreleased"`，不带 `download_url`
-- 同域账号中心：`/account`。未登录是登录和注册；登录后只显示上述接口返回的字段。管理员还会看到运营台，读取 `/api/admin/overview`、`/api/admin/users`、`/api/admin/orders`。支付未开通，页面不能下单，也不汇总金额
+- 同域账号中心：`/account`。未登录是登录和注册；登录后只显示上述接口返回的字段。管理员从登录后的入口进入 `/admin`，读取既有管理接口。支付未开通，页面不能下单，也不汇总金额
+- `GET /api/updates/catalog` 同时给出 Windows、macOS、Android 的清单结果。没有安装包时各平台都是尚未发布
+- `POST /api/auth/forgot-password` 固定返回尚未开通，不发送邮件
+- `POST /api/orders/create`、`POST /api/orders/:id/pay` 和 `POST /api/orders/notify/:channel` 在支付开通前返回 403，不再把订单标成已支付
 - Docker Compose 会启动 PostgreSQL、Redis 和本服务。业务代码不连接 Redis
 - New-API 连接器在配置可用时尝试开户。失败时写入 `sk-mock-` 开头的占位值，不能当作可用密钥
 - 对象存储代码返回未签名地址，不是可用的预签名上传
 
 ## 代码里没有的
 
-- 微信支付、支付宝，以及渠道验签
-- 门户首页上的登录弹窗和假配额。首页顶栏链到 `/account`，不在首页嵌登录或运营台
-- 独立的 `/admin` 站点。运营台在登录后的 `/account` 里，只对管理员显示，数据来自既有管理接口
+- 微信支付、支付宝，以及渠道验签。手动完成支付和未验签通知都已关闭
+- 门户首页上的登录弹窗和假配额。首页顶栏链到 `/account`，帮助在 `/help/`
+- 不登录就能操作的管理后台。`/admin` 只是同一套页面的管理员入口，仍要先登录，角色不符返回 403
 - 已提交的 Windows 安装包。`downloads/` 里只有说明，`updates/latest.json` 不入库
 
 门户价格只来自 `GET /api/plans`。没有支付渠道时，支付按钮保持不可用。
@@ -52,3 +55,36 @@ docker compose exec metaarc-postgres psql -U metaarc_user -d metaarc_db -c "\dt"
 ```
 
 `.env` 里的口令和密钥只留在本机，不要写进文档或提交。
+
+## 生产目录 /opt/metaarc/server
+
+生产机上的 Docker 工程就在 `/opt/metaarc/server`。更新时只替换代码和镜像，保留已经在跑的数据。
+
+保留、不要覆盖、也不要打进部署包的内容：
+
+- `/opt/metaarc/server/.env`
+- `/opt/metaarc/server/downloads/`
+- `/opt/metaarc/server/updates/latest.json`
+- Docker 卷 `postgres_data`、`redis_data`
+
+部署包是 `server/metaarc` 的代码归档，不含 `node_modules`、`.env`、`downloads/`、`updates/latest.json` 和数据库。解压到原目录时，包里没有的文件会留在磁盘上。
+
+```bash
+cd /opt/metaarc/server
+# 备份由现场另行完成。不要使用 docker compose down -v。
+tar -xzf metaarc-server-deploy.tar.gz -C /opt/metaarc/server
+docker compose up -d --build
+curl -fsS http://127.0.0.1:8080/health
+```
+
+仍在 `/opt/metaarc/server` 里执行 compose，不要改项目名，否则会新建一套空数据库卷。服务启动前会先做一次幂等补列：`users.session_version` 和 `admin_audit_logs`。新空库还会在首次初始化时执行 `migrations/003_session_and_audit.sql`。已有用户、安装包和更新清单不会被这条升级改写。
+
+回滚：用上一份代码包按同样方式解压，再 `docker compose up -d --build`。新列和新表可以留下，旧版本不读取它们。不要删除用户表。回滚到禁用支付之前的版本后，未验签的支付完成接口会重新可用。
+
+核对：
+
+```bash
+docker compose exec metaarc-postgres psql -U metaarc_user -d metaarc_db -c "\d users" | grep session_version
+docker compose exec metaarc-postgres psql -U metaarc_user -d metaarc_db -c "\d admin_audit_logs"
+test -f /opt/metaarc/server/.env && test -f /opt/metaarc/server/updates/latest.json
+```

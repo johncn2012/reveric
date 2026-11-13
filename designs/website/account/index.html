@@ -4,421 +4,306 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>账号 — MetaArc 元弧</title>
-<meta name="description" content="MetaArc 元弧账号。登录、注册，以及查看资料、配额和账单。支付尚未开通。">
+<meta name="description" content="MetaArc 元弧用户中心。登录、注册、权益、用量、下载和订单。支付尚未开通。">
 <link rel="canonical" href="https://metaarc.com.cn/account">
 <link rel="icon" href="/assets/icon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/icon-180.png" sizes="180x180">
-<meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="/metaarc.css">
-<link rel="stylesheet" href="/account/account.css?v=20261111_1020">
+<meta name="theme-color" content="#f4f6f8">
+<link rel="stylesheet" href="/account/account.css?v=20261113">
 </head>
 <body>
-<p class="alert" id="alert" data-alert hidden></p>
+<p class="alert" id="alert" hidden></p>
 
 <div id="gate" class="gate">
-  <aside class="gate-still">
-    <img src="/assets/account-gate-still.webp" alt="影棚机位：摄影机、监视器与灯光" width="1280" height="720">
-    <p class="gate-caption">从小说到成片</p>
-  </aside>
-  <main class="gate-form">
-    <a class="brand" href="/"><img class="brand-mark" src="/assets/mark.svg" alt="" width="40" height="40"><span class="brand-lockup"><span class="brand-en">MetaArc</span><span class="brand-zh">元弧</span></span></a>
-    <div class="gate-body">
-      <h1 id="gate-title">进入创作台</h1>
-
-      <form id="login-form">
-        <label for="login-account">邮箱</label>
-        <input id="login-account" name="account" type="text" autocomplete="username" placeholder="邮箱或手机号" required>
-        <label for="login-password">密码</label>
-        <input id="login-password" name="password" type="password" autocomplete="current-password" required>
-        <button class="primary" type="submit">继续</button>
-      </form>
-
-      <form id="register-form" hidden>
-        <label for="register-account">邮箱</label>
-        <input id="register-account" name="account" type="text" autocomplete="username" placeholder="邮箱或手机号" required>
-        <label for="register-nickname">昵称（可选）</label>
-        <input id="register-nickname" name="nickname" type="text" autocomplete="nickname">
-        <label for="register-password">密码（至少 6 位）</label>
-        <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
-        <button class="primary" type="submit">注册</button>
-        <button class="text-link" id="register-back" type="button">返回登录</button>
-      </form>
-
-      <div id="forgot-panel" hidden>
-        <p class="forgot-copy">密码重置尚未开通。需要找回时，请写信到 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>。</p>
-        <button class="text-link" id="forgot-back" type="button">返回登录</button>
-      </div>
-
-      <div class="gate-links" id="login-links">
-        <button type="button" id="show-register">注册账号</button>
-        <button type="button" id="show-forgot">忘记密码</button>
-      </div>
+  <main class="gate-card">
+    <a class="brand" href="/"><img src="/assets/mark-black.svg" alt="" width="36" height="36"><span class="brand-name">MetaArc <span>元弧</span></span></a>
+    <p class="eyebrow">从小说到成片</p>
+    <h1 id="gate-title">进入创作台</h1>
+    <form id="login-form">
+      <label for="login-account">邮箱或手机号</label>
+      <input id="login-account" name="account" type="text" autocomplete="username" required>
+      <label for="login-password">密码</label>
+      <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+      <button class="btn" type="submit">继续</button>
+    </form>
+    <form id="register-form" hidden>
+      <label for="register-account">邮箱或手机号</label>
+      <input id="register-account" name="account" type="text" autocomplete="username" required>
+      <label for="register-nickname">昵称（可选）</label>
+      <input id="register-nickname" name="nickname" type="text" autocomplete="nickname">
+      <label for="register-password">密码（至少 6 位）</label>
+      <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+      <button class="btn" type="submit">注册</button>
+      <button class="text" id="register-back" type="button">返回登录</button>
+    </form>
+    <form id="forgot-form" hidden>
+      <p class="forgot-copy">找回密码尚未开通。请写信到 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>。这里不会发送重置邮件，也不会显示发送成功。</p>
+      <button class="btn" type="submit">查看找回状态</button>
+      <button class="text" id="forgot-back" type="button">返回登录</button>
+    </form>
+    <div class="gate-links" id="login-links">
+      <button type="button" id="show-register">注册账号</button>
+      <button type="button" id="show-forgot">忘记密码</button>
     </div>
     <p class="gate-foot">支付尚未开通</p>
   </main>
 </div>
 
 <div id="console" class="console" hidden>
-  <aside class="rail">
-    <a class="rail-brand" href="/"><img class="brand-mark" src="/assets/mark.svg" alt="" width="28" height="28"><span class="brand-lockup"><span class="brand-en">MetaArc</span><span class="brand-zh">元弧</span></span></a>
-    <nav class="rail-nav" aria-label="用户中心">
-      <button type="button" data-view="overview" aria-current="true">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-        <span>概览</span>
-      </button>
-      <button type="button" data-view="projects">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-        <span>项目</span>
-      </button>
-      <button type="button" data-view="quota">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        <span>配额</span>
-      </button>
-      <button type="button" data-view="billing">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-        <span>账单</span>
-      </button>
+  <aside class="side" id="side">
+    <a class="brand" href="/"><img src="/assets/mark-black.svg" alt="" width="28" height="28"><span class="brand-name">MetaArc <span>元弧</span></span></a>
+    <nav id="user-nav" aria-label="用户中心">
+      <p class="side-label">我的账号</p>
+      <button type="button" data-view="overview">概览</button>
+      <button type="button" data-view="plan">订阅与权益</button>
+      <button type="button" data-view="usage">用量明细</button>
+      <button type="button" data-view="downloads">下载与更新</button>
+      <p class="side-label">管理</p>
+      <button type="button" data-view="security">账号安全</button>
+      <button type="button" data-view="orders">订单记录</button>
+      <button type="button" data-view="support">诊断与支持</button>
+      <a class="side-link" id="admin-entry" href="/admin" hidden>管理员工作台</a>
     </nav>
-    <nav class="rail-nav" id="admin-nav" data-kicker="管理后台" aria-label="管理后台" hidden>
-      <p class="rail-label">管理后台</p>
-      <button type="button" data-view="users">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        <span>用户</span>
-      </button>
-      <button type="button" data-view="tasks">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-        <span>任务</span>
-      </button>
-      <button type="button" data-view="media">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-        <span>存储</span>
-      </button>
-      <button type="button" data-view="orders">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-        <span>订单</span>
-      </button>
-      <button type="button" data-view="health">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-        <span>健康</span>
-      </button>
-      <button type="button" data-view="updates">
-        <svg class="rail-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 12 12 8 8 12"></polyline><line x1="12" y1="16" x2="12" y2="8"></line></svg>
-        <span>更新</span>
-      </button>
+    <nav id="admin-nav" aria-label="管理员工作台" hidden>
+      <p class="side-label">管理员工作台</p>
+      <button type="button" data-view="workspace">工作台概览</button>
+      <button type="button" data-view="users">用户与权限</button>
+      <button type="button" data-view="plans">套餐权益</button>
+      <button type="button" data-view="usage-review">用量核对</button>
+      <p class="side-label">运营与系统</p>
+      <button type="button" data-view="releases">发布更新</button>
+      <button type="button" data-view="diagnostics">诊断与健康</button>
+      <button type="button" data-view="audit">审计日志</button>
+      <a class="side-link" href="/account">返回用户中心</a>
     </nav>
   </aside>
-
-  <div class="console-main">
-    <header class="console-top">
-      <div class="console-title-wrap">
-        <p class="kicker" id="console-kicker">用户中心</p>
+  <div class="main">
+    <header class="main-bar">
+      <div>
+        <p class="eyebrow" id="console-kicker">个人空间</p>
         <h1 id="console-title">概览</h1>
       </div>
       <div class="who">
-        <div class="live-status-pill" title="云端算力调度集群正常">
-          <span class="pulse-dot"></span>
-          <span>服务正常</span>
-        </div>
-        <div class="who-profile">
-          <span class="who-avatar" id="who-avatar">M</span>
-          <div class="who-details">
-            <span id="who-name"></span>
-            <span id="who-role" class="who-role"></span>
-          </div>
-        </div>
-        <button id="btn-refresh" type="button" title="刷新数据">
-          <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-          <span>刷新</span>
-        </button>
-        <button id="btn-logout" type="button" title="退出登录">退出</button>
+        <a href="/help/">帮助中心</a>
+        <span id="who-name"></span>
+        <button id="btn-logout" type="button">退出</button>
       </div>
     </header>
 
     <section data-panel="overview">
-      <div class="banner">
-        <div class="banner-content">
-          <div class="banner-title-row">
-            <span class="banner-icon">
-              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            </span>
-            <h2>支付尚未开通</h2>
-          </div>
-          <p>账户和配额可以在这里看。支付还没接入，不能下单或充值。</p>
-        </div>
+      <p class="lead" id="hello-line">故事从这里继续，账号事务清楚有序。</p>
+      <div class="grid-2">
+        <article class="card">
+          <h2>开始之前，先准备好你的创作空间。</h2>
+          <p>安装客户端，核对权益。诊断工单还没有接通。</p>
+          <a class="btn" href="/help/#install">查看安装说明</a>
+        </article>
+        <ol class="path">
+          <li><button type="button" data-jump="downloads">01 查看安装说明</button></li>
+          <li><button type="button" data-jump="plan">02 核对账号权益</button></li>
+          <li><button type="button" data-jump="support">03 了解诊断与支持</button></li>
+        </ol>
       </div>
-      <dl id="profile-fields" class="profile-strip"></dl>
-      <div class="panels">
-        <div class="panel">
-          <h3>配额用量</h3>
-          <div id="overview-meters"><p class="empty">正在读取配额…</p></div>
-        </div>
-        <div class="panel">
-          <h3>最近项目</h3>
-          <p class="empty">作品保存在本机创作台。这里没有云端项目，也不放示例。</p>
-        </div>
+      <div class="grid-2">
+        <article class="card" id="overview-plan"><p class="empty">正在读取权益…</p></article>
+        <article class="card" id="overview-quota"><p class="empty">正在读取点数…</p></article>
       </div>
-      <div class="panel settings-panel">
-        <div class="panel-head">
-          <h3>账号与安全设置</h3>
-          <button class="action-btn" id="btn-login-logs" type="button">登录审计历史</button>
-        </div>
-        <div class="settings-grid">
-          <form id="form-update-profile" class="inline-form">
-            <label for="profile-nickname-input">修改昵称</label>
-            <div class="form-row">
-              <input id="profile-nickname-input" type="text" placeholder="新的创作者昵称" autocomplete="nickname">
-              <button class="action-btn primary" type="submit">保存昵称</button>
-            </div>
-          </form>
-          <form id="form-change-password" class="inline-form">
-            <label for="old-pwd-input">修改登录密码</label>
-            <div class="form-row">
-              <input id="old-pwd-input" type="password" placeholder="当前原密码" autocomplete="current-password" required>
-              <input id="new-pwd-input" type="password" placeholder="新密码（至少 6 位）" autocomplete="new-password" minlength="6" required>
-              <button class="action-btn primary" type="submit">修改密码</button>
-            </div>
-          </form>
-        </div>
+      <div class="grid-2">
+        <article class="card">
+          <h2>订单记录</h2>
+          <p id="overview-orders" class="empty">暂无订单 · 支付未开通</p>
+          <button class="text" type="button" data-jump="orders">查看订单</button>
+        </article>
+        <article class="card">
+          <h2>需要帮助？</h2>
+          <p>安装、登录或生成遇到问题，可以查看说明。这里不能开出工单编号。</p>
+          <a class="text" href="/help/#support">查看诊断与支持</a>
+        </article>
       </div>
     </section>
 
-    <section data-panel="projects" hidden>
-      <div class="panel">
-        <h3>最近项目</h3>
-        <p class="empty">作品保存在本机创作台。账号中心没有项目列表，这里不展示虚构作品。</p>
-      </div>
-      <div class="panel">
-        <h3>创作与调度队列</h3>
-        <p class="fine">本机创作台发起的云端 AI 渲染与批量任务。</p>
-        <div id="user-tasks-slot"><p class="empty">暂无创作任务记录。</p></div>
-      </div>
-      <div class="panel">
-        <h3>云端交付物资产</h3>
-        <p class="fine">小说成片、批量插图及音视频合成导出归档。</p>
-        <div id="user-media-slot"><p class="empty">暂无云端媒体交付物。</p></div>
-      </div>
+    <section data-panel="plan" hidden>
+      <article class="card" id="plan-detail"><p class="empty">正在读取套餐…</p></article>
     </section>
 
-    <section data-panel="quota" hidden>
-      <div class="panels">
-        <div class="panel">
-          <h3>配额用量</h3>
-          <div id="quota-meters"><p class="empty">正在读取配额…</p></div>
-        </div>
-        <div class="panel">
-          <h3>套餐</h3>
-          <div id="plan-slot"></div>
-          <h3 class="subhead">密钥</h3>
-          <div id="key-slot"></div>
-          <div class="client-guide">
-            <h4>如何将算力密钥接入 Reveric 创作者桌面端？</h4>
-            <ol>
-              <li>点击上方「复制密钥」；</li>
-              <li>打开本地 Reveric 桌面端，进入「设置」→「AI 服务商」；</li>
-              <li>服务商选择「MetaArc 元弧」，粘贴密钥即可畅享云端大模型与多模态成片算力。</li>
-            </ol>
-          </div>
-        </div>
-      </div>
+    <section data-panel="usage" hidden>
+      <article class="card" id="usage-summary"><p class="empty">正在读取用量…</p></article>
+      <article class="card">
+        <h2>点数流水</h2>
+        <p class="fine">流水是点数变动，不是付款。</p>
+        <div id="ledger-slot"><p class="empty">正在读取流水…</p></div>
+      </article>
+      <article class="card">
+        <h2>创作任务</h2>
+        <div id="user-tasks-slot"><p class="empty">正在读取任务…</p></div>
+      </article>
+      <article class="card">
+        <h2>云端文件</h2>
+        <div id="user-media-slot"><p class="empty">正在读取文件记录…</p></div>
+      </article>
     </section>
 
-    <section data-panel="billing" hidden>
-      <div class="banner banner-slim">
-        <div class="banner-content">
-          <div class="banner-title-row">
-            <span class="banner-icon">
-              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            </span>
-            <h2>支付尚未开通</h2>
-          </div>
-          <p>不能在这里下单或充值。没有订单时保持空态。</p>
-        </div>
-      </div>
-      <div class="panel">
-        <h3>订单</h3>
-        <div id="orders-slot"><p class="empty-well">暂无订单 · 支付未开通</p></div>
-      </div>
-      <div class="panel">
-        <h3>配额流水</h3>
-        <p class="fine">流水记的是点数变动，不是付款。</p>
-        <div id="ledger-slot"></div>
-      </div>
+    <section data-panel="downloads" hidden>
+      <article class="card" id="downloads-slot"><p class="empty">正在读取发布状态…</p></article>
     </section>
 
-    <section data-panel="users" hidden>
-      <div class="kpi-row" id="kpi-row">
-        <div class="kpi"><span>用户</span><b id="kpi-users">—</b><em>来自运营接口</em></div>
-        <div class="kpi"><span>今日新增</span><b id="kpi-new">—</b><em>来自运营接口</em></div>
-        <div class="kpi"><span>进行中任务</span><b id="kpi-tasks">—</b><em>来自运营接口</em></div>
-        <div class="kpi"><span>支付</span><b class="kpi-quiet">尚未开通</b><em>不展示金额</em></div>
-      </div>
-      <p class="fine" id="kpi-note" hidden></p>
-      <div class="subnav-tabs" id="users-subnav">
-        <button type="button" class="subnav-tab active" id="tab-users-roster">创作者名录与档案</button>
-        <button type="button" class="subnav-tab" id="tab-users-security">全平台登录与安全审计</button>
-      </div>
-
-      <div id="subview-users-roster">
-        <div class="panel">
-          <div class="panel-head">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <h3>创作者账号</h3>
-              <button class="action-btn primary" id="btn-create-user" type="button">+ 新建创作者</button>
-              <button class="action-btn" id="btn-export-users" type="button">导出 CSV</button>
-            </div>
-            <form id="user-search" class="user-search">
-              <div class="search-input-wrap">
-                <svg class="search-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input id="user-keyword" type="search" placeholder="邮箱、手机、昵称、IP或地理位置…" autocomplete="off">
-              </div>
-              <button type="submit">查找</button>
-            </form>
-          </div>
-          <div class="task-filters" id="admin-user-filters">
-            <button class="action-btn primary" type="button" data-user-filter="">全部</button>
-            <button class="action-btn" type="button" data-user-filter="plan:free">基础版</button>
-            <button class="action-btn" type="button" data-user-filter="plan:creator">创作者版</button>
-            <button class="action-btn" type="button" data-user-filter="plan:pro">专业版</button>
-            <button class="action-btn" type="button" data-user-filter="plan:studio">工作室版</button>
-            <button class="action-btn" type="button" data-user-filter="status:suspended">已封禁</button>
-            <button class="action-btn" type="button" data-user-filter="filter:active_24h">24小时活跃</button>
-          </div>
-          <div id="users-batch-bar" class="batch-bar" hidden>
-            <span id="batch-selected-count">已选 0 项</span>
-            <button type="button" class="action-btn" id="batch-btn-quota">批量调账</button>
-            <button type="button" class="action-btn" id="batch-btn-plan">批量设套餐</button>
-            <button type="button" class="action-btn" id="batch-btn-suspend">批量封禁</button>
-            <button type="button" class="action-btn" id="batch-btn-activate">批量解封</button>
-            <button type="button" class="action-btn" id="batch-btn-clear">取消选择</button>
-          </div>
-          <div id="users-slot"><p class="empty">尚未读取用户列表。</p></div>
-        </div>
-      </div>
-
-      <div id="subview-users-security" hidden>
-        <div class="kpi-row" id="kpi-sec-row">
-          <div class="kpi"><span>今日登录</span><b id="kpi-sec-logins">—</b><em>成功会话</em></div>
-          <div class="kpi"><span>异常拦截</span><b id="kpi-sec-failed">—</b><em>登录失败/阻断</em></div>
-          <div class="kpi"><span>活跃 IP</span><b id="kpi-sec-ips">—</b><em>来源节点数</em></div>
-          <div class="kpi"><span>受限账号</span><b id="kpi-sec-suspended">—</b><em>已封禁管控</em></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head">
-            <h3>全平台登录安全审计日志</h3>
-            <form id="sec-search" class="user-search">
-              <div class="search-input-wrap">
-                <svg class="search-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input id="sec-keyword" type="search" placeholder="搜索账号、IP 或 拦截原因…" autocomplete="off">
-              </div>
-              <button type="submit">检索</button>
-            </form>
-          </div>
-          <div class="task-filters" id="admin-sec-filters">
-            <button class="action-btn primary" type="button" data-sec-filter="">全部记录</button>
-            <button class="action-btn" type="button" data-sec-filter="success">仅成功登录</button>
-            <button class="action-btn" type="button" data-sec-filter="failed">仅异常/失败拦截</button>
-          </div>
-          <div id="global-audit-slot"><p class="empty">正在读取安全审计日志…</p></div>
-        </div>
-      </div>
-    </section>
-
-    <section data-panel="tasks" hidden>
-      <div class="panel">
-        <div class="panel-head">
-          <h3>任务调度队列</h3>
-          <div class="task-filters" id="admin-task-filters">
-            <button class="action-btn primary" type="button" data-filter="">全部</button>
-            <button class="action-btn" type="button" data-filter="pending">排队中</button>
-            <button class="action-btn" type="button" data-filter="running">运行中</button>
-            <button class="action-btn" type="button" data-filter="completed">已完成</button>
-            <button class="action-btn" type="button" data-filter="failed">已失败</button>
-          </div>
-        </div>
-        <div id="admin-tasks-slot"><p class="empty">尚未读取任务调度队列。</p></div>
-      </div>
-    </section>
-
-    <section data-panel="media" hidden>
-      <div class="kpi-row kpi-row-3">
-        <div class="kpi"><span>媒体文件总数</span><b id="kpi-media-count">—</b><em>云端对象存储</em></div>
-        <div class="kpi"><span>已用空间</span><b id="kpi-media-size">—</b><em>S3/OSS 空间</em></div>
-        <div class="kpi"><span>归属创作者</span><b id="kpi-media-users">—</b><em>已上传用户数</em></div>
-      </div>
-      <div class="panel">
-        <div class="panel-head">
-          <h3>对象存储资产列表</h3>
-          <div class="task-filters" id="admin-media-filters">
-            <button class="action-btn primary" type="button" data-media-filter="">全部</button>
-            <button class="action-btn" type="button" data-media-filter="image">图片</button>
-            <button class="action-btn" type="button" data-media-filter="video">视频</button>
-            <button class="action-btn" type="button" data-media-filter="audio">音频</button>
-            <button class="action-btn" type="button" data-media-filter="export">导出包</button>
-          </div>
-        </div>
-        <div id="admin-media-slot"><p class="empty">尚未读取媒体资源列表。</p></div>
-      </div>
+    <section data-panel="security" hidden>
+      <article class="card">
+        <h2>账号资料</h2>
+        <form id="form-update-profile" class="stack">
+          <label for="profile-nickname-input">昵称</label>
+          <input id="profile-nickname-input" type="text" autocomplete="nickname" maxlength="64">
+          <button class="btn" type="submit">保存昵称</button>
+        </form>
+      </article>
+      <article class="card">
+        <h2>登录密码</h2>
+        <form id="form-change-password" class="stack">
+          <label for="old-pwd-input">当前密码</label>
+          <input id="old-pwd-input" type="password" autocomplete="current-password" required>
+          <label for="new-pwd-input">新密码（至少 6 位）</label>
+          <input id="new-pwd-input" type="password" autocomplete="new-password" minlength="6" required>
+          <button class="btn" type="submit">修改密码</button>
+        </form>
+        <button class="btn btn-line" id="btn-logout-others" type="button">退出其他网页会话</button>
+        <p class="fine">这会退出带有会话版本的其他网页登录。更早的客户端登录会保留到过期。</p>
+      </article>
+      <article class="card">
+        <h2>最近登录</h2>
+        <div id="login-logs-slot"><p class="empty">正在读取登录记录…</p></div>
+      </article>
+      <article class="card">
+        <h2>客户端密钥</h2>
+        <p class="fine">桌面创作台用这把密钥连接账号点数。重置后，旧密钥立即失效。</p>
+        <div id="key-slot"></div>
+      </article>
     </section>
 
     <section data-panel="orders" hidden>
-      <div class="banner banner-slim">
-        <div class="banner-content">
-          <div class="banner-title-row">
-            <span class="banner-icon">
-              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            </span>
-            <h2>支付尚未开通</h2>
-          </div>
-          <p>订单区只列出接口实际返回的记录，不汇总金额。</p>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-head">
-          <h3>订单</h3>
-          <div class="task-filters" id="admin-order-filters">
-            <button class="action-btn primary" type="button" data-order-filter="">全部</button>
-            <button class="action-btn" type="button" data-order-filter="paid">已记录</button>
-            <button class="action-btn" type="button" data-order-filter="pending">未完成</button>
-          </div>
-        </div>
-        <div id="admin-orders-slot"><p class="empty-well">暂无订单 · 支付未开通</p></div>
-      </div>
-      <div class="panel">
-        <div class="panel-head">
-          <h3>套餐方案上架管理</h3>
-        </div>
-        <div id="admin-plans-slot"><p class="empty">正在读取套餐方案…</p></div>
-      </div>
+      <article class="card">
+        <h2>支付尚未开通</h2>
+        <p>不能在这里下单、续费或开发票。</p>
+        <div id="orders-slot"><p class="empty">暂无订单 · 支付未开通</p></div>
+      </article>
     </section>
 
-    <section data-panel="health" hidden>
-      <div class="panel">
-        <h3>健康</h3>
-        <div id="health-slot"><p class="empty">尚未读取健康探针。</p></div>
-      </div>
+    <section data-panel="support" hidden>
+      <article class="card" id="support-slot">
+        <h2>诊断还没有工单</h2>
+        <p>本站不能提交诊断、不能生成工单编号，也看不到独立上传服务里的文件。请把平台、版本和现象写到 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>，或先看<a href="/help/#support">帮助说明</a>。</p>
+      </article>
     </section>
 
-    <section data-panel="updates" hidden>
-      <div class="panel">
-        <h3>更新</h3>
-        <p class="fine">状态来自更新清单。没有安装包时保持尚未发布。</p>
-        <div id="updates-slot"><p class="empty">尚未读取更新清单。</p></div>
+    <section data-panel="workspace" hidden>
+      <p class="lead">待办、用户、用量、发布和审计分开看。没有数据来源的位置保持未知或未接入。</p>
+      <div id="workspace-stats"><p class="empty">正在读取工作台…</p></div>
+      <div class="jump-row">
+        <button type="button" data-jump="users">用户与权限</button>
+        <button type="button" data-jump="usage-review">用量核对</button>
+        <button type="button" data-jump="releases">发布记录</button>
+        <button type="button" data-jump="audit">审计日志</button>
       </div>
+      <article class="card">
+        <h2>诊断处理队列</h2>
+        <p class="empty">诊断工单尚未接入，不能显示编号。</p>
+        <h3>创作任务</h3>
+        <div id="workspace-tasks"><p class="empty">正在读取任务…</p></div>
+      </article>
+    </section>
+
+    <section data-panel="users" hidden>
+      <article class="card">
+        <div class="row">
+          <h2>用户与权限</h2>
+          <button class="btn" id="btn-create-user" type="button">新建账号</button>
+        </div>
+        <form id="user-search" class="row">
+          <input id="user-keyword" type="search" placeholder="邮箱、手机或昵称" autocomplete="off">
+          <button class="btn btn-line" type="submit">查找</button>
+        </form>
+        <div class="filters" id="user-filters">
+          <button type="button" data-user-filter="" class="is-on">全部</button>
+          <button type="button" data-user-filter="plan:free">基础体验</button>
+          <button type="button" data-user-filter="plan:creator">创作者</button>
+          <button type="button" data-user-filter="plan:pro">专业</button>
+          <button type="button" data-user-filter="plan:studio">工作室</button>
+          <button type="button" data-user-filter="status:suspended">已封禁</button>
+        </div>
+        <div id="users-slot"><p class="empty">尚未读取用户。</p></div>
+      </article>
+    </section>
+
+    <section data-panel="plans" hidden>
+      <article class="card">
+        <h2>套餐</h2>
+        <p class="fine">上下架需要填写原因，并写入审计。支付未开通，下架只影响展示，不会产生订单。</p>
+        <div id="plans-slot"><p class="empty">正在读取套餐…</p></div>
+      </article>
+    </section>
+
+    <section data-panel="usage-review" hidden>
+      <article class="card">
+        <h2>用量核对</h2>
+        <form id="quota-search" class="row">
+          <input id="quota-keyword" type="search" placeholder="账号、类型或备注" autocomplete="off">
+          <button class="btn btn-line" type="submit">查找</button>
+        </form>
+        <div id="quota-review-slot"><p class="empty">正在读取流水…</p></div>
+      </article>
+    </section>
+
+    <section data-panel="releases" hidden>
+      <article class="card" id="releases-slot">
+        <h2>发布状态</h2>
+        <p class="fine">只读取更新清单。这个工作台不能上传或改写安装包。</p>
+      </article>
+    </section>
+
+    <section data-panel="diagnostics" hidden>
+      <article class="card">
+        <h2>诊断与健康</h2>
+        <p class="empty">诊断工单尚未接入。健康状态来自本服务探针；未配置的依赖显示待接入。</p>
+        <div id="health-slot"><p class="empty">正在读取健康状态…</p></div>
+        <h3>创作任务</h3>
+        <div id="admin-tasks-slot"><p class="empty">正在读取任务…</p></div>
+        <h3>文件索引</h3>
+        <div id="admin-media-slot"><p class="empty">正在读取文件索引…</p></div>
+      </article>
+    </section>
+
+    <section data-panel="audit" hidden>
+      <article class="card">
+        <h2>变更审计</h2>
+        <p class="fine">记录操作者、对象、原因和变更前后。登录记录单独列出。</p>
+        <div id="audit-slot"><p class="empty">正在读取审计…</p></div>
+        <h3>登录记录</h3>
+        <div id="admin-login-slot"><p class="empty">正在读取登录记录…</p></div>
+      </article>
+    </section>
+
+    <section id="admin-denied" hidden>
+      <article class="card">
+        <h2>需要管理员权限</h2>
+        <p>这个账号不能打开工作台。页面没有因此放宽任何权限。</p>
+        <a class="btn" href="/account">返回用户中心</a>
+      </article>
     </section>
   </div>
 </div>
 
-<div id="modal-overlay" class="modal-overlay" hidden>
-  <div class="modal-card">
-    <div class="modal-head">
-      <h3 id="modal-title">详情</h3>
-      <button id="modal-close" class="action-btn" type="button">关闭</button>
+<div id="modal" class="modal" hidden>
+  <form id="modal-form" class="modal-card">
+    <h2 id="modal-title">确认</h2>
+    <p id="modal-copy"></p>
+    <div id="modal-extra"></div>
+    <label id="modal-reason-label" for="modal-reason">变更原因</label>
+    <textarea id="modal-reason" minlength="2" maxlength="500"></textarea>
+    <div class="row">
+      <button class="btn" id="modal-submit" type="submit">确认变更</button>
+      <button class="btn btn-line" id="modal-cancel" type="button">取消</button>
     </div>
-    <div id="modal-body" class="modal-body"></div>
-  </div>
+  </form>
 </div>
-
-<noscript><p class="gate-foot">登录和注册需要浏览器脚本。未登录时这里没有配额数字。</p></noscript>
-<script src="/account/account.js?v=20261111_1020"></script>
+<script src="/account/account.js?v=20261113"></script>
 </body>
 </html>

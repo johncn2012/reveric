@@ -4,10 +4,23 @@ import crypto from 'node:crypto';
 import { query, pool } from '../db.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
+import { cleanReason, insertAudit, runMutation } from '../services/admin_audit.js';
 
 export const adminRouter = Router();
 const newApi = new NewApiConnector();
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function reasonRequired(res: Response) {
+  return res.status(400).json({ error: 'reason_required', message: '请填写至少 2 个字的变更原因' });
+}
+
+function actorId(req: Request): string {
+  return req.user?.userId || '';
+}
+
+function sameUser(left?: string, right?: string): boolean {
+  return !!left && !!right && left.toLowerCase() === right.toLowerCase();
+}
 
 // 所有接口需超管权限
 adminRouter.use(requireAdmin);
@@ -96,6 +109,8 @@ adminRouter.post('/admin/users/create', async (req: Request, res: Response) => {
     const cleanRole = ['user', 'admin'].includes(role) ? role : 'user';
     const initQuota = Math.max(0, parseFloat(quota) || 500);
 
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
     if (!cleanEmail || cleanPassword.length < 6) {
       return res.status(400).json({ error: 'invalid_fields', message: '请输入有效邮箱和至少 6 位初始密码' });
     }
@@ -111,32 +126,32 @@ adminRouter.post('/admin/users/create', async (req: Request, res: Response) => {
     const hash = await bcrypt.hash(cleanPassword, salt);
     const apiKey = 'sk-metaarc-' + crypto.randomBytes(16).toString('hex');
 
-    const insertSql = `
-      INSERT INTO users (email, phone, password_hash, nickname, role, status, plan, quota, total_quota, new_api_key)
-      VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9)
-      RETURNING id, email, phone, nickname, role, status, plan, quota, total_quota, new_api_key, created_at
-    `;
-    const inserted = await query(insertSql, [
-      cleanEmail,
-      cleanPhone || null,
-      hash,
-      cleanNickname || null,
-      cleanRole,
-      cleanPlan,
-      initQuota,
-      initQuota,
-      apiKey,
-    ]);
-
-    const newUser = inserted.rows[0];
-
-    if (initQuota > 0) {
-      await query(
-        `INSERT INTO quota_transactions (user_id, amount, balance_after, type, remark)
-         VALUES ($1, $2, $3, 'admin_grant', $4)`,
-        [newUser.id, initQuota, initQuota, '管理员新建账号初始配额']
+    const newUser = await runMutation(async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO users (email, phone, password_hash, nickname, role, status, plan, quota, total_quota, new_api_key)
+         VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9)
+         RETURNING id, email, phone, nickname, role, status, plan, quota, total_quota, new_api_key, created_at`,
+        [cleanEmail, cleanPhone || null, hash, cleanNickname || null, cleanRole, cleanPlan, initQuota, initQuota, apiKey],
       );
-    }
+      const created = inserted.rows[0];
+      if (initQuota > 0) {
+        await client.query(
+          `INSERT INTO quota_transactions (user_id, amount, balance_after, type, remark)
+           VALUES ($1, $2, $3, 'admin_grant', $4)`,
+          [created.id, initQuota, initQuota, '管理员新建账号初始配额'],
+        );
+      }
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'create_user',
+        targetType: 'user',
+        targetId: created.id,
+        reason,
+        beforeValue: null,
+        afterValue: { email: created.email, role: created.role, plan: created.plan, quota: initQuota },
+      }, client);
+      return created;
+    });
 
     return res.status(201).json({ success: true, user: newUser });
   } catch (err: any) {
@@ -212,18 +227,41 @@ adminRouter.post('/admin/users/:id/set-role', async (req: Request, res: Response
     if (role !== 'admin' && role !== 'user') {
       return res.status(400).json({ error: 'invalid_role', message: '角色只能为 admin 或 user' });
     }
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
 
-    const currentAdminId = (req as any).user?.userId;
-    if (currentAdminId === id && role === 'user') {
+    const currentAdminId = req.user?.userId;
+    if (sameUser(currentAdminId, id) && role === 'user') {
       return res.status(400).json({ error: 'forbidden', message: '不能降级当前登录管理员自身' });
     }
 
-    const result = await query('UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, role', [role, id]);
-    if (result.rows.length === 0) {
+    const user = await runMutation(async (client) => {
+      const before = await client.query('SELECT id, email, role FROM users WHERE id = $1 FOR UPDATE', [id]);
+      if (before.rows.length === 0) {
+        const missing = new Error('not_found');
+        (missing as { status?: number }).status = 404;
+        throw missing;
+      }
+      const updated = await client.query(
+        'UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, role',
+        [role, id],
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'set_role',
+        targetType: 'user',
+        targetId: id,
+        reason,
+        beforeValue: { role: before.rows[0].role },
+        afterValue: { role: updated.rows[0].role },
+      }, client);
+      return updated.rows[0];
+    });
+    return res.json({ success: true, user });
+  } catch (err: any) {
+    if (err?.status === 404) {
       return res.status(404).json({ error: 'not_found', message: '用户不存在' });
     }
-    return res.json({ success: true, user: result.rows[0] });
-  } catch (err: any) {
     console.error('[Admin Set Role Error]', err);
     return res.status(500).json({ error: 'server_error', message: '变更角色失败' });
   }
@@ -236,16 +274,35 @@ adminRouter.post('/admin/users/:id/reset-api-key', async (req: Request, res: Res
     if (!UUID_REGEX.test(id)) {
       return res.status(400).json({ error: 'invalid_id', message: '用户 ID 格式不正确' });
     }
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
     const newApiKey = 'sk-metaarc-' + crypto.randomBytes(16).toString('hex');
-    const result = await query(
-      'UPDATE users SET new_api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, new_api_key',
-      [newApiKey, id]
-    );
-    if (result.rows.length === 0) {
+    const updated = await runMutation(async (client) => {
+      const result = await client.query(
+        'UPDATE users SET new_api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email',
+        [newApiKey, id],
+      );
+      if (result.rows.length === 0) {
+        const missing = new Error('not_found');
+        (missing as { status?: number }).status = 404;
+        throw missing;
+      }
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'reset_api_key',
+        targetType: 'user',
+        targetId: id,
+        reason,
+        beforeValue: null,
+        afterValue: { new_api_key: '[redacted]' },
+      }, client);
+      return result.rows[0];
+    });
+    return res.json({ success: true, apiKey: newApiKey, user: updated });
+  } catch (err: any) {
+    if (err?.status === 404) {
       return res.status(404).json({ error: 'not_found', message: '用户不存在' });
     }
-    return res.json({ success: true, apiKey: newApiKey });
-  } catch (err: any) {
     console.error('[Admin Reset User API Key Error]', err);
     return res.status(500).json({ error: 'server_error', message: '重置算力Key失败' });
   }
@@ -254,7 +311,9 @@ adminRouter.post('/admin/users/:id/reset-api-key', async (req: Request, res: Res
 // 2.5 管理员批量操作用户（批量封禁、批量解封、批量调账、批量设套餐）
 adminRouter.post('/admin/users/batch', async (req: Request, res: Response) => {
   try {
-    const { userIds, action, amount, status, plan, reason } = req.body;
+    const { userIds, action, amount, status, plan } = req.body;
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
     if (!Array.isArray(userIds) || userIds.length === 0) {
       return res.status(400).json({ error: 'invalid_input', message: '请提供要批量操作的用户 ID 列表' });
     }
@@ -267,7 +326,22 @@ adminRouter.post('/admin/users/batch', async (req: Request, res: Response) => {
       if (status !== 'active' && status !== 'suspended') {
         return res.status(400).json({ error: 'invalid_status', message: '状态只能为 active 或 suspended' });
       }
-      await query(`UPDATE users SET status = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`, [status, validIds]);
+      if (status === 'suspended' && validIds.some((id: string) => sameUser(id, actorId(req)))) {
+        return res.status(400).json({ error: 'forbidden', message: '不能封禁当前登录管理员自身' });
+      }
+      await runMutation(async (client) => {
+        const before = await client.query('SELECT id, status FROM users WHERE id = ANY($1::uuid[])', [validIds]);
+        await client.query(`UPDATE users SET status = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`, [status, validIds]);
+        await insertAudit({
+          actorId: actorId(req),
+          action: 'batch_set_status',
+          targetType: 'user',
+          targetId: validIds.join(','),
+          reason,
+          beforeValue: { users: before.rows },
+          afterValue: { status },
+        }, client);
+      });
       return res.json({ success: true, updatedCount: validIds.length });
     }
 
@@ -275,7 +349,19 @@ adminRouter.post('/admin/users/batch', async (req: Request, res: Response) => {
       if (!['free', 'creator', 'pro', 'studio'].includes(plan)) {
         return res.status(400).json({ error: 'invalid_plan', message: '无效的套餐类型' });
       }
-      await query(`UPDATE users SET plan = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`, [plan, validIds]);
+      await runMutation(async (client) => {
+        const before = await client.query('SELECT id, plan FROM users WHERE id = ANY($1::uuid[])', [validIds]);
+        await client.query(`UPDATE users SET plan = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`, [plan, validIds]);
+        await insertAudit({
+          actorId: actorId(req),
+          action: 'batch_set_plan',
+          targetType: 'user',
+          targetId: validIds.join(','),
+          reason,
+          beforeValue: { users: before.rows },
+          afterValue: { plan },
+        }, client);
+      });
       return res.json({ success: true, updatedCount: validIds.length });
     }
 
@@ -296,10 +382,19 @@ adminRouter.post('/admin/users/batch', async (req: Request, res: Response) => {
             await client.query(
               `INSERT INTO quota_transactions (user_id, amount, balance_after, type, remark)
                VALUES ($1, $2, $3, 'admin_grant', $4)`,
-              [uid, delta, nxt, `批量管理员调账：${reason || '批量调整'}`]
+              [uid, delta, nxt, `批量管理员调账：${reason}`]
             );
           }
         }
+        await insertAudit({
+          actorId: actorId(req),
+          action: 'batch_adjust_quota',
+          targetType: 'user',
+          targetId: validIds.join(','),
+          reason,
+          beforeValue: null,
+          afterValue: { amount: delta },
+        }, client);
         await client.query('COMMIT');
         return res.json({ success: true, updatedCount: validIds.length });
       } catch (e) {
@@ -325,32 +420,46 @@ adminRouter.post('/admin/users/:id/adjust-quota', async (req: Request, res: Resp
       return res.status(400).json({ error: 'invalid_user_id', message: '用户ID格式无效' });
     }
 
-    const { amount, reason } = req.body; // 正数加点，负数扣点
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
+    const { amount } = req.body;
 
     if (amount === undefined || isNaN(Number(amount))) {
       return res.status(400).json({ error: 'invalid_amount', message: '必须指定有效调账金额' });
     }
 
     const delta = parseFloat(amount);
-    if (!Number.isFinite(delta)) {
+    if (!Number.isFinite(delta) || delta === 0) {
       return res.status(400).json({ error: 'invalid_amount', message: '必须指定有效调账金额' });
     }
-    const userRes = await query(
-      'UPDATE users SET quota = GREATEST(0, quota + $1), total_quota = total_quota + GREATEST(0, $1), updated_at = NOW() WHERE id = $2 RETURNING *',
-      [delta, targetUserId]
-    );
-
-    if (userRes.rows.length === 0) {
-      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
-    }
-    const updatedUser = userRes.rows[0];
-
-    // 记录审计流水
-    await query(
-      `INSERT INTO quota_transactions (user_id, amount, balance_after, type, remark)
-       VALUES ($1, $2, $3, 'admin_grant', $4)`,
-      [targetUserId, delta, updatedUser.quota, `管理员调账：${reason || '手工调整'}`]
-    );
+    const updatedUser = await runMutation(async (client) => {
+      const before = await client.query('SELECT id, quota, total_quota, new_api_user_id FROM users WHERE id = $1 FOR UPDATE', [targetUserId]);
+      if (before.rows.length === 0) {
+        const missing = new Error('not_found');
+        (missing as { status?: number }).status = 404;
+        throw missing;
+      }
+      const userRes = await client.query(
+        'UPDATE users SET quota = GREATEST(0, quota + $1), total_quota = total_quota + GREATEST(0, $1), updated_at = NOW() WHERE id = $2 RETURNING *',
+        [delta, targetUserId],
+      );
+      const nextUser = userRes.rows[0];
+      await client.query(
+        `INSERT INTO quota_transactions (user_id, amount, balance_after, type, remark)
+         VALUES ($1, $2, $3, 'admin_grant', $4)`,
+        [targetUserId, delta, nextUser.quota, `管理员调账：${reason}`],
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'adjust_quota',
+        targetType: 'user',
+        targetId: targetUserId,
+        reason,
+        beforeValue: { quota: before.rows[0].quota },
+        afterValue: { quota: nextUser.quota, amount: delta },
+      }, client);
+      return nextUser;
+    });
 
     // 同步到 New-API
     if (updatedUser.new_api_user_id && delta > 0) {
@@ -375,8 +484,11 @@ adminRouter.post('/admin/users/:id/adjust-quota', async (req: Request, res: Resp
       },
     });
   } catch (err: any) {
+    if (err?.status === 404) {
+      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
+    }
     console.error('[Admin Adjust Quota Error]', err);
-    return res.status(500).json({ error: 'server_error', message: err.message || '调账失败' });
+    return res.status(500).json({ error: 'server_error', message: '调账失败' });
   }
 });
 
@@ -396,24 +508,43 @@ adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response
         message: `套餐标识无效，允许值: ${ALLOWED_PLANS.join(', ')}`,
       });
     }
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
 
-    const userRes = await query(
-      'UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname, plan, quota, total_quota, role',
-      [plan, targetUserId]
-    );
-
-    if (userRes.rows.length === 0) {
-      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
-    }
+    const user = await runMutation(async (client) => {
+      const before = await client.query('SELECT id, plan FROM users WHERE id = $1 FOR UPDATE', [targetUserId]);
+      if (before.rows.length === 0) {
+        const missing = new Error('not_found');
+        (missing as { status?: number }).status = 404;
+        throw missing;
+      }
+      const userRes = await client.query(
+        'UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname, plan, quota, total_quota, role',
+        [plan, targetUserId],
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'set_plan',
+        targetType: 'user',
+        targetId: targetUserId,
+        reason,
+        beforeValue: { plan: before.rows[0].plan },
+        afterValue: { plan },
+      }, client);
+      return userRes.rows[0];
+    });
 
     return res.json({
       success: true,
       message: '套餐变更成功',
-      user: userRes.rows[0],
+      user,
     });
   } catch (err: any) {
+    if (err?.status === 404) {
+      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
+    }
     console.error('[Admin Set Plan Error]', err);
-    return res.status(500).json({ error: 'server_error', message: err.message || '套餐设置失败' });
+    return res.status(500).json({ error: 'server_error', message: '套餐设置失败' });
   }
 });
 
@@ -487,32 +618,53 @@ adminRouter.post('/admin/users/:id/reset-password', async (req: Request, res: Re
       return res.status(400).json({ error: 'invalid_user_id', message: '用户ID格式无效' });
     }
 
-    const newPassword = req.body.newPassword || req.body.new_password;
-    const pwd = (typeof newPassword === 'string' && newPassword.trim().length >= 6)
-      ? newPassword.trim()
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
+    const supplied = req.body.newPassword || req.body.new_password;
+    const pwd = (typeof supplied === 'string' && supplied.trim().length >= 6)
+      ? supplied.trim()
       : `MetaArc@${Math.random().toString(36).substring(2, 8).toUpperCase()}!`;
 
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(pwd, salt);
-    const userRes = await query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname',
-      [hash, targetUserId]
-    );
-
-    if (userRes.rows.length === 0) {
-      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
-    }
+    const user = await runMutation(async (client) => {
+      const userRes = await client.query(
+        `UPDATE users
+         SET password_hash = $1, session_version = session_version + 1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING id, email, phone, nickname`,
+        [hash, targetUserId],
+      );
+      if (userRes.rows.length === 0) {
+        const missing = new Error('not_found');
+        (missing as { status?: number }).status = 404;
+        throw missing;
+      }
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'reset_password',
+        targetType: 'user',
+        targetId: targetUserId,
+        reason,
+        beforeValue: null,
+        afterValue: { password: '[redacted]' },
+      }, client);
+      return userRes.rows[0];
+    });
 
     return res.json({
       success: true,
-      message: '密码重置成功',
+      message: '密码已重置。请通过已有联系方式交给用户，系统不会发送邮件。',
       temporary_password: pwd,
       newPassword: pwd,
-      user: userRes.rows[0],
+      user,
     });
   } catch (err: any) {
+    if (err?.status === 404) {
+      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
+    }
     console.error('[Admin Reset Password Error]', err);
-    return res.status(500).json({ error: 'server_error', message: err.message || '重置密码失败' });
+    return res.status(500).json({ error: 'server_error', message: '重置密码失败' });
   }
 });
 
@@ -528,24 +680,46 @@ adminRouter.post('/admin/users/:id/set-status', async (req: Request, res: Respon
     if (status !== 'active' && status !== 'suspended') {
       return res.status(400).json({ error: 'invalid_status', message: '状态只能为 active 或 suspended' });
     }
-
-    const userRes = await query(
-      'UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname, status',
-      [status, targetUserId]
-    );
-
-    if (userRes.rows.length === 0) {
-      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
+    if (status === 'suspended' && sameUser(targetUserId, actorId(req))) {
+      return res.status(400).json({ error: 'forbidden', message: '不能封禁当前登录管理员自身' });
     }
+
+    const user = await runMutation(async (client) => {
+      const before = await client.query('SELECT id, status FROM users WHERE id = $1 FOR UPDATE', [targetUserId]);
+      if (before.rows.length === 0) {
+        const missing = new Error('not_found');
+        (missing as { status?: number }).status = 404;
+        throw missing;
+      }
+      const userRes = await client.query(
+        'UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname, status',
+        [status, targetUserId],
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'set_status',
+        targetType: 'user',
+        targetId: targetUserId,
+        reason,
+        beforeValue: { status: before.rows[0].status },
+        afterValue: { status },
+      }, client);
+      return userRes.rows[0];
+    });
 
     return res.json({
       success: true,
-      message: `用户状态已更新为 ${status === 'active' ? '正常' : '已封禁'}`,
-      user: userRes.rows[0],
+      message: status === 'active' ? '用户状态已更新为正常' : '用户状态已更新为已封禁',
+      user,
     });
   } catch (err: any) {
+    if (err?.status === 404) {
+      return res.status(404).json({ error: 'user_not_found', message: '目标用户不存在' });
+    }
     console.error('[Admin Set Status Error]', err);
-    return res.status(500).json({ error: 'server_error', message: err.message || '更新用户状态失败' });
+    return res.status(500).json({ error: 'server_error', message: '更新用户状态失败' });
   }
 });
 
@@ -815,26 +989,43 @@ adminRouter.get('/admin/plans', async (_req: Request, res: Response) => {
 adminRouter.post('/admin/plans/:id/toggle', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    if (!id || typeof id !== 'string') {
+    if (!id || typeof id !== 'string' || !/^[\w-]{1,64}$/.test(id)) {
       return res.status(400).json({ error: 'invalid_id', message: '套餐 ID 格式无效' });
     }
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
 
-    const updateRes = await query(
-      'UPDATE plans SET is_active = NOT is_active WHERE id = $1 RETURNING *',
-      [id]
-    );
-
-    if (updateRes.rows.length === 0) {
-      return res.status(404).json({ error: 'not_found', message: '套餐不存在' });
-    }
-
-    const updated = updateRes.rows[0];
+    const updated = await runMutation(async (client) => {
+      const before = await client.query('SELECT id, name, is_active FROM plans WHERE id = $1 FOR UPDATE', [id]);
+      if (before.rows.length === 0) {
+        const missing = new Error('not_found');
+        (missing as { status?: number }).status = 404;
+        throw missing;
+      }
+      const updateRes = await client.query(
+        'UPDATE plans SET is_active = NOT is_active WHERE id = $1 RETURNING *',
+        [id],
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'toggle_plan',
+        targetType: 'plan',
+        targetId: id,
+        reason,
+        beforeValue: { is_active: before.rows[0].is_active },
+        afterValue: { is_active: updateRes.rows[0].is_active },
+      }, client);
+      return updateRes.rows[0];
+    });
     return res.json({
       success: true,
-      message: `套餐「${updated.name}」已${updated.is_active ? '上架启用' : '下架停用'}`,
+      message: updated.is_active ? `套餐「${updated.name}」已上架` : `套餐「${updated.name}」已下架`,
       plan: updated,
     });
   } catch (err: any) {
+    if (err?.status === 404) {
+      return res.status(404).json({ error: 'not_found', message: '套餐不存在' });
+    }
     console.error('[Admin Toggle Plan Error]', err);
     return res.status(500).json({ error: 'server_error', message: '操作套餐状态失败' });
   }
@@ -966,5 +1157,50 @@ adminRouter.get('/admin/security/stats', async (_req: Request, res: Response) =>
   } catch (err: any) {
     console.error('[Admin Security Stats Error]', err);
     return res.status(500).json({ error: 'server_error', message: '无法获取安全风控统计' });
+  }
+});
+
+adminRouter.get('/admin/audit', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.max(1, Math.min(200, parseInt(String(req.query.limit || '50'), 10) || 50));
+    const result = await query(
+      `SELECT id, actor_id, action, target_type, target_id, reason, before_value, after_value, created_at
+       FROM admin_audit_logs
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [limit],
+    );
+    return res.json({ success: true, data: result.rows });
+  } catch (err: any) {
+    console.error('[Admin Audit Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取变更审计' });
+  }
+});
+
+adminRouter.get('/admin/quota-logs', async (req: Request, res: Response) => {
+  try {
+    const keyword = typeof req.query.keyword === 'string' ? req.query.keyword.trim() : '';
+    const params: unknown[] = [];
+    let where = '';
+    if (keyword) {
+      params.push(`%${keyword}%`);
+      where = `WHERE u.email ILIKE $1 OR u.phone ILIKE $1 OR u.nickname ILIKE $1 OR q.type ILIKE $1 OR q.remark ILIKE $1`;
+    }
+    const limit = Math.max(1, Math.min(200, parseInt(String(req.query.limit || '50'), 10) || 50));
+    params.push(limit);
+    const result = await query(
+      `SELECT q.id, q.user_id, q.amount, q.balance_after, q.type, q.remark, q.created_at,
+              u.email, u.phone, u.nickname
+       FROM quota_transactions q
+       LEFT JOIN users u ON u.id = q.user_id
+       ${where}
+       ORDER BY q.created_at DESC
+       LIMIT $${params.length}`,
+      params,
+    );
+    return res.json({ success: true, data: result.rows });
+  } catch (err: any) {
+    console.error('[Admin Quota Logs Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取用量流水' });
   }
 });

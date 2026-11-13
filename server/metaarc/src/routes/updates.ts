@@ -23,6 +23,20 @@ export function createUpdatesRouter(
     };
     res.json(loadLatestUpdate(resolveOptions(), query));
   });
+  router.get('/updates/catalog', (_req: Request, res: Response) => {
+    const options = resolveOptions();
+    const targets = [
+      { platform: 'windows', arch: 'x64' },
+      { platform: 'macos', arch: 'arm64' },
+      { platform: 'android', arch: 'arm64' },
+    ];
+    const platforms = targets.map((item) => ({
+      ...loadLatestUpdate(options, item),
+      platform: item.platform,
+      arch: item.arch,
+    }));
+    res.json({ success: true, platforms });
+  });
   return router;
 }
 

@@ -1,2160 +1,743 @@
 /**
- * 同域账号中心。未登录只提交登录和注册；登录后只渲染接口返回的字段。
+ * 同域账号中心与管理员工作台。
  * 规范路径：POST /api/auth/login、POST /api/auth/register、GET /api/auth/profile、
  * GET /api/auth/orders、GET /api/auth/quota/logs。套餐名称来自 GET /api/plans。
- * 管理员另读 /api/admin/overview、/api/admin/users、/api/admin/orders、/api/health、
- * /api/updates/latest。不创建订单，也不展示金额汇总。
+ * 管理员读取 /api/admin/users、/api/admin/tasks、/api/admin/media、/api/admin/orders、
+ * /api/admin/plans。用户任务与文件来自 /api/tasks/list、/api/media/list。
+ * 密钥轮换走 /api/auth/reset-api-key，登录记录走 /api/auth/login-logs。
+ * 不创建订单，也不汇总金额。
  */
 (function () {
   const TOKEN_KEY = 'metaarc_account_token';
-  const USER_VIEWS = ['overview', 'projects', 'quota', 'billing'];
-  const ADMIN_VIEWS = ['users', 'tasks', 'media', 'orders', 'health', 'updates'];
+  const surface = location.pathname.indexOf('/admin') === 0 ? 'admin' : 'account';
+  const USER_VIEWS = ['overview', 'plan', 'usage', 'downloads', 'security', 'orders', 'support'];
+  const ADMIN_VIEWS = ['workspace', 'users', 'plans', 'usage-review', 'releases', 'diagnostics', 'audit'];
+  const TITLES = {
+    overview: ['个人空间', '概览'],
+    plan: ['个人空间', '订阅与权益'],
+    usage: ['个人空间', '用量明细'],
+    downloads: ['个人空间', '下载与更新'],
+    security: ['个人空间', '账号安全'],
+    orders: ['个人空间', '订单记录'],
+    support: ['个人空间', '诊断与支持'],
+    workspace: ['运营与系统', '每一项运营，都有清楚去向。'],
+    users: ['运营与系统', '用户与权限'],
+    plans: ['运营与系统', '套餐权益'],
+    'usage-review': ['运营与系统', '用量核对'],
+    releases: ['运营与系统', '发布更新'],
+    diagnostics: ['运营与系统', '诊断与健康'],
+    audit: ['运营与系统', '审计日志'],
+  };
+
   const alertEl = document.getElementById('alert');
   const gate = document.getElementById('gate');
   const consoleEl = document.getElementById('console');
-  const adminNav = document.getElementById('admin-nav');
   const gateTitle = document.getElementById('gate-title');
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
-  const forgotPanel = document.getElementById('forgot-panel');
+  const forgotForm = document.getElementById('forgot-form');
   const loginLinks = document.getElementById('login-links');
+  const modal = document.getElementById('modal');
+  const modalForm = document.getElementById('modal-form');
   let currentUser = null;
-  let busy = false;
+  let plans = [];
+  let userFilter = '';
   let alertTimer = null;
 
-  function showAlert(message, isSuccess) {
-    if (alertTimer) {
-      clearTimeout(alertTimer);
-      alertTimer = null;
-    }
-    if (!message) {
-      alertEl.hidden = true;
-      alertEl.textContent = '';
-      alertEl.classList.remove('alert-success');
-      return;
-    }
-    alertEl.hidden = false;
-    alertEl.textContent = message;
-    if (isSuccess) {
-      alertEl.classList.add('alert-success');
-      alertTimer = setTimeout(function () {
-        showAlert('');
-      }, 4000);
-    } else {
-      alertEl.classList.remove('alert-success');
-    }
-  }
-
-  if (alertEl) {
-    alertEl.addEventListener('click', function () {
-      showAlert('');
-    });
-  }
-
-  document.addEventListener('click', function () {
-    document.querySelectorAll('.action-dropdown-menu.show').forEach(function (m) {
-      m.classList.remove('show');
-    });
-  });
-
-  function token() {
-    return localStorage.getItem(TOKEN_KEY) || '';
-  }
-
+  function token() { return localStorage.getItem(TOKEN_KEY) || ''; }
   function setToken(value) {
     if (value) localStorage.setItem(TOKEN_KEY, value);
     else localStorage.removeItem(TOKEN_KEY);
   }
-
+  function $(id) { return document.getElementById(id); }
+  function showAlert(message, ok) {
+    alertEl.hidden = false;
+    alertEl.textContent = message;
+    alertEl.classList.toggle('is-ok', !!ok);
+    clearTimeout(alertTimer);
+    alertTimer = setTimeout(function () { alertEl.hidden = true; }, 4200);
+  }
   async function request(path, options) {
-    const headers = Object.assign({ Accept: 'application/json' }, options && options.headers);
+    const headers = { Accept: 'application/json' };
     if (options && options.body) headers['Content-Type'] = 'application/json';
-    const current = token();
-    if (current) headers.Authorization = 'Bearer ' + current;
+    if (token()) headers.Authorization = 'Bearer ' + token();
     const res = await fetch(path, {
       method: (options && options.method) || 'GET',
       headers: headers,
       body: options && options.body ? JSON.stringify(options.body) : undefined,
     });
     let data = null;
-    try {
-      data = await res.json();
-    } catch (_) {
-      data = null;
-    }
-    return { res: res, data: data };
+    try { data = await res.json(); } catch (_) { data = null; }
+    return { ok: res.ok, status: res.status, data: data };
   }
-
   function errorMessage(result, fallback) {
-    const message = result.data && result.data.message;
-    if (typeof message === 'string' && message.trim()) return message.trim();
-    return fallback + ' (HTTP ' + result.res.status + ')';
+    return (result && result.data && result.data.message) || fallback;
   }
-
-  function showLoggedOut() {
-    gate.hidden = false;
-    consoleEl.hidden = true;
-    currentUser = null;
-    adminNav.hidden = true;
-  }
-
-  function showLoggedIn() {
-    gate.hidden = true;
-    consoleEl.hidden = false;
-  }
-
-  function showGateMode(mode) {
-    const login = mode === 'login';
-    loginForm.hidden = !login;
-    loginLinks.hidden = !login;
-    registerForm.hidden = mode !== 'register';
-    forgotPanel.hidden = mode !== 'forgot';
-    gateTitle.textContent = mode === 'register' ? '注册账号' : '进入创作台';
-    showAlert('');
-  }
-
-  function addField(dl, label, value) {
-    if (value === undefined || value === null || value === '') return;
-    const row = document.createElement('div');
-    row.className = 'field';
-    const dt = document.createElement('dt');
-    dt.textContent = label;
-    const dd = document.createElement('dd');
-    dd.textContent = String(value);
-    row.append(dt, dd);
-    dl.append(row);
-  }
-
-  function formatNumber(value) {
+  function num(value) {
     const amount = Number(value);
-    if (!Number.isFinite(amount)) return null;
-    return amount.toLocaleString('zh-CN');
+    return Number.isFinite(amount) ? amount : null;
   }
-
-  function formatCents(cents) {
-    const amount = Number(cents);
-    if (!Number.isFinite(amount)) return '';
-    const yuan = amount / 100;
-    const text = Number.isInteger(yuan) ? String(yuan) : yuan.toFixed(2);
-    return '¥' + text;
+  function formatNumber(value) {
+    const amount = num(value);
+    return amount === null ? '—' : amount.toLocaleString('zh-CN');
   }
-
   function formatWhen(value) {
-    if (value === undefined || value === null || value === '') return '';
+    if (!value) return '—';
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    const pad = function (n) { return String(n).padStart(2, '0'); };
-    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
-      + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleString('zh-CN', { hour12: false });
   }
-
-  function roleLabel(role) {
-    if (role === 'admin') return '管理员';
-    if (role === 'user') return '用户';
-    return role ? String(role) : '';
+  function planName(slug) {
+    const found = plans.find(function (plan) { return plan.slug === slug; });
+    return found ? found.name : (slug || '未知套餐');
   }
-
-  function statusLabel(status) {
-    if (status === 'paid') return '已记录';
-    if (status === 'pending') return '未完成';
-    if (status === 'failed' || status === 'cancelled' || status === 'canceled') return '未完成';
-    return status ? String(status) : '';
+  function person(row) {
+    return row.nickname || row.email || row.phone || row.account || '未命名';
   }
-
-  function formatBytes(bytes) {
-    const b = Number(bytes);
-    if (!Number.isFinite(b) || b <= 0) return '0 B';
-    if (b < 1024) return b + ' B';
-    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
-    if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + ' MB';
-    return (b / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  function fill(id, node) {
+    const slot = $(id);
+    if (!slot) return;
+    slot.replaceChildren(node);
   }
-
-  function assetTypeLabel(type) {
-    if (type === 'image') return '图片/分镜';
-    if (type === 'video') return '成片视频';
-    if (type === 'audio') return '音频/配音';
-    if (type === 'export') return '交付导出包';
-    return type ? String(type) : '媒体';
+  function empty(text) {
+    const p = document.createElement('p');
+    p.className = 'empty';
+    p.textContent = text;
+    return p;
   }
-
-  function taskTypeLabel(type) {
-    if (type === 'chapter_illustrations') return '章节绘图';
-    if (type === 'batch_dubbing') return '批量配音';
-    if (type === 'video_render') return '分镜渲染';
-    if (type === 'character_profile') return '角色肖像';
-    return type ? String(type) : '通用任务';
-  }
-
-  function taskStatusLabel(status) {
-    if (status === 'pending') return '排队中';
-    if (status === 'running' || status === 'processing') return '运行中';
-    if (status === 'completed') return '已完成';
-    if (status === 'failed') return '失败';
-    if (status === 'cancelled') return '已取消';
-    return status ? String(status) : '未知';
-  }
-
-  function progressBar(percent) {
-    const val = Math.max(0, Math.min(100, Number(percent) || 0));
-    const wrap = document.createElement('div');
-    wrap.className = 'progress-bar-inline';
-    const track = document.createElement('div');
-    track.className = 'progress-track-mini';
-    const fill = document.createElement('div');
-    fill.className = 'progress-fill-mini';
-    fill.style.width = val + '%';
-    track.append(fill);
-    const span = document.createElement('span');
-    span.style.fontSize = '12px';
-    span.style.color = '#c4c6ce';
-    span.textContent = val + '%';
-    wrap.append(track, span);
-    return wrap;
-  }
-
-  function personLabel(row) {
-    if (!row) return '';
-    if (row.email) return String(row.email);
-    if (row.phone) return String(row.phone);
-    if (row.nickname) return String(row.nickname);
-    return '';
-  }
-
-  function renderProfile(user) {
-    const dl = document.getElementById('profile-fields');
-    dl.replaceChildren();
-    addField(dl, '昵称', user.nickname);
-    addField(dl, '邮箱', user.email);
-    addField(dl, '手机', user.phone);
-    addField(dl, '角色', roleLabel(user.role));
-    addField(dl, '套餐', user.plan);
-    addField(dl, '到期', formatWhen(user.expires_at));
-    if (user.last_login_at) {
-      const loc = user.last_login_location ? ' (' + user.last_login_location + ')' : '';
-      const ip = user.last_login_ip ? ' · ' + user.last_login_ip : '';
-      addField(dl, '最后登录', formatWhen(user.last_login_at) + ip + loc);
-    }
-    document.getElementById('who-name').textContent = user.nickname || user.email || user.phone || '已登录';
-    const whoAvatarEl = document.getElementById('who-avatar');
-    if (whoAvatarEl) {
-      const charStr = user.nickname || user.email || user.phone || 'M';
-      whoAvatarEl.textContent = charStr.charAt(0).toUpperCase();
-    }
-    const whoRoleEl = document.getElementById('who-role');
-    whoRoleEl.textContent = roleLabel(user.role);
-    if (user.role === 'admin') {
-      whoRoleEl.classList.add('who-role-admin');
-    } else {
-      whoRoleEl.classList.remove('who-role-admin');
-    }
-  }
-
-  function meter(label, value, total, detail) {
-    const wrap = document.createElement('div');
-    wrap.className = 'meter';
-    const row = document.createElement('div');
-    row.className = 'meter-row';
-    const name = document.createElement('span');
-    name.textContent = label;
-    const note = document.createElement('span');
-    note.textContent = detail;
-    row.append(name, note);
-    const track = document.createElement('div');
-    track.className = 'meter-track';
-    const fill = document.createElement('div');
-    fill.className = 'meter-fill';
-    const width = total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0;
-    fill.style.width = width + '%';
-    track.append(fill);
-    wrap.append(row, track);
-    return wrap;
-  }
-
-  function renderMeters(user) {
-    const nodes = [document.getElementById('overview-meters'), document.getElementById('quota-meters')];
-    const total = Number(user.total_quota);
-    const remain = Number(user.quota);
-    nodes.forEach(function (slot) {
-      slot.replaceChildren();
-      if (!Number.isFinite(total) && !Number.isFinite(remain)) {
-        const empty = document.createElement('p');
-        empty.className = 'empty';
-        empty.textContent = '资料接口没有返回配额。';
-        slot.append(empty);
-        return;
-      }
-      const safeTotal = Number.isFinite(total) && total > 0 ? total : 0;
-      const safeRemain = Number.isFinite(remain) && remain > 0 ? remain : 0;
-      const used = safeTotal > 0 ? Math.max(0, safeTotal - safeRemain) : 0;
-      const remainText = formatNumber(safeRemain) + (safeTotal ? ' / ' + formatNumber(safeTotal) : '');
-      slot.append(
-        meter('剩余点数', safeRemain, safeTotal, remainText),
-        meter('已用点数', used, safeTotal, formatNumber(used) || '0')
-      );
-    });
-  }
-
-  function renderKey(user) {
-    const slot = document.getElementById('key-slot');
-    slot.replaceChildren();
-    const key = typeof user.new_api_key === 'string' ? user.new_api_key.trim() : '';
-    const base = typeof user.new_api_base_url === 'string' ? user.new_api_base_url.trim() : '';
-    const note = document.createElement('p');
-    note.className = 'empty';
-    if (!key || key.indexOf('sk-mock-') === 0) {
-      note.textContent = '算力通道尚未开通，接口没有返回可用密钥。';
-      const genBtn = document.createElement('button');
-      genBtn.className = 'action-btn primary';
-      genBtn.type = 'button';
-      genBtn.style.marginTop = '8px';
-      genBtn.textContent = '签发算力密钥';
-      genBtn.addEventListener('click', async function () {
-        genBtn.disabled = true;
-        genBtn.textContent = '签发中…';
-        try {
-          const res = await request('/api/auth/reset-api-key', { method: 'POST' });
-          if (res.res.ok && res.data && res.data.success && res.data.new_api_key) {
-            currentUser.new_api_key = res.data.new_api_key;
-            notify('算力密钥已成功签发', 'success');
-            renderKey(currentUser);
-          } else {
-            notify(errorMessage(res, '签发密钥失败'), 'error');
-            genBtn.disabled = false;
-            genBtn.textContent = '签发算力密钥';
-          }
-        } catch (_) {
-          notify('网络异常，请稍后重试', 'error');
-          genBtn.disabled = false;
-          genBtn.textContent = '签发算力密钥';
-        }
-      });
-      slot.append(note, genBtn);
-    } else {
-      const card = document.createElement('div');
-      card.className = 'key-display-card';
-
-      const code = document.createElement('span');
-      code.className = 'key-val';
-      code.textContent = key;
-      code.title = key;
-
-      const actGroup = document.createElement('div');
-      actGroup.className = 'key-actions';
-
-      const copyBtn = document.createElement('button');
-      copyBtn.className = 'action-btn primary';
-      copyBtn.type = 'button';
-      copyBtn.textContent = '复制密钥';
-      copyBtn.addEventListener('click', function () {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(key).then(function () {
-            copyBtn.textContent = '已复制！';
-            setTimeout(function () { copyBtn.textContent = '复制密钥'; }, 2000);
-          }).catch(function () {
-            prompt('请手动复制密钥：', key);
-          });
-        } else {
-          prompt('请手动复制密钥：', key);
-        }
-      });
-
-      const resetBtn = document.createElement('button');
-      resetBtn.className = 'action-btn';
-      resetBtn.type = 'button';
-      resetBtn.textContent = '重置密钥';
-      resetBtn.addEventListener('click', async function () {
-        if (!confirm('确定要重置当前算力密钥吗？重置后旧密钥将立即失效，需在本地客户端更新配置。')) return;
-        resetBtn.disabled = true;
-        resetBtn.textContent = '重置中…';
-        try {
-          const res = await request('/api/auth/reset-api-key', { method: 'POST' });
-          if (res.res.ok && res.data && res.data.success && res.data.new_api_key) {
-            currentUser.new_api_key = res.data.new_api_key;
-            notify('密钥已重新生成并生效', 'success');
-            renderKey(currentUser);
-          } else {
-            notify(errorMessage(res, '重置密钥失败'), 'error');
-            resetBtn.disabled = false;
-            resetBtn.textContent = '重置密钥';
-          }
-        } catch (_) {
-          notify('网络异常，请稍后重试', 'error');
-          resetBtn.disabled = false;
-          resetBtn.textContent = '重置密钥';
-        }
-      });
-
-      actGroup.append(copyBtn, resetBtn);
-      card.append(code, actGroup);
-      slot.append(card);
-    }
-    if (base) {
-      const line = document.createElement('p');
-      line.className = 'empty';
-      line.textContent = '算力地址：' + base;
-      slot.append(line);
-    }
-  }
-
-  function cycleSuffix(cycle) {
-    if (cycle === 'monthly') return ' / 月';
-    if (cycle === 'yearly') return ' / 年';
-    if (typeof cycle === 'string' && cycle.trim()) return ' / ' + cycle.trim();
-    return '';
-  }
-
-  function renderPlan(user, plansResult) {
-    const slot = document.getElementById('plan-slot');
-    slot.replaceChildren();
-    const slug = typeof user.plan === 'string' ? user.plan : '';
-    if (!plansResult.res.ok || !plansResult.data || plansResult.data.success !== true || !Array.isArray(plansResult.data.data)) {
-      const missing = document.createElement('p');
-      missing.className = 'empty';
-      missing.textContent = slug
-        ? '套餐列表暂时无法获取。当前标识：' + slug
-        : '套餐列表暂时无法获取，资料里也没有套餐标识。';
-      slot.append(missing);
-      return;
-    }
-    const match = plansResult.data.data.find(function (plan) {
-      return plan && plan.slug === slug;
-    });
-    if (!match) {
-      const missing = document.createElement('p');
-      missing.className = 'empty';
-      missing.textContent = slug ? '套餐列表里没有「' + slug + '」。' : '资料里没有套餐标识。';
-      slot.append(missing);
-      return;
-    }
-    const dl = document.createElement('dl');
-    addField(dl, '名称', match.name);
-    addField(dl, '标识', match.slug);
-    const price = formatCents(match.price_cents);
-    if (price) addField(dl, '标价', price + cycleSuffix(match.billing_cycle));
-    const points = formatNumber(match.quota_points);
-    if (points) addField(dl, '点数', points);
-    const closed = document.createElement('p');
-    closed.className = 'fine';
-    closed.textContent = '支付尚未开通，不能购买这个套餐。';
-    slot.append(dl, closed);
-  }
-
-  function cell(value) {
-    if (value === undefined || value === null || value === '') return '';
-    return String(value);
-  }
-
-  function renderTable(slot, columns, rows) {
+  function table(columns, rows) {
     const wrap = document.createElement('div');
     wrap.className = 'table-wrap';
-    const table = document.createElement('table');
+    const el = document.createElement('table');
     const head = document.createElement('tr');
     columns.forEach(function (column) {
       const th = document.createElement('th');
       th.textContent = column.label;
-      if (column.label && column.label.includes('操作')) {
-        th.className = 'action-col';
-      }
       head.append(th);
     });
     const thead = document.createElement('thead');
     thead.append(head);
-    const tbody = document.createElement('tbody');
+    const body = document.createElement('tbody');
     rows.forEach(function (row) {
       const tr = document.createElement('tr');
       columns.forEach(function (column) {
         const td = document.createElement('td');
-        if (column.label && column.label.includes('操作')) {
-          td.className = 'action-col';
-        }
         column.fill(td, row);
         tr.append(td);
       });
-      tbody.append(tr);
+      body.append(tr);
     });
-    table.append(thead, tbody);
-    wrap.append(table);
-    slot.append(wrap);
+    el.append(thead, body);
+    wrap.append(el);
+    return wrap;
+  }
+  function textCell(value) {
+    return function (td) { td.textContent = value == null || value === '' ? '—' : String(value); };
   }
 
-  function renderOrderTable(slot, rows, withUser) {
-    slot.replaceChildren();
-    if (!rows.length) {
-      const empty = document.createElement('p');
-      empty.className = 'empty-well';
-      empty.textContent = '暂无订单 · 支付未开通';
-      slot.append(empty);
-      return;
-    }
-    const columns = [];
-    if (withUser) columns.push({ label: '用户', fill: function (td, row) { td.textContent = personLabel(row); } });
-    columns.push(
-      { label: '套餐', fill: function (td, row) { td.textContent = cell(row.plan_name || row.plan_slug); } },
-      { label: '金额', fill: function (td, row) { td.textContent = formatCents(row.amount_cents); } },
-      { label: '点数', fill: function (td, row) { td.textContent = formatNumber(row.quota_points) || ''; } },
-      { label: '状态', fill: function (td, row) { td.textContent = statusLabel(row.status); } },
-      { label: '创建', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } }
-    );
-    renderTable(slot, columns, rows);
+  function showGate(mode) {
+    gate.hidden = false;
+    consoleEl.hidden = true;
+    loginForm.hidden = mode !== 'login';
+    registerForm.hidden = mode !== 'register';
+    forgotForm.hidden = mode !== 'forgot';
+    loginLinks.hidden = mode !== 'login';
+    gateTitle.textContent = mode === 'register' ? '注册账号' : '进入创作台';
   }
-
-  function renderOrders(slot, result, withUser) {
-    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
-      slot.replaceChildren();
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = errorMessage(result, '无法获取订单');
-      slot.append(note);
-      return;
-    }
-    renderOrderTable(slot, result.data.data, withUser);
-  }
-
-  function renderLedger(result) {
-    const slot = document.getElementById('ledger-slot');
-    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
-      slot.replaceChildren();
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = errorMessage(result, '无法获取流水');
-      slot.append(note);
-      return;
-    }
-    if (!result.data.data.length) {
-      slot.replaceChildren();
-      const empty = document.createElement('p');
-      empty.className = 'empty';
-      empty.textContent = '没有点数流水。';
-      slot.append(empty);
-      return;
-    }
-    slot.replaceChildren();
-    renderTable(slot, [
-      { label: '点数', fill: function (td, row) { td.textContent = formatNumber(row.amount) || cell(row.amount); } },
-      { label: '余额', fill: function (td, row) { td.textContent = formatNumber(row.balance_after) || cell(row.balance_after); } },
-      { label: '类型', fill: function (td, row) { td.textContent = cell(row.type); } },
-      { label: '备注', fill: function (td, row) { td.textContent = cell(row.remark); } },
-      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
-    ], result.data.data);
-  }
-
-  function setKpi(id, value) {
-    const el = document.getElementById(id);
-    el.textContent = value === null || value === undefined ? '—' : String(value);
-  }
-
-  function renderOverview(result) {
-    const note = document.getElementById('kpi-note');
-    if (!result.res.ok || !result.data || result.data.success !== true || !result.data.data) {
-      setKpi('kpi-users', '—');
-      setKpi('kpi-new', '—');
-      setKpi('kpi-tasks', '—');
-      note.hidden = false;
-      note.textContent = errorMessage(result, '运营数据暂时无法读取');
-      return;
-    }
-    const data = result.data.data;
-    setKpi('kpi-users', formatNumber(data.total_users) || '—');
-    setKpi('kpi-new', formatNumber(data.today_new_users) || '—');
-    setKpi('kpi-tasks', formatNumber(data.active_tasks) || '—');
-    note.hidden = true;
-    note.textContent = '';
-  }
-
-  const modalOverlay = document.getElementById('modal-overlay');
-  const modalTitle = document.getElementById('modal-title');
-  const modalBody = document.getElementById('modal-body');
-  const modalClose = document.getElementById('modal-close');
-
-  function openModal(title, contentNode) {
-    if (!modalOverlay || !modalTitle || !modalBody) return;
-    modalTitle.textContent = title;
-    modalBody.replaceChildren(contentNode);
-    modalOverlay.hidden = false;
-  }
-
-  function closeModal() {
-    if (!modalOverlay || !modalBody) return;
-    modalOverlay.hidden = true;
-    modalBody.replaceChildren();
-  }
-
-  if (modalClose) modalClose.addEventListener('click', closeModal);
-  if (modalOverlay) {
-    modalOverlay.addEventListener('click', function (e) {
-      if (e.target === modalOverlay) closeModal();
+  function showApp() {
+    alertEl.hidden = true;
+    gate.hidden = true;
+    consoleEl.hidden = false;
+    const admin = currentUser && currentUser.role === 'admin';
+    $('user-nav').hidden = surface === 'admin';
+    $('admin-nav').hidden = surface !== 'admin' || !admin;
+    $('admin-entry').hidden = !admin;
+    $('who-name').textContent = currentUser.nickname || currentUser.email || currentUser.phone || '';
+    const denied = surface === 'admin' && !admin;
+    $('admin-denied').hidden = !denied;
+    document.querySelectorAll('[data-panel]').forEach(function (panel) {
+      panel.hidden = true;
     });
+    if (denied) return;
+    const stored = sessionStorage.getItem('metaarc_view_' + surface);
+    const allowed = surface === 'admin' ? ADMIN_VIEWS : USER_VIEWS;
+    showView(allowed.indexOf(stored) >= 0 ? stored : allowed[0]);
   }
-
-  let selectedUserIds = new Set();
-  let latestLoadedUsers = [];
-
-  function updateBatchBar() {
-    const bar = document.getElementById('users-batch-bar');
-    const countEl = document.getElementById('batch-selected-count');
-    if (!bar) return;
-    if (selectedUserIds.size > 0) {
-      bar.hidden = false;
-      if (countEl) countEl.textContent = '已选择 ' + selectedUserIds.size + ' 位创作者';
-    } else {
-      bar.hidden = true;
-    }
-  }
-
-  function renderUsers(result) {
-    const slot = document.getElementById('users-slot');
-    slot.replaceChildren();
-    selectedUserIds.clear();
-    updateBatchBar();
-
-    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = errorMessage(result, '无法获取用户');
-      slot.append(note);
-      return;
-    }
-    latestLoadedUsers = result.data.data;
-    if (!latestLoadedUsers.length) {
-      const empty = document.createElement('p');
-      empty.className = 'empty';
-      empty.textContent = '没有匹配的用户。';
-      slot.append(empty);
-      return;
-    }
-
-    renderTable(slot, [
-      {
-        label: '选',
-        fill: function (td, row) {
-          td.className = 'table-check-col';
-          const cb = document.createElement('input');
-          cb.type = 'checkbox';
-          cb.className = 'user-row-check';
-          cb.value = row.id;
-          cb.checked = selectedUserIds.has(row.id);
-          cb.addEventListener('change', function () {
-            if (cb.checked) {
-              selectedUserIds.add(row.id);
-            } else {
-              selectedUserIds.delete(row.id);
-            }
-            updateBatchBar();
-          });
-          td.append(cb);
-        },
-      },
-      {
-        label: '用户标识',
-        fill: function (td, row) {
-          const wrap = document.createElement('div');
-          wrap.className = 'cell-user-profile';
-
-          const avatar = document.createElement('span');
-          avatar.className = 'user-avatar-mini';
-          const nameStr = row.nickname || row.email || row.phone || '创';
-          avatar.textContent = nameStr.charAt(0).toUpperCase();
-
-          const meta = document.createElement('div');
-          meta.className = 'user-meta-wrap';
-
-          const title = document.createElement('span');
-          title.className = 'user-primary-name';
-          title.textContent = personLabel(row) || '—';
-
-          if (row.nickname && (row.email || row.phone)) {
-            const sub = document.createElement('span');
-            sub.className = 'user-sub-id';
-            sub.textContent = row.email || row.phone;
-            meta.append(title, sub);
-          } else {
-            meta.append(title);
-          }
-          wrap.append(avatar, meta);
-          td.append(wrap);
-        },
-      },
-      {
-        label: '角色/状态',
-        fill: function (td, row) {
-          const isSuspended = row.status === 'suspended';
-          const isAdmin = row.role === 'admin';
-          const badge = document.createElement('span');
-          badge.className = 'badge-status' + (isSuspended ? ' status-suspended' : (isAdmin ? ' role-admin' : ''));
-
-          const dot = document.createElement('i');
-          dot.className = isSuspended ? 'dot danger' : (isAdmin ? 'dot warn' : 'dot');
-          dot.style.marginRight = '0';
-
-          const labelText = (isSuspended ? '已封禁 · ' : '') + roleLabel(row.role);
-          badge.append(dot, document.createTextNode(labelText));
-
-          if (row.plan) {
-            const planTag = document.createElement('span');
-            planTag.className = 'badge-plan-tag';
-            planTag.textContent = row.plan;
-            badge.append(planTag);
-          }
-
-          td.append(badge);
-        },
-      },
-      { label: '配额', fill: function (td, row) { td.textContent = formatNumber(row.quota) || cell(row.quota); } },
-      { label: '注册时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
-      {
-        label: '最近登录与 IP 归属',
-        fill: function (td, row) {
-          if (!row.last_login_at && !row.last_login_ip) {
-            td.textContent = '尚未登录';
-            td.className = 'fine';
-            return;
-          }
-          const wrap = document.createElement('div');
-          wrap.className = 'cell-ip-wrap';
-
-          const ipSpan = document.createElement('span');
-          ipSpan.className = 'cell-ip-addr';
-          ipSpan.textContent = row.last_login_ip || '未知 IP';
-
-          const locSpan = document.createElement('span');
-          locSpan.className = 'cell-ip-loc';
-          locSpan.textContent = row.last_login_location || '未解析节点';
-
-          const timeSpan = document.createElement('span');
-          timeSpan.className = 'cell-ip-time';
-          timeSpan.textContent = formatWhen(row.last_login_at);
-
-          wrap.append(ipSpan, locSpan, timeSpan);
-          td.append(wrap);
-        },
-      },
-      {
-        label: '管理操作',
-        fill: function (td, row) {
-          const isSuspended = row.status === 'suspended';
-
-          // 1. 调账
-          const onAdjustQuota = async function () {
-            const raw = prompt('请输入给用户「' + (personLabel(row) || row.id) + '」调整的算力点数（正数加点，负数扣点）：', '500');
-            if (raw === null) return;
-            const amount = parseFloat(raw.trim());
-            if (!Number.isFinite(amount) || amount === 0) {
-              alert('请输入有效的非零数值');
-              return;
-            }
-            const reason = prompt('请输入调账原因或备注：', '管理员手工调账') || '';
-            const res = await request('/api/admin/users/' + row.id + '/adjust-quota', {
-              method: 'POST',
-              body: { amount: amount, reason: reason },
-            });
-            if (res.res.ok && res.data && res.data.success) {
-              showAlert('调账成功！用户新余额：' + res.data.user.quota);
-              loadUsers();
-            } else {
-              showAlert(errorMessage(res, '调账失败'));
-            }
-          };
-
-          // 2. 套餐方案
-          const onSetPlan = async function () {
-            const rawPlan = prompt('请选择新套餐（free / creator / pro / studio）：', row.plan || 'free');
-            if (!rawPlan) return;
-            const newPlan = rawPlan.trim().toLowerCase();
-            if (['free', 'creator', 'pro', 'studio'].indexOf(newPlan) < 0) {
-              alert('无效套餐标识，只能填 free / creator / pro / studio');
-              return;
-            }
-            const res = await request('/api/admin/users/' + row.id + '/set-plan', {
-              method: 'POST',
-              body: { plan: newPlan },
-            });
-            if (res.res.ok && res.data && res.data.success) {
-              showAlert('套餐设置成功！');
-              loadUsers();
-            } else {
-              showAlert(errorMessage(res, '套餐设置失败'));
-            }
-          };
-
-          // 3. 配额流水
-          const onShowLogs = async function () {
-            const res = await request('/api/admin/users/' + row.id + '/quota-logs');
-            if (!res.res.ok || !res.data || !res.data.success) {
-              showAlert(errorMessage(res, '无法获取流水记录'));
-              return;
-            }
-            const logs = Array.isArray(res.data.data) ? res.data.data : [];
-            const container = document.createElement('div');
-            if (!logs.length) {
-              const p = document.createElement('p');
-              p.className = 'empty';
-              p.textContent = '该用户暂无配额流水记录。';
-              container.append(p);
-            } else {
-              renderTable(container, [
-                { label: '变动点数', fill: function (t, log) { t.textContent = formatNumber(log.amount) || cell(log.amount); } },
-                { label: '变动后余额', fill: function (t, log) { t.textContent = formatNumber(log.balance_after) || cell(log.balance_after); } },
-                { label: '类型', fill: function (t, log) { t.textContent = cell(log.type); } },
-                { label: '备注', fill: function (t, log) { t.textContent = cell(log.remark); } },
-                { label: '时间', fill: function (t, log) { t.textContent = formatWhen(log.created_at); } },
-              ], logs);
-            }
-            openModal('用户算力流水 — ' + (personLabel(row) || row.id), container);
-          };
-
-          // 4. 重置密码
-          const onResetPwd = async function () {
-            if (!confirm('确定要重置用户「' + (personLabel(row) || row.id) + '」的密码吗？')) return;
-            const res = await request('/api/admin/users/' + row.id + '/reset-password', { method: 'POST' });
-            if (res.res.ok && res.data && res.data.success) {
-              const tempPwd = res.data.temporary_password || res.data.newPassword;
-              prompt('密码已重置！请妥善保存临时密码并通知用户：', tempPwd);
-            } else {
-              showAlert(errorMessage(res, '密码重置失败'));
-            }
-          };
-
-          // 5. 封禁/解封
-          const onToggleStatus = async function () {
-            const nextStatus = isSuspended ? 'active' : 'suspended';
-            const actionText = isSuspended ? '解封' : '封禁';
-            if (!confirm('确定要' + actionText + '用户「' + (personLabel(row) || row.id) + '」吗？')) return;
-            const res = await request('/api/admin/users/' + row.id + '/set-status', {
-              method: 'POST',
-              body: { status: nextStatus },
-            });
-            if (res.res.ok && res.data && res.data.success) {
-              showAlert('用户状态已变更为：' + (nextStatus === 'active' ? '正常' : '已封禁'));
-              loadUsers();
-            } else {
-              showAlert(errorMessage(res, '更新用户状态失败'));
-            }
-          };
-
-          // 6. 登录安全审计
-          const onShowLoginAuditRow = async function () {
-            const res = await request('/api/admin/users/' + row.id + '/login-logs');
-            if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
-              showAlert(errorMessage(res, '无法读取登录日志'));
-              return;
-            }
-            const userLogs = res.data.data;
-            if (!userLogs.length) {
-              showAlert('该用户暂无登录审计记录');
-              return;
-            }
-            const auditWrap = document.createElement('div');
-            renderTable(auditWrap, [
-              { label: '登录时间', fill: function (t, r) { t.textContent = formatWhen(r.created_at); } },
-              {
-                label: '状态',
-                fill: function (t, r) {
-                  const dot = document.createElement('i');
-                  dot.className = r.status === 'success' ? 'dot' : 'dot danger';
-                  t.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
-                },
-              },
-              { label: 'IP', fill: function (t, r) { t.textContent = r.ip || '—'; } },
-              { label: '地理位置', fill: function (t, r) { t.textContent = r.ip_location || '—'; } },
-              { label: '客户端', fill: function (t, r) { t.textContent = r.user_agent ? (r.user_agent.substring(0, 30) + '…') : '—'; } },
-            ], userLogs);
-            openModal('登录安全审计历史 — ' + (personLabel(row) || row.id), auditWrap);
-          };
-
-          // 7. 编辑资料
-          const onEditProfile = function () {
-            const wrap = document.createElement('div');
-            const form = document.createElement('form');
-            form.className = 'profile-form';
-
-            const nameLabel = document.createElement('label');
-            nameLabel.textContent = '创作者昵称';
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.value = row.nickname || '';
-
-            const phoneLabel = document.createElement('label');
-            phoneLabel.textContent = '绑定手机号';
-            const phoneInput = document.createElement('input');
-            phoneInput.type = 'tel';
-            phoneInput.value = row.phone || '';
-
-            const emailLabel = document.createElement('label');
-            emailLabel.textContent = '登录邮箱';
-            const emailInput = document.createElement('input');
-            emailInput.type = 'email';
-            emailInput.value = row.email || '';
-            emailInput.required = true;
-
-            const btnSubmit = document.createElement('button');
-            btnSubmit.type = 'submit';
-            btnSubmit.className = 'action-btn primary';
-            btnSubmit.style.marginTop = '14px';
-            btnSubmit.textContent = '保存创作者资料';
-
-            form.append(nameLabel, nameInput, phoneLabel, phoneInput, emailLabel, emailInput, btnSubmit);
-            form.addEventListener('submit', async function (e) {
-              e.preventDefault();
-              btnSubmit.disabled = true;
-              btnSubmit.textContent = '保存中…';
-              const res = await request('/api/admin/users/' + row.id + '/update-profile', {
-                method: 'POST',
-                body: {
-                  nickname: nameInput.value.trim(),
-                  phone: phoneInput.value.trim(),
-                  email: emailInput.value.trim(),
-                },
-              });
-              if (res.res.ok && res.data && res.data.success) {
-                showAlert('创作者资料更新成功！');
-                closeModal();
-                loadUsers();
-              } else {
-                showAlert(errorMessage(res, '更新资料失败'));
-                btnSubmit.disabled = false;
-                btnSubmit.textContent = '保存创作者资料';
-              }
-            });
-            wrap.append(form);
-            openModal('编辑创作者资料 — ' + (personLabel(row) || row.id), wrap);
-          };
-
-          // 8. 变更角色 (User / Admin)
-          const onSetRole = async function () {
-            const nextRole = row.role === 'admin' ? 'user' : 'admin';
-            const roleText = nextRole === 'admin' ? '管理员 (admin)' : '普通创作者 (user)';
-            if (!confirm('确定将用户「' + (personLabel(row) || row.id) + '」的角色变更为【' + roleText + '】吗？')) return;
-            const res = await request('/api/admin/users/' + row.id + '/set-role', {
-              method: 'POST',
-              body: { role: nextRole },
-            });
-            if (res.res.ok && res.data && res.data.success) {
-              showAlert('角色权限已更新为：' + roleText);
-              loadUsers();
-            } else {
-              showAlert(errorMessage(res, '变更角色失败'));
-            }
-          };
-
-          // 9. 轮换重置算力 Key
-          const onResetApiKey = async function () {
-            if (!confirm('确定为用户「' + (personLabel(row) || row.id) + '」签发新的算力 Key 吗？旧 Key 将立即失效！')) return;
-            const res = await request('/api/admin/users/' + row.id + '/reset-api-key', {
-              method: 'POST',
-            });
-            if (res.res.ok && res.data && res.data.success) {
-              prompt('新算力 Key 签发成功，请复制保存：', res.data.apiKey);
-              loadUsers();
-            } else {
-              showAlert(errorMessage(res, '重置算力Key失败'));
-            }
-          };
-
-          // 10. 用户生成任务穿透
-          const onShowUserTasks = async function () {
-            const res = await request('/api/admin/tasks?userId=' + row.id);
-            if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
-              showAlert(errorMessage(res, '无法读取该用户的任务列表'));
-              return;
-            }
-            const tasks = res.data.data;
-            const wrap = document.createElement('div');
-            if (!tasks.length) {
-              const p = document.createElement('p');
-              p.className = 'empty';
-              p.textContent = '该创作者暂无提交的任务。';
-              wrap.append(p);
-            } else {
-              renderTable(wrap, [
-                { label: '任务类型', fill: function (t, r) { t.textContent = taskTypeLabel(r.task_type); } },
-                {
-                  label: '状态',
-                  fill: function (t, r) {
-                    const dot = document.createElement('i');
-                    dot.className = r.status === 'failed' ? 'dot danger' : (r.status === 'completed' ? 'dot' : 'dot warn');
-                    t.append(dot, document.createTextNode(taskStatusLabel(r.status)));
-                  },
-                },
-                {
-                  label: '提示词 / 输入',
-                  fill: function (t, r) {
-                    t.className = 'col-truncate';
-                    t.title = r.prompt || '';
-                    t.textContent = r.prompt ? (r.prompt.substring(0, 36) + '…') : '—';
-                  },
-                },
-                { label: '耗时', fill: function (t, r) { t.textContent = r.duration_ms ? (r.duration_ms + 'ms') : '—'; } },
-                { label: '提交时间', fill: function (t, r) { t.textContent = formatWhen(r.created_at); } },
-              ], tasks);
-            }
-            openModal('创作者生成任务 — ' + (personLabel(row) || row.id), wrap);
-          };
-
-          // 11. 用户媒体资产穿透
-          const onShowUserMedia = async function () {
-            const res = await request('/api/admin/media?userId=' + row.id);
-            if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
-              showAlert(errorMessage(res, '无法读取该用户的资产列表'));
-              return;
-            }
-            const mediaList = res.data.data;
-            const wrap = document.createElement('div');
-            if (!mediaList.length) {
-              const p = document.createElement('p');
-              p.className = 'empty';
-              p.textContent = '该创作者暂无云端资产交付物。';
-              wrap.append(p);
-            } else {
-              renderTable(wrap, [
-                { label: '资产类型', fill: function (t, r) { t.textContent = assetTypeLabel(r.asset_type); } },
-                { label: '大小', fill: function (t, r) { t.textContent = formatBytes(r.byte_size); } },
-                { label: '格式', fill: function (t, r) { t.textContent = cell(r.mime_type || r.asset_type); } },
-                {
-                  label: '存储 Key',
-                  fill: function (t, r) {
-                    t.className = 'mono col-truncate';
-                    t.title = r.storage_key || '';
-                    t.textContent = cell(r.storage_key);
-                  },
-                },
-                { label: '归档时间', fill: function (t, r) { t.textContent = formatWhen(r.created_at); } },
-                {
-                  label: '操作',
-                  fill: function (t, r) {
-                    if (r.cdn_url) {
-                      const link = document.createElement('a');
-                      link.className = 'action-btn';
-                      link.href = r.cdn_url;
-                      link.target = '_blank';
-                      link.rel = 'noopener noreferrer';
-                      link.textContent = '查看';
-                      t.append(link);
-                    }
-                  },
-                },
-              ], mediaList);
-            }
-            openModal('创作者云端资产 — ' + (personLabel(row) || row.id), wrap);
-          };
-
-          // 详情弹窗
-          const btnDetails = document.createElement('button');
-          btnDetails.className = 'action-btn';
-          btnDetails.type = 'button';
-          btnDetails.textContent = '详情';
-          btnDetails.addEventListener('click', function () {
-            const wrap = document.createElement('div');
-            const dl = document.createElement('dl');
-            addField(dl, '用户 ID', row.id);
-            addField(dl, '登录邮箱', row.email || '—');
-            addField(dl, '绑定手机', row.phone || '—');
-            addField(dl, '创作者昵称', row.nickname || '—');
-            addField(dl, '角色权限', roleLabel(row.role));
-            addField(dl, '账号状态', row.status === 'suspended' ? '已封禁' : '正常');
-            addField(dl, '当前套餐', row.plan || 'free');
-            addField(dl, '可用算力', formatNumber(row.quota) || cell(row.quota));
-            addField(dl, '累计配额', formatNumber(row.total_quota) || cell(row.total_quota));
-            if (row.new_api_key) addField(dl, '算力 Key', row.new_api_key.substring(0, 12) + '******');
-            if (row.last_login_at) {
-              const loc = row.last_login_location ? ' (' + row.last_login_location + ')' : '';
-              const ip = row.last_login_ip ? ' · ' + row.last_login_ip : '';
-              addField(dl, '最后登录', formatWhen(row.last_login_at) + ip + loc);
-            }
-            addField(dl, '注册时间', formatWhen(row.created_at));
-            wrap.append(dl);
-
-            const modalActions = document.createElement('div');
-            modalActions.style.marginTop = '14px';
-            modalActions.style.display = 'flex';
-            modalActions.style.gap = '8px';
-            modalActions.style.flexWrap = 'wrap';
-
-            const mBtnEdit = document.createElement('button');
-            mBtnEdit.className = 'action-btn';
-            mBtnEdit.type = 'button';
-            mBtnEdit.textContent = '编辑资料';
-            mBtnEdit.addEventListener('click', onEditProfile);
-
-            const mBtnPlan = document.createElement('button');
-            mBtnPlan.className = 'action-btn';
-            mBtnPlan.type = 'button';
-            mBtnPlan.textContent = '设置套餐';
-            mBtnPlan.addEventListener('click', onSetPlan);
-
-            const mBtnQuota = document.createElement('button');
-            mBtnQuota.className = 'action-btn primary';
-            mBtnQuota.type = 'button';
-            mBtnQuota.textContent = '调整配额';
-            mBtnQuota.addEventListener('click', onAdjustQuota);
-
-            const mBtnRole = document.createElement('button');
-            mBtnRole.className = 'action-btn';
-            mBtnRole.type = 'button';
-            mBtnRole.textContent = row.role === 'admin' ? '取消管理员' : '设为管理员';
-            mBtnRole.addEventListener('click', onSetRole);
-
-            const mBtnResetKey = document.createElement('button');
-            mBtnResetKey.className = 'action-btn';
-            mBtnResetKey.type = 'button';
-            mBtnResetKey.textContent = '轮换Key';
-            mBtnResetKey.addEventListener('click', onResetApiKey);
-
-            const mBtnTasks = document.createElement('button');
-            mBtnTasks.className = 'action-btn';
-            mBtnTasks.type = 'button';
-            mBtnTasks.textContent = '生成任务';
-            mBtnTasks.addEventListener('click', onShowUserTasks);
-
-            const mBtnMedia = document.createElement('button');
-            mBtnMedia.className = 'action-btn';
-            mBtnMedia.type = 'button';
-            mBtnMedia.textContent = '云端资产';
-            mBtnMedia.addEventListener('click', onShowUserMedia);
-
-            const mBtnLogs = document.createElement('button');
-            mBtnLogs.className = 'action-btn';
-            mBtnLogs.type = 'button';
-            mBtnLogs.textContent = '算力流水';
-            mBtnLogs.addEventListener('click', onShowLogs);
-
-            const mBtnReset = document.createElement('button');
-            mBtnReset.className = 'action-btn';
-            mBtnReset.type = 'button';
-            mBtnReset.textContent = '重置密码';
-            mBtnReset.addEventListener('click', onResetPwd);
-
-            const mBtnStatus = document.createElement('button');
-            mBtnStatus.className = isSuspended ? 'action-btn primary' : 'action-btn danger';
-            mBtnStatus.type = 'button';
-            mBtnStatus.textContent = isSuspended ? '解封账号' : '封禁账号';
-            mBtnStatus.addEventListener('click', onToggleStatus);
-
-            const btnLoginAudit = document.createElement('button');
-            btnLoginAudit.className = 'action-btn';
-            btnLoginAudit.type = 'button';
-            btnLoginAudit.textContent = '登录日志';
-            btnLoginAudit.addEventListener('click', onShowLoginAuditRow);
-
-            modalActions.append(
-              mBtnEdit,
-              mBtnPlan,
-              mBtnQuota,
-              mBtnRole,
-              mBtnResetKey,
-              mBtnTasks,
-              mBtnMedia,
-              mBtnLogs,
-              mBtnReset,
-              mBtnStatus,
-              btnLoginAudit
-            );
-            wrap.append(modalActions);
-            openModal('创作者档案详情 — ' + (personLabel(row) || row.id), wrap);
-          });
-
-          // 1. 调账按钮（核心直接操作）
-          const btnQuota = document.createElement('button');
-          btnQuota.className = 'action-btn primary';
-          btnQuota.type = 'button';
-          btnQuota.textContent = '调账';
-          btnQuota.addEventListener('click', onAdjustQuota);
-
-          // 2. 套餐按钮（直接显示在表格行上）
-          const btnPlan = document.createElement('button');
-          btnPlan.className = 'action-btn';
-          btnPlan.type = 'button';
-          btnPlan.textContent = '套餐';
-          btnPlan.title = '修改用户套餐方案';
-          btnPlan.addEventListener('click', onSetPlan);
-
-          // 3. 流水按钮（直接显示在表格行上）
-          const btnLogs = document.createElement('button');
-          btnLogs.className = 'action-btn';
-          btnLogs.type = 'button';
-          btnLogs.textContent = '流水';
-          btnLogs.title = '查看用户算力流水记录';
-          btnLogs.addEventListener('click', onShowLogs);
-
-          // 4. 重置密码按钮（直接显示在表格行上）
-          const btnReset = document.createElement('button');
-          btnReset.className = 'action-btn';
-          btnReset.type = 'button';
-          btnReset.textContent = '重置';
-          btnReset.title = '重置用户密码';
-          btnReset.addEventListener('click', onResetPwd);
-
-          // 5. 封禁/解封按钮（直接显示在表格行上）
-          const btnStatus = document.createElement('button');
-          btnStatus.className = isSuspended ? 'action-btn primary' : 'action-btn danger';
-          btnStatus.type = 'button';
-          btnStatus.textContent = isSuspended ? '解封' : '封禁';
-          btnStatus.title = isSuspended ? '解封账号' : '封禁账号';
-          btnStatus.addEventListener('click', onToggleStatus);
-
-          // 6. 审计按钮（直接显示在表格行上）
-          const btnAudit = document.createElement('button');
-          btnAudit.className = 'action-btn';
-          btnAudit.type = 'button';
-          btnAudit.textContent = '审计';
-          btnAudit.title = '查看登录安全与IP审计历史';
-          btnAudit.addEventListener('click', onShowLoginAuditRow);
-
-          // 更多操作下拉菜单（收纳编辑资料、变更角色、换Key、任务与资产深钻）
-          const moreWrap = document.createElement('div');
-          moreWrap.className = 'action-more-wrap';
-
-          const btnMore = document.createElement('button');
-          btnMore.className = 'action-btn';
-          btnMore.type = 'button';
-          btnMore.textContent = '更多 ▾';
-          btnMore.title = '编辑资料、权限变更、换Key、查看生成任务与资产交付物';
-
-          const menu = document.createElement('div');
-          menu.className = 'action-dropdown-menu';
-
-          btnMore.addEventListener('click', function (e) {
-            e.stopPropagation();
-            document.querySelectorAll('.action-dropdown-menu.show').forEach(function (m) {
-              if (m !== menu) m.classList.remove('show');
-            });
-            menu.classList.toggle('show');
-          });
-
-          const itemEdit = document.createElement('button');
-          itemEdit.className = 'dropdown-item';
-          itemEdit.type = 'button';
-          itemEdit.textContent = '编辑资料';
-          itemEdit.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onEditProfile();
-          });
-
-          const itemRole = document.createElement('button');
-          itemRole.className = 'dropdown-item';
-          itemRole.type = 'button';
-          itemRole.textContent = row.role === 'admin' ? '取消管理员' : '设为管理员';
-          itemRole.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onSetRole();
-          });
-
-          const itemResetKey = document.createElement('button');
-          itemResetKey.className = 'dropdown-item';
-          itemResetKey.type = 'button';
-          itemResetKey.textContent = '轮换算力Key';
-          itemResetKey.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onResetApiKey();
-          });
-
-          const itemTasks = document.createElement('button');
-          itemTasks.className = 'dropdown-item';
-          itemTasks.type = 'button';
-          itemTasks.textContent = '查看TA的任务';
-          itemTasks.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onShowUserTasks();
-          });
-
-          const itemMedia = document.createElement('button');
-          itemMedia.className = 'dropdown-item';
-          itemMedia.type = 'button';
-          itemMedia.textContent = '查看TA的资产';
-          itemMedia.addEventListener('click', function () {
-            menu.classList.remove('show');
-            onShowUserMedia();
-          });
-
-          menu.append(
-            itemEdit,
-            itemRole,
-            itemResetKey,
-            itemTasks,
-            itemMedia
-          );
-          moreWrap.append(btnMore, menu);
-
-          const actionWrap = document.createElement('div');
-          actionWrap.className = 'action-cell-wrap';
-          actionWrap.append(btnDetails, btnQuota, btnPlan, btnLogs, btnReset, btnStatus, btnAudit, moreWrap);
-          td.append(actionWrap);
-        },
-      },
-    ], latestLoadedUsers);
-  }
-
-  function renderHealth(healthResult, sysResult) {
-    const slot = document.getElementById('health-slot');
-    slot.replaceChildren();
-    const ok = healthResult && healthResult.res.ok && healthResult.data && healthResult.data.status === 'ok';
-    const dl = document.createElement('dl');
-    addField(dl, '基础服务', ok ? '正常运行' : '不可用');
-    addField(dl, '数据库连接', ok && healthResult.data.db === 'connected' ? '已连接' : '未连接');
-    if (healthResult && healthResult.data && healthResult.data.timestamp) {
-      addField(dl, '探针时间', formatWhen(healthResult.data.timestamp));
-    }
-
-    if (sysResult && sysResult.res.ok && sysResult.data && sysResult.data.success && sysResult.data.data) {
-      const sys = sysResult.data.data;
-      addField(dl, '主机平台', (sys.platform || '') + ' ' + (sys.arch || '') + ' (Node ' + (sys.node_version || '') + ')');
-      addField(dl, '运行时间', sys.uptime_formatted);
-      if (sys.memory_mb) {
-        addField(dl, '内存使用', '物理占用 ' + sys.memory_mb.rss + ' MB / 堆内存已用 ' + sys.memory_mb.heap_used + ' MB');
-      }
-      if (sys.db_pool) {
-        addField(dl, '连接池状态', '总计 ' + sys.db_pool.total + ' / 空闲 ' + sys.db_pool.idle + ' / 等待 ' + sys.db_pool.waiting);
-      }
-      if (sys.ai_gateway) {
-        const gwText = sys.ai_gateway.status === 'connected'
-          ? '正常 (已连接)'
-          : (sys.ai_gateway.configured ? '离线 (' + sys.ai_gateway.status + ')' : '未配置');
-        addField(dl, 'AI 算力通道', gwText);
-      }
-      if (sys.s3) {
-        const s3Text = sys.s3.configured
-          ? '已就绪 (桶: ' + sys.s3.bucket + ' · ' + sys.s3.region + ')'
-          : '默认离线 (桶: ' + sys.s3.bucket + ')';
-        addField(dl, '对象存储 (S3)', s3Text);
-      }
-    }
-
-    slot.append(dl);
-    if (!ok) {
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = '健康探针没有返回可用状态。';
-      slot.append(note);
-    }
-  }
-
-  function updateLabel(data) {
-    if (!data || data.has_update !== true) {
-      return (data && typeof data.message === 'string' && data.message.trim()) ? data.message.trim() : '尚未发布';
-    }
-    const parts = [];
-    if (data.version) parts.push('版本 ' + data.version);
-    if (data.channel) parts.push(data.channel);
-    if (data.file_size) parts.push(formatBytes(data.file_size));
-    return parts.length ? parts.join(' · ') : '清单返回了更新';
-  }
-
-  function renderUpdates(rows) {
-    const slot = document.getElementById('updates-slot');
-    slot.replaceChildren();
-    const dl = document.createElement('dl');
-    rows.forEach(function (row) {
-      const dt = document.createElement('dt');
-      dt.textContent = row.name;
-      const dd = document.createElement('dd');
-      const textSpan = document.createElement('span');
-      textSpan.textContent = row.ok ? updateLabel(row.data) : '清单暂时无法读取';
-      dd.append(textSpan);
-      if (row.ok && row.data && row.data.download_url) {
-        const dlLink = document.createElement('a');
-        dlLink.className = 'action-btn primary';
-        dlLink.style.marginLeft = '12px';
-        dlLink.href = row.data.download_url;
-        dlLink.target = '_blank';
-        dlLink.rel = 'noopener noreferrer';
-        dlLink.textContent = '下载安装包';
-        dd.append(dlLink);
-      }
-      dl.append(dt, dd);
-    });
-    slot.append(dl);
-  }
-
-  function renderUserTasks(result) {
-    const slot = document.getElementById('user-tasks-slot');
-    if (!slot) return;
-    slot.replaceChildren();
-    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = errorMessage(result, '无法获取创作任务记录');
-      slot.append(note);
-      return;
-    }
-    if (!result.data.data.length) {
-      const empty = document.createElement('p');
-      empty.className = 'empty';
-      empty.textContent = '暂无云端 AI 渲染任务，在桌面端发起生成后将在此展示进度。';
-      slot.append(empty);
-      return;
-    }
-    renderTable(slot, [
-      { label: '任务类型', fill: function (td, row) { td.textContent = taskTypeLabel(row.task_type); } },
-      { label: '进度', fill: function (td, row) { td.append(progressBar(row.progress)); } },
-      {
-        label: '状态',
-        fill: function (td, row) {
-          const dot = document.createElement('i');
-          dot.className = row.status === 'failed' ? 'dot danger' : (row.status === 'completed' ? 'dot' : 'dot warn');
-          td.append(dot, document.createTextNode(taskStatusLabel(row.status)));
-        },
-      },
-      { label: '创建时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
-      {
-        label: '操作',
-        fill: function (td, row) {
-          if (row.status === 'pending' || row.status === 'running' || row.status === 'processing') {
-            const btnCancel = document.createElement('button');
-            btnCancel.className = 'action-btn danger';
-            btnCancel.type = 'button';
-            btnCancel.textContent = '取消';
-            btnCancel.addEventListener('click', async function () {
-              if (!confirm('确定要取消该任务吗？')) return;
-              btnCancel.disabled = true;
-              btnCancel.textContent = '取消中…';
-              try {
-                const res = await request('/api/tasks/' + encodeURIComponent(row.id) + '/cancel', { method: 'POST' });
-                if (res.res.ok && res.data && res.data.success) {
-                  notify('任务已取消', 'success');
-                  const refreshed = await request('/api/tasks/list');
-                  renderUserTasks(refreshed);
-                } else {
-                  notify(errorMessage(res, '取消任务失败'), 'error');
-                  btnCancel.disabled = false;
-                  btnCancel.textContent = '取消';
-                }
-              } catch (_) {
-                notify('网络异常，请稍后重试', 'error');
-                btnCancel.disabled = false;
-                btnCancel.textContent = '取消';
-              }
-            });
-            td.append(btnCancel);
-          } else {
-            const btnDel = document.createElement('button');
-            btnDel.className = 'action-btn';
-            btnDel.type = 'button';
-            btnDel.textContent = '清除';
-            btnDel.addEventListener('click', async function () {
-              if (!confirm('确定清除该任务历史记录吗？')) return;
-              btnDel.disabled = true;
-              btnDel.textContent = '清除中…';
-              try {
-                const res = await request('/api/tasks/' + encodeURIComponent(row.id), { method: 'DELETE' });
-                if (res.res.ok && res.data && res.data.success) {
-                  notify('任务记录已清除', 'success');
-                  const refreshed = await request('/api/tasks/list');
-                  renderUserTasks(refreshed);
-                } else {
-                  notify(errorMessage(res, '清除失败'), 'error');
-                  btnDel.disabled = false;
-                  btnDel.textContent = '清除';
-                }
-              } catch (_) {
-                notify('网络异常，请稍后重试', 'error');
-                btnDel.disabled = false;
-                btnDel.textContent = '清除';
-              }
-            });
-            td.append(btnDel);
-          }
-          const btnDetail = document.createElement('button');
-          btnDetail.className = 'action-btn';
-          btnDetail.type = 'button';
-          btnDetail.textContent = '透视';
-          btnDetail.addEventListener('click', function () {
-            const wrap = document.createElement('div');
-            const dl = document.createElement('dl');
-            addField(dl, '任务 ID', row.id);
-            addField(dl, '任务类型', taskTypeLabel(row.task_type));
-            addField(dl, '状态', taskStatusLabel(row.status));
-            addField(dl, '进度', row.progress + '%');
-            if (row.duration_ms) {
-              addField(dl, '执行耗时', (row.duration_ms / 1000).toFixed(1) + ' 秒');
-            }
-            if (row.prompt) {
-              const dt = document.createElement('dt');
-              dt.textContent = 'AI 提示词';
-              const dd = document.createElement('dd');
-              const pre = document.createElement('pre');
-              pre.style.whiteSpace = 'pre-wrap';
-              pre.style.background = 'rgba(0,0,0,0.3)';
-              pre.style.padding = '8px';
-              pre.style.borderRadius = '4px';
-              pre.textContent = row.prompt;
-              const copyPromptBtn = document.createElement('button');
-              copyPromptBtn.className = 'action-btn';
-              copyPromptBtn.type = 'button';
-              copyPromptBtn.textContent = '复制提示词';
-              copyPromptBtn.style.marginTop = '6px';
-              copyPromptBtn.addEventListener('click', function () {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(row.prompt);
-                  copyPromptBtn.textContent = '已复制！';
-                  setTimeout(function () { copyPromptBtn.textContent = '复制提示词'; }, 2000);
-                } else {
-                  prompt('请复制提示词：', row.prompt);
-                }
-              });
-              dd.append(pre, copyPromptBtn);
-              dl.append(dt, dd);
-            }
-            if (row.output_payload && Object.keys(row.output_payload).length > 0) {
-              const dtOut = document.createElement('dt');
-              dtOut.textContent = '产出交付物';
-              const ddOut = document.createElement('dd');
-              const preOut = document.createElement('pre');
-              preOut.style.whiteSpace = 'pre-wrap';
-              preOut.style.background = 'rgba(0,0,0,0.3)';
-              preOut.style.padding = '8px';
-              preOut.style.borderRadius = '4px';
-              preOut.textContent = JSON.stringify(row.output_payload, null, 2);
-              ddOut.append(preOut);
-              dl.append(dtOut, ddOut);
-            }
-            wrap.append(dl);
-            openModal('任务透视详情 — ' + row.id, wrap);
-          });
-          td.append(btnDetail);
-
-          if (row.error_message) {
-            const btnErr = document.createElement('button');
-            btnErr.className = 'action-btn';
-            btnErr.type = 'button';
-            btnErr.textContent = '原因';
-            btnErr.style.marginLeft = '4px';
-            btnErr.addEventListener('click', function () {
-              const p = document.createElement('p');
-              p.style.whiteSpace = 'pre-wrap';
-              p.style.color = '#ff8566';
-              p.textContent = row.error_message;
-              openModal('任务异常信息 — ' + row.id, p);
-            });
-            td.append(btnErr);
-          }
-        },
-      },
-    ], result.data.data);
-  }
-
-  function renderAdminTasks(result) {
-    const slot = document.getElementById('admin-tasks-slot');
-    if (!slot) return;
-    slot.replaceChildren();
-    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = errorMessage(result, '无法获取任务调度队列');
-      slot.append(note);
-      return;
-    }
-    if (!result.data.data.length) {
-      const empty = document.createElement('p');
-      empty.className = 'empty';
-      empty.textContent = '当前没有匹配的任务。';
-      slot.append(empty);
-      return;
-    }
-    renderTable(slot, [
-      { label: '任务类型', fill: function (td, row) { td.textContent = taskTypeLabel(row.task_type); } },
-      { label: '所属用户', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
-      { label: '进度', fill: function (td, row) { td.append(progressBar(row.progress)); } },
-      {
-        label: '状态',
-        fill: function (td, row) {
-          const dot = document.createElement('i');
-          dot.className = row.status === 'failed' ? 'dot danger' : (row.status === 'completed' ? 'dot' : 'dot warn');
-          td.append(dot, document.createTextNode(taskStatusLabel(row.status)));
-        },
-      },
-      { label: '创建时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
-      {
-        label: '操作',
-        fill: function (td, row) {
-          if (row.status === 'pending' || row.status === 'running' || row.status === 'processing') {
-            const btnCancel = document.createElement('button');
-            btnCancel.className = 'action-btn danger';
-            btnCancel.type = 'button';
-            btnCancel.textContent = '终止';
-            btnCancel.addEventListener('click', async function () {
-              if (!confirm('确定要终止任务「' + row.id + '」吗？')) return;
-              btnCancel.disabled = true;
-              btnCancel.textContent = '终止中…';
-              try {
-                const res = await request('/api/admin/tasks/' + encodeURIComponent(row.id) + '/cancel', { method: 'POST' });
-                if (res.res.ok && res.data && res.data.success) {
-                  notify('任务已成功终止', 'success');
-                  await loadAdminTasks(currentTaskFilter);
-                } else {
-                  notify(errorMessage(res, '终止任务失败'), 'error');
-                  btnCancel.disabled = false;
-                  btnCancel.textContent = '终止';
-                }
-              } catch (_) {
-                notify('网络异常，请稍后重试', 'error');
-                btnCancel.disabled = false;
-                btnCancel.textContent = '终止';
-              }
-            });
-            td.append(btnCancel);
-          }
-          const btnDel = document.createElement('button');
-          btnDel.className = 'action-btn danger';
-          btnDel.type = 'button';
-          btnDel.textContent = '删除';
-          btnDel.addEventListener('click', async function () {
-            if (!confirm('确定从全平台删除任务记录「' + row.id + '」吗？')) return;
-            btnDel.disabled = true;
-            btnDel.textContent = '删除中…';
-            try {
-              const res = await request('/api/admin/tasks/' + encodeURIComponent(row.id), { method: 'DELETE' });
-              if (res.res.ok && res.data && res.data.success) {
-                notify('任务记录已删除', 'success');
-                await loadAdminTasks(currentTaskFilter);
-              } else {
-                notify(errorMessage(res, '删除任务失败'), 'error');
-                btnDel.disabled = false;
-                btnDel.textContent = '删除';
-              }
-            } catch (_) {
-              notify('网络异常，请稍后重试', 'error');
-              btnDel.disabled = false;
-              btnDel.textContent = '删除';
-            }
-          });
-          td.append(btnDel);
-
-          const btnDetail = document.createElement('button');
-          btnDetail.className = 'action-btn';
-          btnDetail.type = 'button';
-          btnDetail.textContent = '透视';
-          btnDetail.addEventListener('click', function () {
-            const wrap = document.createElement('div');
-            const dl = document.createElement('dl');
-            addField(dl, '任务 ID', row.id);
-            addField(dl, '所属用户', personLabel(row) || row.user_id);
-            addField(dl, '客户端 IP', row.client_ip || '—');
-            addField(dl, '任务类型', taskTypeLabel(row.task_type));
-            addField(dl, '状态', taskStatusLabel(row.status));
-            addField(dl, '当前进度', row.progress + '%');
-            if (row.duration_ms) {
-              addField(dl, '执行耗时', (row.duration_ms / 1000).toFixed(1) + ' 秒');
-            }
-            if (row.prompt) {
-              const dt = document.createElement('dt');
-              dt.textContent = 'AI 提示词 (Prompt)';
-              const dd = document.createElement('dd');
-              const pre = document.createElement('pre');
-              pre.style.whiteSpace = 'pre-wrap';
-              pre.style.background = 'rgba(0,0,0,0.3)';
-              pre.style.padding = '8px';
-              pre.style.borderRadius = '4px';
-              pre.textContent = row.prompt;
-              const copyPromptBtn = document.createElement('button');
-              copyPromptBtn.className = 'action-btn';
-              copyPromptBtn.type = 'button';
-              copyPromptBtn.textContent = '复制提示词';
-              copyPromptBtn.style.marginTop = '6px';
-              copyPromptBtn.addEventListener('click', function () {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(row.prompt);
-                  copyPromptBtn.textContent = '已复制！';
-                  setTimeout(function () { copyPromptBtn.textContent = '复制提示词'; }, 2000);
-                } else {
-                  prompt('请复制提示词：', row.prompt);
-                }
-              });
-              dd.append(pre, copyPromptBtn);
-              dl.append(dt, dd);
-            }
-            if (row.input_payload && Object.keys(row.input_payload).length > 0) {
-              const dtIn = document.createElement('dt');
-              dtIn.textContent = '请求参数 (Input Payload)';
-              const ddIn = document.createElement('dd');
-              const preIn = document.createElement('pre');
-              preIn.style.whiteSpace = 'pre-wrap';
-              preIn.style.background = 'rgba(0,0,0,0.3)';
-              preIn.style.padding = '8px';
-              preIn.style.borderRadius = '4px';
-              preIn.textContent = JSON.stringify(row.input_payload, null, 2);
-              ddIn.append(preIn);
-              dl.append(dtIn, ddIn);
-            }
-            if (row.output_payload && Object.keys(row.output_payload).length > 0) {
-              const dtOut = document.createElement('dt');
-              dtOut.textContent = '产出交付物 (Output Payload)';
-              const ddOut = document.createElement('dd');
-              const preOut = document.createElement('pre');
-              preOut.style.whiteSpace = 'pre-wrap';
-              preOut.style.background = 'rgba(0,0,0,0.3)';
-              preOut.style.padding = '8px';
-              preOut.style.borderRadius = '4px';
-              preOut.textContent = JSON.stringify(row.output_payload, null, 2);
-              ddOut.append(preOut);
-              dl.append(dtOut, ddOut);
-            }
-            wrap.append(dl);
-            openModal('任务透视监控 — ' + row.id, wrap);
-          });
-          td.append(btnDetail);
-
-          if (row.error_message) {
-            const btnErr = document.createElement('button');
-            btnErr.className = 'action-btn';
-            btnErr.type = 'button';
-            btnErr.textContent = '查看原因';
-            btnErr.addEventListener('click', function () {
-              const p = document.createElement('p');
-              p.style.whiteSpace = 'pre-wrap';
-              p.style.color = '#ff8566';
-              p.textContent = row.error_message;
-              openModal('任务异常信息 — ' + row.id, p);
-            });
-            td.append(btnErr);
-          }
-        },
-      },
-    ], result.data.data);
-  }
-
-  function renderUserMedia(result) {
-    const slot = document.getElementById('user-media-slot');
-    if (!slot) return;
-    slot.replaceChildren();
-    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = errorMessage(result, '无法获取媒体交付物列表');
-      slot.append(note);
-      return;
-    }
-    if (!result.data.data.length) {
-      const empty = document.createElement('p');
-      empty.className = 'empty';
-      empty.textContent = '暂无云端媒体交付物。小说分镜成片导出后将归档至此。';
-      slot.append(empty);
-      return;
-    }
-    renderTable(slot, [
-      { label: '交付物类型', fill: function (td, row) { td.textContent = assetTypeLabel(row.asset_type); } },
-      { label: '格式/类型', fill: function (td, row) { td.textContent = cell(row.mime_type || row.asset_type); } },
-      { label: '大小', fill: function (td, row) { td.textContent = formatBytes(row.byte_size); } },
-      { label: '归档时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
-      {
-        label: '操作',
-        fill: function (td, row) {
-          if (row.cdn_url) {
-            const link = document.createElement('a');
-            link.className = 'action-btn';
-            link.href = row.cdn_url;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.textContent = '查看/下载';
-            td.append(link);
-          }
-          const delBtn = document.createElement('button');
-          delBtn.className = 'action-btn danger';
-          delBtn.type = 'button';
-          delBtn.textContent = '删除';
-          delBtn.addEventListener('click', async function () {
-            if (!confirm('确定要删除此媒体交付物吗？删除后将无法恢复。')) return;
-            delBtn.disabled = true;
-            delBtn.textContent = '删除中…';
-            try {
-              const res = await request('/api/media/' + encodeURIComponent(row.id), { method: 'DELETE' });
-              if (res.res.ok && res.data && res.data.success) {
-                notify('媒体资产已删除', 'success');
-                const refreshed = await request('/api/media/list');
-                renderUserMedia(refreshed);
-              } else {
-                notify(errorMessage(res, '删除失败'), 'error');
-                delBtn.disabled = false;
-                delBtn.textContent = '删除';
-              }
-            } catch (_) {
-              notify('网络异常，请稍后重试', 'error');
-              delBtn.disabled = false;
-              delBtn.textContent = '删除';
-            }
-          });
-          td.append(delBtn);
-        },
-      },
-    ], result.data.data);
-  }
-
-  function renderAdminMedia(result) {
-    const slot = document.getElementById('admin-media-slot');
-    if (!slot) return;
-    slot.replaceChildren();
-    if (!result.res.ok || !result.data || result.data.success !== true) {
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = errorMessage(result, '无法获取媒体资源列表');
-      slot.append(note);
-      return;
-    }
-    const stats = result.data.stats || {};
-    const rows = Array.isArray(result.data.data) ? result.data.data : [];
-
-    setKpi('kpi-media-count', formatNumber(stats.total_assets) || '0');
-    setKpi('kpi-media-size', formatBytes(stats.total_bytes));
-    setKpi('kpi-media-users', formatNumber(stats.total_users) || '0');
-
-    if (!rows.length) {
-      const empty = document.createElement('p');
-      empty.className = 'empty';
-      empty.textContent = '当前没有匹配的媒体资产。';
-      slot.append(empty);
-      return;
-    }
-    renderTable(slot, [
-      { label: '资产类型', fill: function (td, row) { td.textContent = assetTypeLabel(row.asset_type); } },
-      { label: '归属创作者', fill: function (td, row) { td.textContent = personLabel(row) || '—'; } },
-      { label: '文件大小', fill: function (td, row) { td.textContent = formatBytes(row.byte_size); } },
-      {
-        label: '存储 Key',
-        fill: function (td, row) {
-          td.className = 'mono col-truncate';
-          td.title = row.storage_key || '';
-          td.textContent = cell(row.storage_key);
-        },
-      },
-      { label: '上传时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
-      {
-        label: '操作',
-        fill: function (td, row) {
-          if (row.cdn_url) {
-            const link = document.createElement('a');
-            link.className = 'action-btn';
-            link.href = row.cdn_url;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.textContent = 'CDN';
-            link.title = '在新标签页打开 CDN 资源';
-            td.append(link);
-          }
-          const delBtn = document.createElement('button');
-          delBtn.className = 'action-btn danger';
-          delBtn.type = 'button';
-          delBtn.textContent = '删除';
-          delBtn.addEventListener('click', async function () {
-            if (!confirm('确定从全平台删除此媒体资产记录吗？')) return;
-            delBtn.disabled = true;
-            delBtn.textContent = '删除中…';
-            try {
-              const res = await request('/api/admin/media/' + encodeURIComponent(row.id), { method: 'DELETE' });
-              if (res.res.ok && res.data && res.data.success) {
-                notify('媒体资源已删除', 'success');
-                await loadAdminMedia(currentMediaFilter);
-              } else {
-                notify(errorMessage(res, '删除失败'), 'error');
-                delBtn.disabled = false;
-                delBtn.textContent = '删除';
-              }
-            } catch (_) {
-              notify('网络异常，请稍后重试', 'error');
-              delBtn.disabled = false;
-              delBtn.textContent = '删除';
-            }
-          });
-          td.append(delBtn);
-        },
-      },
-    ], rows);
-  }
-
-  let currentMediaFilter = '';
-  async function loadAdminMedia(type) {
-    currentMediaFilter = type || '';
-    const query = currentMediaFilter ? '?assetType=' + encodeURIComponent(currentMediaFilter) : '';
-    const result = await request('/api/admin/media' + query);
-    renderAdminMedia(result);
-  }
-
-  let currentTaskFilter = '';
-  async function loadAdminTasks(status) {
-    currentTaskFilter = status || '';
-    const query = currentTaskFilter ? '?status=' + encodeURIComponent(currentTaskFilter) : '';
-    const result = await request('/api/admin/tasks' + query);
-    renderAdminTasks(result);
-  }
-
-  let currentUserKeyword = '';
-  let currentUserFilter = '';
-  async function loadUsers(keyword, filter) {
-    if (keyword !== undefined) currentUserKeyword = keyword;
-    if (filter !== undefined) currentUserFilter = filter;
-    const params = [];
-    if (currentUserKeyword) params.push('keyword=' + encodeURIComponent(currentUserKeyword));
-    if (currentUserFilter) {
-      if (currentUserFilter.indexOf('plan:') === 0) {
-        params.push('plan=' + encodeURIComponent(currentUserFilter.replace('plan:', '')));
-      } else if (currentUserFilter.indexOf('status:') === 0) {
-        params.push('status=' + encodeURIComponent(currentUserFilter.replace('status:', '')));
-      } else if (currentUserFilter.indexOf('filter:') === 0) {
-        params.push('filter=' + encodeURIComponent(currentUserFilter.replace('filter:', '')));
-      }
-    }
-    const query = params.length ? '?' + params.join('&') : '';
-    const result = await request('/api/admin/users' + query);
-    renderUsers(result);
-  }
-
-  let currentSecStatus = '';
-  let currentSecKeyword = '';
-  async function loadGlobalAuditLogs(keyword, status) {
-    if (keyword !== undefined) currentSecKeyword = keyword;
-    if (status !== undefined) currentSecStatus = status;
-    const params = [];
-    if (currentSecKeyword) params.push('keyword=' + encodeURIComponent(currentSecKeyword));
-    if (currentSecStatus) params.push('status=' + encodeURIComponent(currentSecStatus));
-    const query = params.length ? '?' + params.join('&') : '';
-    const [logsRes, statsRes] = await Promise.all([
-      request('/api/admin/login-logs' + query),
-      request('/api/admin/security/stats'),
-    ]);
-
-    if (statsRes && statsRes.res.ok && statsRes.data && statsRes.data.success && statsRes.data.data) {
-      const s = statsRes.data.data;
-      setKpi('kpi-sec-logins', formatNumber(s.today_logins) || '0');
-      setKpi('kpi-sec-failed', formatNumber(s.today_failed) || '0');
-      setKpi('kpi-sec-ips', formatNumber(s.today_ips) || '0');
-      setKpi('kpi-sec-suspended', formatNumber(s.suspended_users) || '0');
-    }
-
-    renderGlobalAuditLogs(logsRes);
-  }
-
-  function renderGlobalAuditLogs(result) {
-    const slot = document.getElementById('global-audit-slot');
-    if (!slot) return;
-    slot.replaceChildren();
-    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
-      const p = document.createElement('p');
-      p.className = 'empty';
-      p.textContent = errorMessage(result, '无法读取全局登录审计日志');
-      slot.append(p);
-      return;
-    }
-    const logs = result.data.data;
-    if (!logs.length) {
-      const p = document.createElement('p');
-      p.className = 'empty';
-      p.textContent = '暂无符合条件的安全审计日志。';
-      slot.append(p);
-      return;
-    }
-
-    renderTable(slot, [
-      { label: '登录时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
-      {
-        label: '账号 / 用户',
-        fill: function (td, r) {
-          const name = r.nickname ? (r.nickname + ' (' + (r.email || r.account) + ')') : (r.email || r.account || '—');
-          td.textContent = name;
-        },
-      },
-      {
-        label: '登录 IP',
-        fill: function (td, r) {
-          td.className = 'mono';
-          td.textContent = r.ip || '—';
-        },
-      },
-      {
-        label: '地理归属',
-        fill: function (td, r) {
-          td.textContent = r.ip_location || '未解析节点';
-        },
-      },
-      {
-        label: '状态 / 审计结论',
-        fill: function (td, r) {
-          const dot = document.createElement('i');
-          const isSuccess = r.status === 'success';
-          dot.className = isSuccess ? 'dot' : 'dot danger';
-          const label = isSuccess ? '成功' : ('拦截: ' + (r.fail_reason || '异常登录'));
-          td.append(dot, document.createTextNode(label));
-        },
-      },
-      {
-        label: '客户端环境',
-        fill: function (td, r) {
-          td.className = 'col-truncate';
-          td.title = r.user_agent || '';
-          td.textContent = r.user_agent ? (r.user_agent.substring(0, 32) + '…') : '—';
-        },
-      },
-    ], logs);
-  }
-
-  let currentOrderFilter = '';
-  async function loadAdminOrders(status) {
-    currentOrderFilter = status || '';
-    const query = currentOrderFilter ? '?status=' + encodeURIComponent(currentOrderFilter) : '';
-    const orders = await request('/api/admin/orders' + query);
-    renderOrders(document.getElementById('admin-orders-slot'), orders, true);
-  }
-
-  function renderAdminPlans(result) {
-    const slot = document.getElementById('admin-plans-slot');
-    if (!slot) return;
-    slot.replaceChildren();
-    if (!result.res.ok || !result.data || result.data.success !== true || !Array.isArray(result.data.data)) {
-      const note = document.createElement('p');
-      note.className = 'empty';
-      note.textContent = errorMessage(result, '无法获取套餐方案配置');
-      slot.append(note);
-      return;
-    }
-    const rows = result.data.data;
-    if (!rows.length) {
-      const empty = document.createElement('p');
-      empty.className = 'empty';
-      empty.textContent = '暂无套餐方案配置。';
-      slot.append(empty);
-      return;
-    }
-    renderTable(slot, [
-      { label: '方案名称', fill: function (td, row) { td.textContent = row.name; } },
-      { label: '标识', fill: function (td, row) { td.textContent = cell(row.slug); } },
-      { label: '价格', fill: function (td, row) { td.textContent = row.price_cents > 0 ? '¥' + (row.price_cents / 100) + ' / 月' : '免费体验'; } },
-      { label: '包含算力', fill: function (td, row) { td.textContent = formatNumber(row.quota_points) || cell(row.quota_points); } },
-      { label: '并发/存储', fill: function (td, row) { td.textContent = row.max_concurrency + ' 任务 · ' + (row.storage_limit_mb >= 1024 ? (row.storage_limit_mb / 1024) + 'GB' : row.storage_limit_mb + 'MB'); } },
-      {
-        label: '上架状态',
-        fill: function (td, row) {
-          const dot = document.createElement('i');
-          dot.className = row.is_active ? 'dot' : 'dot warn';
-          td.append(dot, document.createTextNode(row.is_active ? '已上架' : '已下架'));
-        },
-      },
-      {
-        label: '操作',
-        fill: function (td, row) {
-          const btnToggle = document.createElement('button');
-          btnToggle.className = row.is_active ? 'action-btn danger' : 'action-btn primary';
-          btnToggle.type = 'button';
-          btnToggle.textContent = row.is_active ? '下架' : '上架';
-          btnToggle.addEventListener('click', async function () {
-            const actionText = row.is_active ? '下架' : '上架';
-            if (!confirm('确定要' + actionText + '套餐方案「' + row.name + '」吗？')) return;
-            btnToggle.disabled = true;
-            btnToggle.textContent = '处理中…';
-            try {
-              const res = await request('/api/admin/plans/' + encodeURIComponent(row.id) + '/toggle', { method: 'POST' });
-              if (res.res.ok && res.data && res.data.success) {
-                notify(res.data.message || '操作成功', 'success');
-                const refreshed = await request('/api/admin/plans');
-                renderAdminPlans(refreshed);
-              } else {
-                notify(errorMessage(res, '操作失败'), 'error');
-                btnToggle.disabled = false;
-                btnToggle.textContent = actionText;
-              }
-            } catch (_) {
-              notify('网络异常，请稍后重试', 'error');
-              btnToggle.disabled = false;
-              btnToggle.textContent = actionText;
-            }
-          });
-          td.append(btnToggle);
-        },
-      },
-    ], rows);
-  }
-
-  async function loadAdmin() {
-    const [overview, users, tasks, media, orders, plans, health, sysStatus, windows, mac, android] = await Promise.all([
-      request('/api/admin/overview'),
-      request('/api/admin/users'),
-      request('/api/admin/tasks'),
-      request('/api/admin/media'),
-      request('/api/admin/orders'),
-      request('/api/admin/plans'),
-      request('/api/health'),
-      request('/api/admin/system-status'),
-      request('/api/updates/latest?platform=windows&arch=x64'),
-      request('/api/updates/latest?platform=macos&arch=arm64'),
-      request('/api/updates/latest?platform=android&arch=arm64'),
-    ]);
-    renderOverview(overview);
-    renderUsers(users);
-    renderAdminTasks(tasks);
-    renderAdminMedia(media);
-    renderOrders(document.getElementById('admin-orders-slot'), orders, true);
-    renderAdminPlans(plans);
-    renderHealth(health, sysStatus);
-    renderUpdates([
-      { name: 'Windows', ok: windows.res.ok, data: windows.data },
-      { name: 'macOS', ok: mac.res.ok, data: mac.data },
-      { name: 'Android', ok: android.res.ok, data: android.data },
-    ]);
-  }
-
-  function viewAllowed(name) {
-    if (USER_VIEWS.indexOf(name) >= 0) return true;
-    return currentUser && currentUser.role === 'admin' && ADMIN_VIEWS.indexOf(name) >= 0;
-  }
-
   function showView(name) {
-    if (!viewAllowed(name)) name = 'overview';
+    if (surface === 'admin' && (!currentUser || currentUser.role !== 'admin')) return;
+    sessionStorage.setItem('metaarc_view_' + surface, name);
+    document.querySelectorAll('[data-view]').forEach(function (button) {
+      button.classList.toggle('is-on', button.getAttribute('data-view') === name);
+    });
     document.querySelectorAll('[data-panel]').forEach(function (panel) {
       panel.hidden = panel.getAttribute('data-panel') !== name;
     });
-    document.querySelectorAll('.rail button[data-view]').forEach(function (button) {
-      if (button.getAttribute('data-view') === name) button.setAttribute('aria-current', 'true');
-      else button.removeAttribute('aria-current');
-    });
-    const button = document.querySelector('.rail button[data-view="' + name + '"]');
-    const label = button && button.querySelector('span');
-    document.getElementById('console-title').textContent = label ? label.textContent : '概览';
-    const kicker = button && adminNav.contains(button) ? (adminNav.getAttribute('data-kicker') || '') : '用户中心';
-    document.getElementById('console-kicker').textContent = kicker;
-    if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+    const title = TITLES[name] || ['MetaArc', '概览'];
+    $('console-kicker').textContent = title[0];
+    $('console-title').textContent = name === 'overview' && currentUser
+      ? '你好，' + (currentUser.nickname || '创作者') + '。'
+      : title[1];
+    const loaders = {
+      overview: loadOverview,
+      plan: loadPlan,
+      usage: loadUsage,
+      downloads: loadDownloads,
+      security: loadSecurity,
+      orders: loadOrders,
+      support: function () {},
+      workspace: loadWorkspace,
+      users: loadUsers,
+      plans: loadAdminPlans,
+      'usage-review': loadQuotaReview,
+      releases: loadDownloads,
+      diagnostics: loadDiagnostics,
+      audit: loadAudit,
+    };
+    if (loaders[name]) loaders[name]();
   }
 
-  async function loadSession() {
-    showAlert('');
-    const profile = await request('/api/auth/profile');
-    if (profile.res.status === 401) {
-      setToken('');
-      showLoggedOut();
-      showAlert(errorMessage(profile, '登录态已失效'));
-      return;
-    }
-    if (!profile.res.ok || !profile.data || !profile.data.user) {
-      showLoggedIn();
-      showAlert(errorMessage(profile, '无法获取资料'));
-      return;
-    }
-    const user = profile.data.user;
-    currentUser = user;
-    showLoggedIn();
-    adminNav.hidden = user.role !== 'admin';
-    renderProfile(user);
-    renderMeters(user);
-    renderKey(user);
-    const plans = await request('/api/plans');
+  function quotaBlock(user) {
+    const wrap = document.createElement('div');
+    const title = document.createElement('h2');
+    title.textContent = '账户点数';
+    const remain = num(user.quota);
+    const total = num(user.total_quota);
+    const line = document.createElement('p');
+    line.textContent = '剩余 ' + formatNumber(remain) + ' / 累计发放 ' + formatNumber(total);
+    const meter = document.createElement('div');
+    meter.className = 'meter';
+    const bar = document.createElement('span');
+    const ratio = total > 0 && remain !== null ? Math.max(0, Math.min(100, (remain / total) * 100)) : 0;
+    bar.style.width = ratio + '%';
+    meter.append(bar);
+    const note = document.createElement('p');
+    note.className = 'fine';
+    note.textContent = '文本、图像、视频尚未分开记账。这里也没有单独的周期重置记录。';
+    wrap.append(title, line, meter, note);
+    return wrap;
+  }
+
+  async function loadPlans() {
+    const result = await request('/api/plans');
+    plans = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : [];
+  }
+  async function loadOverview() {
+    await loadPlans();
+    const planCard = document.createElement('div');
+    const h = document.createElement('h2');
+    h.textContent = planName(currentUser.plan);
+    const p = document.createElement('p');
+    p.textContent = '权益以账号资料和套餐接口为准。在线支付尚未开通。';
+    const jump = document.createElement('button');
+    jump.className = 'text';
+    jump.type = 'button';
+    jump.textContent = '查看权益';
+    jump.addEventListener('click', function () { showView('plan'); });
+    planCard.append(h, p, jump);
+    fill('overview-plan', planCard);
+    fill('overview-quota', quotaBlock(currentUser));
     const orders = await request('/api/auth/orders');
+    const slot = $('overview-orders');
+    const count = orders.ok && orders.data && Array.isArray(orders.data.data) ? orders.data.data.length : 0;
+    slot.textContent = count ? '有 ' + count + ' 条订单记录' : '暂无订单 · 支付未开通';
+  }
+  async function loadPlan() {
+    await loadPlans();
+    const match = plans.find(function (plan) { return plan.slug === currentUser.plan; });
+    const wrap = document.createElement('div');
+    const h = document.createElement('h2');
+    h.textContent = match ? match.name : planName(currentUser.plan);
+    wrap.append(h);
+    if (!match) {
+      wrap.append(empty('套餐接口没有返回当前档位，页面不补写价格。'));
+    } else {
+      const price = document.createElement('p');
+      const yuan = num(match.price_cents);
+      price.textContent = yuan === null ? '价格未知' : ('¥' + (yuan / 100).toLocaleString('zh-CN') + (match.billing_cycle === 'monthly' ? ' / 月' : ''));
+      const points = document.createElement('p');
+      points.textContent = formatNumber(match.quota_points) + ' 点';
+      const closed = document.createElement('p');
+      closed.className = 'fine';
+      closed.textContent = '支付尚未开通，不能购买或续费。';
+      wrap.append(price, points, closed);
+      const features = Array.isArray(match.features) ? match.features : [];
+      features.forEach(function (item) {
+        if (typeof item !== 'string') return;
+        const line = document.createElement('p');
+        line.textContent = item;
+        wrap.append(line);
+      });
+    }
+    fill('plan-detail', wrap);
+  }
+  async function loadUsage() {
+    fill('usage-summary', quotaBlock(currentUser));
     const ledger = await request('/api/auth/quota/logs');
-    const userTasks = await request('/api/tasks/list');
-    const userMedia = await request('/api/media/list');
-    renderPlan(user, plans);
-    renderOrders(document.getElementById('orders-slot'), orders, false);
-    renderLedger(ledger);
-    renderUserTasks(userTasks);
-    renderUserMedia(userMedia);
-    if (user.role === 'admin') await loadAdmin();
-    const hash = (location.hash || '').replace('#', '');
-    showView(viewAllowed(hash) ? hash : 'overview');
+    renderLedger('ledger-slot', ledger);
+    const tasks = await request('/api/tasks/list');
+    renderTasks('user-tasks-slot', tasks, false);
+    const media = await request('/api/media/list');
+    renderMedia('user-media-slot', media, false);
+  }
+  function renderLedger(id, result) {
+    const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
+    if (!rows) return fill(id, empty('点数流水暂时无法读取。'));
+    if (!rows.length) return fill(id, empty('还没有点数流水。'));
+    const labels = { purchase: '增加', consumption: '消耗', admin_grant: '调整' };
+    fill(id, table([
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      { label: '点数', fill: function (td, row) { td.textContent = formatNumber(row.amount); } },
+      { label: '余额', fill: function (td, row) { td.textContent = formatNumber(row.balance_after); } },
+      { label: '类型', fill: function (td, row) { td.textContent = labels[row.type] || row.type || '—'; } },
+      { label: '备注', fill: function (td, row) { td.textContent = row.remark || '—'; } },
+    ], rows));
+  }
+  function renderTasks(id, result, admin) {
+    const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
+    if (!rows) return fill(id, empty('任务暂时无法读取。'));
+    if (!rows.length) return fill(id, empty('没有创作任务。'));
+    const columns = [
+      { label: '类型', fill: function (td, row) { td.textContent = row.task_type || '—'; } },
+      { label: '状态', fill: function (td, row) { td.textContent = row.status || '—'; } },
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+    ];
+    if (admin) columns.unshift({ label: '账号', fill: function (td, row) { td.textContent = person(row); } });
+    fill(id, table(columns, rows));
+  }
+  function renderMedia(id, result, admin) {
+    const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
+    if (!rows) return fill(id, empty('文件索引暂时无法读取。'));
+    if (!rows.length) return fill(id, empty('没有云端文件记录。'));
+    const columns = [
+      { label: '类型', fill: function (td, row) { td.textContent = row.asset_type || '—'; } },
+      { label: '大小', fill: function (td, row) { td.textContent = formatNumber(row.byte_size); } },
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+    ];
+    if (admin) columns.unshift({ label: '账号', fill: function (td, row) { td.textContent = person(row); } });
+    fill(id, table(columns, rows));
+  }
+  async function loadDownloads() {
+    const catalog = await request('/api/updates/catalog');
+    const windows = await request('/api/updates/latest?platform=windows&arch=x64');
+    const macos = await request('/api/updates/latest?platform=macos&arch=arm64');
+    const android = await request('/api/updates/latest?platform=android&arch=arm64');
+    const wrap = document.createElement('div');
+    const h = document.createElement('h2');
+    h.textContent = '发布状态';
+    const note = document.createElement('p');
+    note.className = 'fine';
+    note.textContent = '状态来自更新清单。没有安装包时保持尚未发布，工作台不能改写安装包。';
+    wrap.append(h, note);
+    const items = [
+      ['Windows', windows],
+      ['macOS', macos],
+      ['Android', android],
+    ];
+    if (!catalog.ok) {
+      const warn = document.createElement('p');
+      warn.textContent = '发布清单暂时无法读取。';
+      wrap.append(warn);
+    }
+    items.forEach(function (item) {
+      const block = document.createElement('div');
+      block.className = 'dl';
+      const name = document.createElement('b');
+      name.textContent = item[0];
+      const detail = document.createElement('p');
+      const data = item[1].ok ? item[1].data : null;
+      if (!data) detail.textContent = '暂时无法读取';
+      else if (data.has_update && data.download_url) {
+        detail.textContent = [data.version, data.signed === true ? '已签名' : '未签名', data.channel].filter(Boolean).join(' · ');
+        const link = document.createElement('a');
+        link.href = data.download_url;
+        link.rel = 'noopener';
+        link.textContent = '下载';
+        block.append(name, detail, link);
+        wrap.append(block);
+        return;
+      } else detail.textContent = '尚未发布';
+      block.append(name, detail);
+      wrap.append(block);
+    });
+    const slot = surface === 'admin' ? 'releases-slot' : 'downloads-slot';
+    fill(slot, wrap);
+  }
+  async function loadSecurity() {
+    $('profile-nickname-input').value = currentUser.nickname || '';
+    const logs = await request('/api/auth/login-logs');
+    const rows = logs.ok && logs.data && Array.isArray(logs.data.data) ? logs.data.data : null;
+    if (!rows) fill('login-logs-slot', empty('登录记录暂时无法读取。'));
+    else if (!rows.length) fill('login-logs-slot', empty('还没有登录记录。'));
+    else fill('login-logs-slot', table([
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      { label: '结果', fill: function (td, row) { td.textContent = row.status === 'success' ? '成功' : '失败'; } },
+      { label: 'IP', fill: function (td, row) { td.textContent = row.ip || '—'; } },
+      { label: '位置', fill: function (td, row) { td.textContent = row.ip_location || '—'; } },
+    ], rows));
+    renderKey();
+  }
+  function renderKey() {
+    const slot = $('key-slot');
+    slot.replaceChildren();
+    const key = currentUser.new_api_key || '';
+    const code = document.createElement('code');
+    code.textContent = key || '当前没有可展示的密钥';
+    const row = document.createElement('div');
+    row.className = 'actions';
+    if (key && !key.startsWith('sk-mock-')) {
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.textContent = '复制';
+      copy.addEventListener('click', function () {
+        navigator.clipboard.writeText(key).then(function () { showAlert('已复制', true); }).catch(function () { showAlert('复制失败'); });
+      });
+      row.append(copy);
+    }
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.textContent = '重置密钥';
+    reset.addEventListener('click', resetOwnKey);
+    row.append(reset);
+    if (key.startsWith('sk-mock-')) {
+      const warn = document.createElement('p');
+      warn.className = 'fine';
+      warn.textContent = '这是占位值，不能当作可用密钥。';
+      slot.append(code, warn, row);
+      return;
+    }
+    slot.append(code, row);
+  }
+  async function resetOwnKey() {
+    const answer = await ask({ title: '重置客户端密钥', copy: '旧密钥会立即失效。', reason: false, confirm: '确认重置' });
+    if (!answer) return;
+    const result = await request('/api/auth/reset-api-key', { method: 'POST' });
+    if (!result.ok) return showAlert(errorMessage(result, '重置失败'));
+    currentUser.new_api_key = result.data.new_api_key || '';
+    renderKey();
+    showAlert(result.data.message || '密钥已重置', true);
+  }
+  async function loadOrders() {
+    const result = await request('/api/auth/orders');
+    const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
+    if (!rows) return fill('orders-slot', empty('订单暂时无法读取。'));
+    if (!rows.length) return fill('orders-slot', empty('暂无订单 · 支付未开通'));
+    fill('orders-slot', table([
+      { label: '套餐', fill: function (td, row) { td.textContent = row.plan_name || '—'; } },
+      { label: '状态', fill: function (td, row) { td.textContent = row.status || '—'; } },
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+    ], rows));
+  }
+
+  async function loadWorkspace() {
+    const overview = await request('/api/admin/overview');
+    const health = await request('/api/health');
+    const status = await request('/api/admin/system-status');
+    const wrap = document.createElement('div');
+    wrap.className = 'stats';
+    function stat(label, value, note) {
+      const card = document.createElement('article');
+      card.className = 'card stat';
+      const span = document.createElement('span');
+      span.textContent = label;
+      const strong = document.createElement('b');
+      strong.textContent = value;
+      const em = document.createElement('em');
+      em.textContent = note;
+      card.append(span, strong, em);
+      return card;
+    }
+    const tasks = overview.ok && overview.data && overview.data.data ? overview.data.data.active_tasks : null;
+    wrap.append(stat('诊断工单', '未接入', '没有工单表，不能显示编号'));
+    wrap.append(stat('进行中的创作任务', tasks === null || tasks === undefined ? '未知' : String(tasks), '来自任务队列'));
+    const dbOk = health.ok && health.data && health.data.db === 'connected';
+    const gateway = status.ok && status.data && status.data.data ? status.data.data.ai_gateway : null;
+    const gatewayText = gatewayLabel(gateway);
+    wrap.append(stat('服务健康', dbOk ? '数据库已连接' : '数据库未知', '外部依赖：' + gatewayText));
+    $('workspace-stats').replaceChildren(wrap);
+    const taskResult = await request('/api/admin/tasks');
+    renderTasks('workspace-tasks', taskResult, true);
+  }
+  async function loadUsers() {
+    const params = new URLSearchParams();
+    const keyword = $('user-keyword').value.trim();
+    if (keyword) params.set('keyword', keyword);
+    if (userFilter.indexOf('plan:') === 0) params.set('plan', userFilter.slice(5));
+    if (userFilter.indexOf('status:') === 0) params.set('status', userFilter.slice(7));
+    const result = await request('/api/admin/users' + (params.toString() ? '?' + params.toString() : ''));
+    const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
+    if (!rows) return fill('users-slot', empty('用户列表暂时无法读取。'));
+    if (!rows.length) return fill('users-slot', empty('没有符合条件的用户。'));
+    fill('users-slot', table([
+      { label: '账号', fill: function (td, row) { td.textContent = person(row); } },
+      { label: '邮箱 / 手机', fill: function (td, row) { td.textContent = [row.email, row.phone].filter(Boolean).join(' / ') || '—'; } },
+      { label: '套餐', fill: function (td, row) { td.textContent = planName(row.plan); } },
+      { label: '角色', fill: function (td, row) { td.textContent = row.role === 'admin' ? '管理员' : '用户'; } },
+      { label: '状态', fill: function (td, row) { td.textContent = row.status === 'suspended' ? '已封禁' : '正常'; } },
+      { label: '剩余点数', fill: function (td, row) { td.textContent = formatNumber(row.quota); } },
+      { label: '操作', fill: function (td, row) { td.append(userActions(row)); } },
+    ], rows));
+  }
+  function userActions(row) {
+    const box = document.createElement('div');
+    box.className = 'actions';
+    function add(label, handler) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.addEventListener('click', handler);
+      box.append(button);
+    }
+    add('权限', function () { return changeRole(row); });
+    add('套餐', function () { return changePlan(row); });
+    add('状态', function () { return changeStatus(row); });
+    add('调账', function () { return adjustQuota(row); });
+    add('流水', function () { return showUserLedger(row); });
+    return box;
+  }
+  async function changeRole(row) {
+    const next = row.role === 'admin' ? 'user' : 'admin';
+    const answer = await ask({
+      title: next === 'admin' ? '设为管理员' : '取消管理员',
+      copy: (person(row)) + ' 目前是' + (row.role === 'admin' ? '管理员' : '用户') + '。管理员可以查看用户、调整套餐和点数。此操作不能降级你自己。',
+      confirm: '确认变更',
+    });
+    if (!answer) return;
+    const result = await request('/api/admin/users/' + row.id + '/set-role', { method: 'POST', body: { role: next, reason: answer.reason } });
+    if (!result.ok) return showAlert(errorMessage(result, '变更失败'));
+    showAlert('权限已更新', true);
+    loadUsers();
+  }
+  async function changePlan(row) {
+    const extra = document.createElement('select');
+    ['free', 'creator', 'pro', 'studio'].forEach(function (slug) {
+      const option = document.createElement('option');
+      option.value = slug;
+      option.textContent = planName(slug);
+      option.selected = slug === row.plan;
+      extra.append(option);
+    });
+    const answer = await ask({ title: '调整套餐', copy: '只改账号上的套餐标记，不会创建订单。', extra: extra, confirm: '确认变更', collect: function () { return { plan: extra.value }; } });
+    if (!answer) return;
+    const result = await request('/api/admin/users/' + row.id + '/set-plan', { method: 'POST', body: { plan: answer.plan, reason: answer.reason } });
+    if (!result.ok) return showAlert(errorMessage(result, '套餐变更失败'));
+    showAlert('套餐已更新', true);
+    loadUsers();
+  }
+  async function changeStatus(row) {
+    const next = row.status === 'suspended' ? 'active' : 'suspended';
+    const answer = await ask({
+      title: next === 'suspended' ? '封禁账号' : '恢复账号',
+      copy: next === 'suspended' ? '封禁后，该账号不能登录。不能封禁当前管理员自己。' : '恢复后，该账号可以重新登录。',
+      confirm: '确认变更',
+    });
+    if (!answer) return;
+    const result = await request('/api/admin/users/' + row.id + '/set-status', { method: 'POST', body: { status: next, reason: answer.reason } });
+    if (!result.ok) return showAlert(errorMessage(result, '状态变更失败'));
+    showAlert('状态已更新', true);
+    loadUsers();
+  }
+  async function adjustQuota(row) {
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = '1';
+    input.placeholder = '正数增加，负数扣减';
+    const answer = await ask({ title: '调整点数', copy: person(row) + ' 当前剩余 ' + formatNumber(row.quota) + '。', extra: input, confirm: '确认调账', collect: function () { return { amount: input.value }; } });
+    if (!answer) return;
+    const result = await request('/api/admin/users/' + row.id + '/adjust-quota', { method: 'POST', body: { amount: Number(answer.amount), reason: answer.reason } });
+    if (!result.ok) return showAlert(errorMessage(result, '调账失败'));
+    showAlert('点数已调整', true);
+    loadUsers();
+  }
+  async function showUserLedger(row) {
+    const result = await request('/api/admin/users/' + row.id + '/quota-logs');
+    const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : [];
+    const box = document.createElement('div');
+    if (!rows.length) box.append(empty('这个账号还没有点数流水。'));
+    else box.append(table([
+      { label: '时间', fill: function (td, item) { td.textContent = formatWhen(item.created_at); } },
+      { label: '点数', fill: function (td, item) { td.textContent = formatNumber(item.amount); } },
+      { label: '余额', fill: function (td, item) { td.textContent = formatNumber(item.balance_after); } },
+      { label: '备注', fill: function (td, item) { td.textContent = item.remark || '—'; } },
+    ], rows));
+    await ask({ title: person(row) + ' 的流水', reason: false, extra: box, confirm: '关闭' });
+  }
+  async function createUser() {
+    const email = document.createElement('input');
+    email.type = 'email';
+    email.placeholder = '邮箱';
+    email.required = true;
+    const password = document.createElement('input');
+    password.type = 'text';
+    password.placeholder = '初始密码，至少 6 位';
+    password.required = true;
+    const nickname = document.createElement('input');
+    nickname.placeholder = '昵称，可选';
+    const box = document.createElement('div');
+    box.className = 'stack';
+    box.append(email, password, nickname);
+    const answer = await ask({ title: '新建账号', copy: '新账号默认是普通用户和基础体验。不会发送邮件。', extra: box, confirm: '创建', collect: function () { return { email: email.value.trim(), password: password.value, nickname: nickname.value.trim() }; } });
+    if (!answer) return;
+    const result = await request('/api/admin/users/create', { method: 'POST', body: { email: answer.email, password: answer.password, nickname: answer.nickname, reason: answer.reason } });
+    if (!result.ok) return showAlert(errorMessage(result, '创建失败'));
+    showAlert('账号已创建', true);
+    loadUsers();
+  }
+  async function loadAdminPlans() {
+    const result = await request('/api/admin/plans');
+    const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
+    if (!rows) return fill('plans-slot', empty('套餐暂时无法读取。'));
+    fill('plans-slot', table([
+      { label: '名称', fill: function (td, row) { td.textContent = row.name || '—'; } },
+      { label: '价格（分）', fill: function (td, row) { td.textContent = formatNumber(row.price_cents); } },
+      { label: '点数', fill: function (td, row) { td.textContent = formatNumber(row.quota_points); } },
+      { label: '展示', fill: function (td, row) { td.textContent = row.is_active ? '上架' : '下架'; } },
+      { label: '操作', fill: function (td, row) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = row.is_active ? '下架' : '上架';
+        button.addEventListener('click', function () { return togglePlan(row); });
+        td.append(button);
+      } },
+    ], rows));
+  }
+  async function togglePlan(row) {
+    const answer = await ask({ title: row.is_active ? '下架套餐' : '上架套餐', copy: '这只改变官网是否展示，不会产生付款。', confirm: '确认变更' });
+    if (!answer) return;
+    const result = await request('/api/admin/plans/' + encodeURIComponent(row.id) + '/toggle', { method: 'POST', body: { reason: answer.reason } });
+    if (!result.ok) return showAlert(errorMessage(result, '操作失败'));
+    showAlert(result.data.message || '已更新', true);
+    loadAdminPlans();
+  }
+  async function loadQuotaReview() {
+    const keyword = $('quota-keyword').value.trim();
+    const result = await request('/api/admin/quota-logs' + (keyword ? '?keyword=' + encodeURIComponent(keyword) : ''));
+    const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
+    if (!rows) return fill('quota-review-slot', empty('用量流水暂时无法读取。'));
+    if (!rows.length) return fill('quota-review-slot', empty('没有点数流水。'));
+    fill('quota-review-slot', table([
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      { label: '账号', fill: function (td, row) { td.textContent = person(row); } },
+      { label: '点数', fill: function (td, row) { td.textContent = formatNumber(row.amount); } },
+      { label: '余额', fill: function (td, row) { td.textContent = formatNumber(row.balance_after); } },
+      { label: '类型', fill: function (td, row) { td.textContent = row.type || '—'; } },
+      { label: '备注', fill: function (td, row) { td.textContent = row.remark || '—'; } },
+    ], rows));
+  }
+  async function loadDiagnostics() {
+    const health = await request('/api/health');
+    const status = await request('/api/admin/system-status');
+    const lines = [];
+    lines.push(health.ok && health.data && health.data.db === 'connected' ? '数据库：已连接' : '数据库：未知');
+    const data = status.ok && status.data && status.data.data ? status.data.data : null;
+    if (!data) lines.push('运行状态：暂时无法读取');
+    else {
+      lines.push('进程已运行 ' + (data.uptime_formatted || '未知时长'));
+      const gateway = data.ai_gateway || {};
+      lines.push('外部创作服务：' + gatewayLabel(gateway));
+      lines.push(data.s3 && data.s3.configured ? '对象存储：已配置' : '对象存储：待接入');
+    }
+    const box = document.createElement('div');
+    lines.forEach(function (line) {
+      const p = document.createElement('p');
+      p.textContent = line;
+      box.append(p);
+    });
+    fill('health-slot', box);
+    const orders = await request('/api/admin/orders');
+    const orderCount = orders.ok && orders.data && Array.isArray(orders.data.data) ? orders.data.data.length : null;
+    const orderLine = document.createElement('p');
+    orderLine.textContent = orderCount === null ? '订单记录：暂时无法读取' : (orderCount ? '订单记录：' + orderCount + ' 条' : '订单记录：没有记录，支付尚未开通');
+    box.append(orderLine);
+    renderTasks('admin-tasks-slot', await request('/api/admin/tasks'), true);
+    const media = await request('/api/admin/media');
+    const mediaRows = media.ok && media.data && Array.isArray(media.data.data) ? media.data.data : null;
+    if (!mediaRows) fill('admin-media-slot', empty('文件索引暂时无法读取。'));
+    else if (!mediaRows.length) fill('admin-media-slot', empty('没有云端文件记录。'));
+    else renderMedia('admin-media-slot', { ok: true, data: { data: mediaRows } }, true);
+  }
+  async function loadAudit() {
+    const audit = await request('/api/admin/audit');
+    const rows = audit.ok && audit.data && Array.isArray(audit.data.data) ? audit.data.data : null;
+    if (!rows) fill('audit-slot', empty('变更审计暂时无法读取。'));
+    else if (!rows.length) fill('audit-slot', empty('还没有变更记录。'));
+    else fill('audit-slot', table([
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      { label: '动作', fill: function (td, row) { td.textContent = row.action || '—'; } },
+      { label: '对象', fill: function (td, row) { td.textContent = (row.target_type || '') + ' ' + (row.target_id || ''); } },
+      { label: '原因', fill: function (td, row) { td.textContent = row.reason || '—'; } },
+      { label: '变化', fill: function (td, row) { td.textContent = briefChange(row.before_value, row.after_value); } },
+    ], rows));
+    const logs = await request('/api/admin/login-logs');
+    const loginRows = logs.ok && logs.data && Array.isArray(logs.data.data) ? logs.data.data : null;
+    if (!loginRows) fill('admin-login-slot', empty('登录记录暂时无法读取。'));
+    else if (!loginRows.length) fill('admin-login-slot', empty('还没有登录记录。'));
+    else fill('admin-login-slot', table([
+      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      { label: '账号', fill: function (td, row) { td.textContent = row.account || person(row); } },
+      { label: '结果', fill: function (td, row) { td.textContent = row.status || '—'; } },
+      { label: 'IP', fill: function (td, row) { td.textContent = row.ip || '—'; } },
+    ], loginRows));
+  }
+  function gatewayLabel(gateway) {
+    if (!gateway || !gateway.configured) return '待接入';
+    if (gateway.status === 'connected') return '已连通';
+    if (gateway.status === 'unreachable') return '未连通';
+    if (typeof gateway.status === 'string' && gateway.status.indexOf('http_') === 0) return '响应异常';
+    return '未知';
+  }
+  function briefChange(before, after) {
+    try {
+      return JSON.stringify(before) + ' → ' + JSON.stringify(after);
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  function ask(options) {
+    return new Promise(function (resolve) {
+      $('modal-title').textContent = options.title || '确认';
+      $('modal-copy').textContent = options.copy || '';
+      const extra = $('modal-extra');
+      extra.replaceChildren();
+      if (options.extra) extra.append(options.extra);
+      const reason = $('modal-reason');
+      const reasonLabel = $('modal-reason-label');
+      const needsReason = options.reason !== false;
+      reason.hidden = !needsReason;
+      reasonLabel.hidden = !needsReason;
+      reason.value = '';
+      $('modal-submit').textContent = options.confirm || '确认变更';
+      modal.hidden = false;
+      function finish(value) {
+        modal.hidden = true;
+        modalForm.removeEventListener('submit', onSubmit);
+        $('modal-cancel').removeEventListener('click', onCancel);
+        resolve(value);
+      }
+      function onSubmit(event) {
+        event.preventDefault();
+        const text = reason.value.trim();
+        if (needsReason && text.length < 2) {
+          showAlert('请填写至少 2 个字的原因');
+          return;
+        }
+        const collected = options.collect ? options.collect() : {};
+        collected.reason = text;
+        finish(collected);
+      }
+      function onCancel() { finish(null); }
+      modalForm.addEventListener('submit', onSubmit);
+      $('modal-cancel').addEventListener('click', onCancel);
+      if (needsReason) reason.focus();
+    });
   }
 
   async function submitAuth(path, body, button) {
-    if (busy) return;
-    busy = true;
     button.disabled = true;
-    showAlert('');
     try {
       const result = await request(path, { method: 'POST', body: body });
-      if (!result.res.ok || !result.data || !result.data.token) {
-        showAlert(errorMessage(result, '账号请求失败'));
+      if (!result.ok || !result.data || !result.data.token) {
+        showAlert(errorMessage(result, '没有完成'));
         return;
       }
       setToken(result.data.token);
@@ -2162,529 +745,100 @@
     } catch (_) {
       showAlert('网络请求失败，请稍后再试');
     } finally {
-      busy = false;
       button.disabled = false;
     }
   }
 
+  async function loadSession() {
+    const result = await request('/api/auth/profile');
+    if (!result.ok || !result.data || !result.data.user) {
+      setToken('');
+      currentUser = null;
+      showGate('login');
+      if (result.status !== 401) showAlert(errorMessage(result, '登录态已失效'));
+      return;
+    }
+    currentUser = result.data.user;
+    await loadPlans();
+    showApp();
+  }
+
   loginForm.addEventListener('submit', function (event) {
     event.preventDefault();
-    const account = document.getElementById('login-account').value.trim();
-    const password = document.getElementById('login-password').value;
-    if (!account || !password) {
-      showAlert('请输入账号与密码');
-      return;
-    }
+    const account = $('login-account').value.trim();
+    const password = $('login-password').value;
+    if (!account || !password) return showAlert('请输入账号与密码');
     submitAuth('/api/auth/login', { account: account, password: password }, loginForm.querySelector('button'));
   });
-
   registerForm.addEventListener('submit', function (event) {
     event.preventDefault();
-    const account = document.getElementById('register-account').value.trim();
-    const password = document.getElementById('register-password').value;
-    const nickname = document.getElementById('register-nickname').value.trim();
-    if (!account || !password) {
-      showAlert('请输入账号与密码');
-      return;
-    }
-    if (password.length < 6) {
-      showAlert('密码长度至少为 6 位');
-      return;
-    }
+    const account = $('register-account').value.trim();
+    const password = $('register-password').value;
+    const nickname = $('register-nickname').value.trim();
+    if (!account || password.length < 6) return showAlert('请输入账号，且密码至少 6 位');
     const body = { password: password };
     if (nickname) body.nickname = nickname;
     if (account.indexOf('@') >= 0) body.email = account;
     else body.phone = account;
-    submitAuth('/api/auth/register', body, registerForm.querySelector('button.primary'));
+    submitAuth('/api/auth/register', body, registerForm.querySelector('button'));
   });
-
-  document.getElementById('show-register').addEventListener('click', function () { showGateMode('register'); });
-  document.getElementById('show-forgot').addEventListener('click', function () { showGateMode('forgot'); });
-  document.getElementById('register-back').addEventListener('click', function () { showGateMode('login'); });
-  document.getElementById('forgot-back').addEventListener('click', function () { showGateMode('login'); });
-
-  document.getElementById('btn-refresh').addEventListener('click', function () { loadSession(); });
-  document.getElementById('btn-logout').addEventListener('click', function () {
-    setToken('');
-    showAlert('');
-    showLoggedOut();
-    showGateMode('login');
-  });
-
-  document.querySelectorAll('.rail button[data-view]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      showView(button.getAttribute('data-view'));
-    });
-  });
-
-  document.getElementById('user-search').addEventListener('submit', function (event) {
+  forgotForm.addEventListener('submit', async function (event) {
     event.preventDefault();
-    if (!currentUser || currentUser.role !== 'admin') return;
-    loadUsers(document.getElementById('user-keyword').value.trim());
+    const result = await request('/api/auth/forgot-password', { method: 'POST', body: {} });
+    showAlert(errorMessage(result, '找回密码尚未开通'));
+  });
+  $('show-register').addEventListener('click', function () { showGate('register'); });
+  $('register-back').addEventListener('click', function () { showGate('login'); });
+  $('show-forgot').addEventListener('click', function () { showGate('forgot'); });
+  $('forgot-back').addEventListener('click', function () { showGate('login'); });
+  $('btn-logout').addEventListener('click', function () {
+    setToken('');
+    currentUser = null;
+    showGate('login');
+  });
+  document.body.addEventListener('click', function (event) {
+    const jump = event.target.closest('[data-jump]');
+    if (jump) showView(jump.getAttribute('data-jump'));
+    const view = event.target.closest('[data-view]');
+    if (view) showView(view.getAttribute('data-view'));
+    const filter = event.target.closest('[data-user-filter]');
+    if (filter) {
+      userFilter = filter.getAttribute('data-user-filter') || '';
+      document.querySelectorAll('[data-user-filter]').forEach(function (button) {
+        button.classList.toggle('is-on', button === filter);
+      });
+      loadUsers();
+    }
+  });
+  $('user-search').addEventListener('submit', function (event) { event.preventDefault(); loadUsers(); });
+  $('quota-search').addEventListener('submit', function (event) { event.preventDefault(); loadQuotaReview(); });
+  $('btn-create-user').addEventListener('click', createUser);
+  $('form-update-profile').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const result = await request('/api/auth/update-profile', { method: 'POST', body: { nickname: $('profile-nickname-input').value.trim() } });
+    if (!result.ok) return showAlert(errorMessage(result, '没有保存'));
+    showAlert('昵称已保存', true);
+    await loadSession();
+  });
+  $('form-change-password').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const result = await request('/api/auth/change-password', {
+      method: 'POST',
+      body: { oldPassword: $('old-pwd-input').value, newPassword: $('new-pwd-input').value },
+    });
+    if (!result.ok) return showAlert(errorMessage(result, '没有修改密码'));
+    if (result.data && result.data.token) setToken(result.data.token);
+    $('old-pwd-input').value = '';
+    $('new-pwd-input').value = '';
+    showAlert(result.data.message || '密码已更新', true);
+  });
+  $('btn-logout-others').addEventListener('click', async function () {
+    const result = await request('/api/auth/logout-others', { method: 'POST', body: {} });
+    if (!result.ok) return showAlert(errorMessage(result, '没有退出其他会话'));
+    if (result.data && result.data.token) setToken(result.data.token);
+    showAlert(result.data.message || '已处理', true);
   });
 
-  const updateProfileForm = document.getElementById('form-update-profile');
-  if (updateProfileForm) {
-    updateProfileForm.addEventListener('submit', async function (event) {
-      event.preventDefault();
-      const nicknameInput = document.getElementById('profile-nickname-input');
-      const nickname = nicknameInput ? nicknameInput.value.trim() : '';
-      if (!nickname) {
-        showAlert('请输入新的创作者昵称');
-        return;
-      }
-      showAlert('');
-      const res = await request('/api/auth/update-profile', {
-        method: 'POST',
-        body: { nickname: nickname },
-      });
-      if (res.res.ok && res.data && res.data.success) {
-        showAlert('昵称已成功更新为：' + res.data.user.nickname);
-        if (currentUser) {
-          currentUser.nickname = res.data.user.nickname;
-          renderProfile(currentUser);
-        }
-      } else {
-        showAlert(errorMessage(res, '修改昵称失败'));
-      }
-    });
-  }
-
-  const changePasswordForm = document.getElementById('form-change-password');
-  if (changePasswordForm) {
-    changePasswordForm.addEventListener('submit', async function (event) {
-      event.preventDefault();
-      const oldPwdInput = document.getElementById('old-pwd-input');
-      const newPwdInput = document.getElementById('new-pwd-input');
-      const oldPassword = oldPwdInput ? oldPwdInput.value : '';
-      const newPassword = newPwdInput ? newPwdInput.value : '';
-      if (!oldPassword || !newPassword) {
-        showAlert('请输入当前密码和新密码');
-        return;
-      }
-      if (newPassword.length < 6) {
-        showAlert('新密码长度至少为 6 位');
-        return;
-      }
-      showAlert('');
-      const res = await request('/api/auth/change-password', {
-        method: 'POST',
-        body: { old_password: oldPassword, new_password: newPassword },
-      });
-      if (res.res.ok && res.data && res.data.success) {
-        showAlert('登录密码修改成功，请妥善保存新密码');
-        if (oldPwdInput) oldPwdInput.value = '';
-        if (newPwdInput) newPwdInput.value = '';
-      } else {
-        showAlert(errorMessage(res, '修改密码失败'));
-      }
-    });
-  }
-
-  const taskFilterGroup = document.getElementById('admin-task-filters');
-  if (taskFilterGroup) {
-    taskFilterGroup.addEventListener('click', function (e) {
-      const btn = e.target.closest('button[data-filter]');
-      if (!btn) return;
-      taskFilterGroup.querySelectorAll('button').forEach(function (b) {
-        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
-      });
-      loadAdminTasks(btn.getAttribute('data-filter'));
-    });
-  }
-
-  const mediaFilterGroup = document.getElementById('admin-media-filters');
-  if (mediaFilterGroup) {
-    mediaFilterGroup.addEventListener('click', function (e) {
-      const btn = e.target.closest('button[data-media-filter]');
-      if (!btn) return;
-      mediaFilterGroup.querySelectorAll('button').forEach(function (b) {
-        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
-      });
-      loadAdminMedia(btn.getAttribute('data-media-filter'));
-    });
-  }
-
-  const userFilterGroup = document.getElementById('admin-user-filters');
-  if (userFilterGroup) {
-    userFilterGroup.addEventListener('click', function (e) {
-      const btn = e.target.closest('button[data-user-filter]');
-      if (!btn) return;
-      userFilterGroup.querySelectorAll('button').forEach(function (b) {
-        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
-      });
-      loadUsers(undefined, btn.getAttribute('data-user-filter'));
-    });
-  }
-
-  const tabUsersRoster = document.getElementById('tab-users-roster');
-  const tabUsersSecurity = document.getElementById('tab-users-security');
-  const subviewRoster = document.getElementById('subview-users-roster');
-  const subviewSecurity = document.getElementById('subview-users-security');
-
-  if (tabUsersRoster && tabUsersSecurity) {
-    tabUsersRoster.addEventListener('click', function () {
-      tabUsersRoster.classList.add('active');
-      tabUsersSecurity.classList.remove('active');
-      if (subviewRoster) subviewRoster.hidden = false;
-      if (subviewSecurity) subviewSecurity.hidden = true;
-      loadUsers();
-    });
-
-    tabUsersSecurity.addEventListener('click', function () {
-      tabUsersSecurity.classList.add('active');
-      tabUsersRoster.classList.remove('active');
-      if (subviewRoster) subviewRoster.hidden = true;
-      if (subviewSecurity) subviewSecurity.hidden = false;
-      loadGlobalAuditLogs();
-    });
-  }
-
-  const secSearchForm = document.getElementById('sec-search');
-  if (secSearchForm) {
-    secSearchForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      const kwInput = document.getElementById('sec-keyword');
-      const kw = kwInput ? kwInput.value.trim() : '';
-      loadGlobalAuditLogs(kw);
-    });
-  }
-
-  const secFilterGroup = document.getElementById('admin-sec-filters');
-  if (secFilterGroup) {
-    secFilterGroup.addEventListener('click', function (e) {
-      const btn = e.target.closest('button[data-sec-filter]');
-      if (!btn) return;
-      secFilterGroup.querySelectorAll('button').forEach(function (b) {
-        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
-      });
-      loadGlobalAuditLogs(undefined, btn.getAttribute('data-sec-filter'));
-    });
-  }
-
-  function openCreateUserModal() {
-    const wrap = document.createElement('div');
-    const form = document.createElement('form');
-    form.className = 'profile-form';
-
-    const emailLabel = document.createElement('label');
-    emailLabel.textContent = '登录邮箱 *';
-    const emailInput = document.createElement('input');
-    emailInput.type = 'email';
-    emailInput.required = true;
-    emailInput.placeholder = 'creator@example.com';
-
-    const pwdLabel = document.createElement('label');
-    pwdLabel.textContent = '初始密码 * (至少6位)';
-    const pwdInput = document.createElement('input');
-    pwdInput.type = 'text';
-    pwdInput.required = true;
-    pwdInput.value = 'MetaArc' + Math.floor(1000 + Math.random() * 9000) + '!';
-
-    const nameLabel = document.createElement('label');
-    nameLabel.textContent = '创作者昵称 (可选)';
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.placeholder = '例如：元弧导演';
-
-    const phoneLabel = document.createElement('label');
-    phoneLabel.textContent = '绑定手机 (可选)';
-    const phoneInput = document.createElement('input');
-    phoneInput.type = 'tel';
-    phoneInput.placeholder = '13800000000';
-
-    const planLabel = document.createElement('label');
-    planLabel.textContent = '初始套餐版本';
-    const planSelect = document.createElement('select');
-    planSelect.className = 'form-input';
-    [
-      { v: 'free', l: '基础版 (Free)' },
-      { v: 'creator', l: '创作者版 (Creator)' },
-      { v: 'pro', l: '专业版 (Pro)' },
-      { v: 'studio', l: '工作室版 (Studio)' },
-    ].forEach(function (opt) {
-      const o = document.createElement('option');
-      o.value = opt.v;
-      o.textContent = opt.l;
-      planSelect.append(o);
-    });
-
-    const quotaLabel = document.createElement('label');
-    quotaLabel.textContent = '初始算力点数';
-    const quotaInput = document.createElement('input');
-    quotaInput.type = 'number';
-    quotaInput.value = '500';
-
-    const roleLabelEl = document.createElement('label');
-    roleLabelEl.textContent = '身份权限';
-    const roleSelect = document.createElement('select');
-    roleSelect.className = 'form-input';
-    const oUser = document.createElement('option');
-    oUser.value = 'user';
-    oUser.textContent = '普通创作者 (User)';
-    const oAdmin = document.createElement('option');
-    oAdmin.value = 'admin';
-    oAdmin.textContent = '管理员 (Admin)';
-    roleSelect.append(oUser, oAdmin);
-
-    const btnSubmit = document.createElement('button');
-    btnSubmit.type = 'submit';
-    btnSubmit.className = 'action-btn primary';
-    btnSubmit.style.marginTop = '16px';
-    btnSubmit.textContent = '确认创建创作者账号';
-
-    form.append(
-      emailLabel, emailInput,
-      pwdLabel, pwdInput,
-      nameLabel, nameInput,
-      phoneLabel, phoneInput,
-      planLabel, planSelect,
-      quotaLabel, quotaInput,
-      roleLabelEl, roleSelect,
-      btnSubmit
-    );
-
-    form.addEventListener('submit', async function (e) {
-      e.preventDefault();
-      btnSubmit.disabled = true;
-      btnSubmit.textContent = '创建中…';
-      const res = await request('/api/admin/users/create', {
-        method: 'POST',
-        body: {
-          email: emailInput.value.trim(),
-          password: pwdInput.value.trim(),
-          nickname: nameInput.value.trim(),
-          phone: phoneInput.value.trim(),
-          plan: planSelect.value,
-          quota: parseFloat(quotaInput.value) || 500,
-          role: roleSelect.value,
-        },
-      });
-      if (res.res.ok && res.data && res.data.success) {
-        showAlert('创作者账号创建成功！初始密码：' + pwdInput.value.trim());
-        closeModal();
-        loadUsers();
-      } else {
-        showAlert(errorMessage(res, '创建创作者失败'));
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = '确认创建创作者账号';
-      }
-    });
-
-    wrap.append(form);
-    openModal('新建创作者账号', wrap);
-  }
-
-  function exportUsersCsv() {
-    if (!latestLoadedUsers || !latestLoadedUsers.length) {
-      showAlert('当前没有可导出的创作者记录');
-      return;
-    }
-    const headers = ['用户ID', '登录邮箱', '绑定手机', '创作者昵称', '角色权限', '账号状态', '当前套餐', '可用算力点数', '累计算力点数', '最后登录时间', '登录IP', 'IP归属', '注册时间'];
-    const rows = latestLoadedUsers.map(function (u) {
-      return [
-        u.id || '',
-        u.email || '',
-        u.phone || '',
-        (u.nickname || '').replace(/"/g, '""'),
-        roleLabel(u.role),
-        u.status === 'suspended' ? '已封禁' : '正常',
-        u.plan || 'free',
-        u.quota || 0,
-        u.total_quota || 0,
-        u.last_login_at || '',
-        u.last_login_ip || '',
-        (u.last_login_location || '').replace(/"/g, '""'),
-        u.created_at || '',
-      ].map(function (f) { return '"' + f + '"'; }).join(',');
-    });
-    const csvContent = '\uFEFF' + headers.join(',') + '\n' + rows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'metaarc_creators_' + new Date().toISOString().slice(0, 10) + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showAlert('已成功导出 ' + latestLoadedUsers.length + ' 位创作者记录');
-  }
-
-  const btnCreateUser = document.getElementById('btn-create-user');
-  if (btnCreateUser) {
-    btnCreateUser.addEventListener('click', openCreateUserModal);
-  }
-
-  const btnExportUsers = document.getElementById('btn-export-users');
-  if (btnExportUsers) {
-    btnExportUsers.addEventListener('click', exportUsersCsv);
-  }
-
-  const btnBatchQuota = document.getElementById('batch-btn-quota');
-  if (btnBatchQuota) {
-    btnBatchQuota.addEventListener('click', async function () {
-      if (selectedUserIds.size === 0) return;
-      const raw = prompt('请输入给已选中的 ' + selectedUserIds.size + ' 位创作者调整的算力点数（正数加点，负数扣点）：', '500');
-      if (raw === null) return;
-      const amount = parseFloat(raw.trim());
-      if (!Number.isFinite(amount) || amount === 0) {
-        alert('请输入有效的非零数值');
-        return;
-      }
-      const reason = prompt('请输入调账原因或备注：', '批量管理员调账') || '';
-      const res = await request('/api/admin/users/batch', {
-        method: 'POST',
-        body: {
-          action: 'adjust_quota',
-          userIds: Array.from(selectedUserIds),
-          amount: amount,
-          reason: reason,
-        },
-      });
-      if (res.res.ok && res.data && res.data.success) {
-        showAlert('批量调账成功！已调整 ' + res.data.updatedCount + ' 位用户');
-        selectedUserIds.clear();
-        updateBatchBar();
-        loadUsers();
-      } else {
-        showAlert(errorMessage(res, '批量调账失败'));
-      }
-    });
-  }
-
-  const btnBatchPlan = document.getElementById('batch-btn-plan');
-  if (btnBatchPlan) {
-    btnBatchPlan.addEventListener('click', async function () {
-      if (selectedUserIds.size === 0) return;
-      const rawPlan = prompt('请选择要为已选中的 ' + selectedUserIds.size + ' 位创作者设置的新套餐（free / creator / pro / studio）：', 'creator');
-      if (!rawPlan) return;
-      const newPlan = rawPlan.trim().toLowerCase();
-      if (['free', 'creator', 'pro', 'studio'].indexOf(newPlan) < 0) {
-        alert('无效套餐标识');
-        return;
-      }
-      const res = await request('/api/admin/users/batch', {
-        method: 'POST',
-        body: {
-          action: 'set_plan',
-          userIds: Array.from(selectedUserIds),
-          plan: newPlan,
-        },
-      });
-      if (res.res.ok && res.data && res.data.success) {
-        showAlert('批量套餐设置成功！已更新 ' + res.data.updatedCount + ' 位用户');
-        selectedUserIds.clear();
-        updateBatchBar();
-        loadUsers();
-      } else {
-        showAlert(errorMessage(res, '批量设置套餐失败'));
-      }
-    });
-  }
-
-  const btnBatchSuspend = document.getElementById('batch-btn-suspend');
-  if (btnBatchSuspend) {
-    btnBatchSuspend.addEventListener('click', async function () {
-      if (selectedUserIds.size === 0) return;
-      if (!confirm('确定要批量封禁已选中的 ' + selectedUserIds.size + ' 位创作者账号吗？')) return;
-      const res = await request('/api/admin/users/batch', {
-        method: 'POST',
-        body: {
-          action: 'set_status',
-          userIds: Array.from(selectedUserIds),
-          status: 'suspended',
-        },
-      });
-      if (res.res.ok && res.data && res.data.success) {
-        showAlert('已成功封禁 ' + res.data.updatedCount + ' 位用户');
-        selectedUserIds.clear();
-        updateBatchBar();
-        loadUsers();
-      } else {
-        showAlert(errorMessage(res, '批量封禁失败'));
-      }
-    });
-  }
-
-  const btnBatchActivate = document.getElementById('batch-btn-activate');
-  if (btnBatchActivate) {
-    btnBatchActivate.addEventListener('click', async function () {
-      if (selectedUserIds.size === 0) return;
-      if (!confirm('确定要批量解封已选中的 ' + selectedUserIds.size + ' 位创作者账号吗？')) return;
-      const res = await request('/api/admin/users/batch', {
-        method: 'POST',
-        body: {
-          action: 'set_status',
-          userIds: Array.from(selectedUserIds),
-          status: 'active',
-        },
-      });
-      if (res.res.ok && res.data && res.data.success) {
-        showAlert('已成功解封 ' + res.data.updatedCount + ' 位用户');
-        selectedUserIds.clear();
-        updateBatchBar();
-        loadUsers();
-      } else {
-        showAlert(errorMessage(res, '批量解封失败'));
-      }
-    });
-  }
-
-  const btnBatchClear = document.getElementById('batch-btn-clear');
-  if (btnBatchClear) {
-    btnBatchClear.addEventListener('click', function () {
-      selectedUserIds.clear();
-      document.querySelectorAll('.user-row-check').forEach(function (cb) { cb.checked = false; });
-      updateBatchBar();
-    });
-  }
-
-  const orderFilterGroup = document.getElementById('admin-order-filters');
-  if (orderFilterGroup) {
-    orderFilterGroup.addEventListener('click', function (e) {
-      const btn = e.target.closest('button[data-order-filter]');
-      if (!btn) return;
-      orderFilterGroup.querySelectorAll('button').forEach(function (b) {
-        b.className = (b === btn) ? 'action-btn primary' : 'action-btn';
-      });
-      loadAdminOrders(btn.getAttribute('data-order-filter'));
-    });
-  }
-
-  const btnLoginLogs = document.getElementById('btn-login-logs');
-  if (btnLoginLogs) {
-    btnLoginLogs.addEventListener('click', async function () {
-      const res = await request('/api/auth/login-logs');
-      if (!res.res.ok || !res.data || !res.data.success || !Array.isArray(res.data.data)) {
-        notify(errorMessage(res, '无法获取登录日志'), 'error');
-        return;
-      }
-      const logs = res.data.data;
-      if (!logs.length) {
-        notify('暂无登录审计记录', 'info');
-        return;
-      }
-      const wrap = document.createElement('div');
-      renderTable(wrap, [
-        { label: '登录时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
-        { label: 'IP 地址', fill: function (td, r) { td.textContent = r.ip; } },
-        { label: '地理位置', fill: function (td, r) { td.textContent = r.ip_location || '—'; } },
-        { label: '客户端环境', fill: function (td, r) { td.textContent = (r.user_agent || '').substring(0, 36) + '…'; } },
-        {
-          label: '状态',
-          fill: function (td, r) {
-            const dot = document.createElement('i');
-            dot.className = r.status === 'success' ? 'dot' : 'dot danger';
-            td.append(dot, document.createTextNode(r.status === 'success' ? '成功' : ('失败: ' + (r.fail_reason || ''))));
-          },
-        },
-      ], logs);
-      openModal('账户登录审计日志', wrap);
-    });
-  }
-
-  showGateMode('login');
   if (token()) loadSession();
-  else showLoggedOut();
+  else showGate('login');
 })();

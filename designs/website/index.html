@@ -3,277 +3,138 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MetaArc 元弧 — AI 原生视听创作成片平台 | MetaArc.COM.CN</title>
-<meta name="description" content="小说、剧本、画布、导演台、剪辑，都是智能体的工具。一句话，从原著走到成片。MetaArc 元弧商业化创作工作台与云端协同平台。">
+<title>MetaArc 元弧 — AI 原生视听创作成片平台</title>
+<meta name="description" content="让文字拥有自己的银幕。MetaArc 元弧把小说、剧本、分镜、素材、剪辑和成片放在一条可以亲手接管的路径上。">
 <link rel="canonical" href="https://metaarc.com.cn/">
 <link rel="icon" href="assets/icon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon-180.png" sizes="180x180">
-<meta name="theme-color" content="#07080b">
+<meta name="theme-color" content="#ffffff">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://metaarc.com.cn/">
-<meta property="og:title" content="MetaArc 元弧 — AI 原生视听创作成片平台">
-<meta property="og:description" content="小说、剧本、画布、导演台、剪辑，都是智能体的工具。一句话，从原著走到成片。">
-<meta property="og:image" content="https://metaarc.com.cn/assets/s6_editing.webp">
+<meta property="og:title" content="MetaArc 元弧 — 让文字拥有自己的银幕">
+<meta property="og:description" content="从一个念头走到一段旅程。套餐、下载和帮助都以当前发布状态为准。">
+<meta property="og:image" content="https://metaarc.com.cn/assets/story-ridge.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<script>(function(s){if(s&&s('selector(:has(*))')&&s('width:1lh')&&s('color:color-mix(in srgb,red,red)'))document.documentElement.classList.add('cv-js')})(window.CSS&&CSS.supports);</script>
-<link rel="stylesheet" href="vendor/cineview/cineview.css">
-<script type="module" src="vendor/cineview/cineview.js"></script>
-<link rel="preload" href="fonts/NotoSerifSC-subset.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="landing.css?v=0c1e1c83a3">
-<link rel="stylesheet" href="metaarc.css">
+<link rel="preload" href="fonts/NotoSansSC-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="landing.css">
 </head>
 <body>
-
 <header class="topbar">
-  <a class="brand" href="#top"><img class="brand-mark" src="assets/mark.svg" alt="" width="36" height="36"><span class="brand-lockup"><span class="brand-en">MetaArc</span><span class="brand-zh">元弧</span></span></a>
-  <nav class="topnav">
-    <a href="#run">工作方式</a>
-    <a href="#models">模型</a>
-    <a href="#pricing">套餐</a>
-    <a href="#download">下载</a>
+  <a class="brand" href="#top"><img class="brand-mark" src="assets/mark-black.svg" alt="" width="36" height="36"><span class="brand-name">MetaArc <span>元弧</span></span></a>
+  <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="topnav">菜单</button>
+  <nav class="topnav" id="topnav">
+    <a href="#method">工作方式</a>
+    <a href="#pricing">套餐权益</a>
+    <a href="#download">下载更新</a>
+    <a href="/help/">帮助中心</a>
   </nav>
-
-  <!-- 顶栏进入同域账号中心，首页不嵌登录框 -->
-  <div class="topbar-actions">
-    <a class="account-link" href="/account">账号</a>
-  </div>
+  <a class="btn btn-small" href="/account">进入用户中心</a>
 </header>
 
-<cv-stage design-width="1920" id="stage">
-
-  <!-- ============ SC.01 片头：产品指挥台 ============ -->
-  <cv-scene id="top" class="sc cover" preload>
-    <div class="desk-frame">
-    <div class="desk">
-      <div class="desk-copy">
-        <h1 class="desk-title">从小说到成片</h1>
-        <p class="desk-sub">多智能体创作台</p>
-        <div class="ctas desk-ctas">
-          <a class="btn btn-pill" id="primary-dl" href="#download">下载 Windows 内测包</a>
-          <a class="btn btn-pill btn-line" href="#pricing">查看套餐</a>
-        </div>
-      </div>
-      <figure class="monitor">
-        <div class="monitor-screen">
-          <img src="assets/s6_editing.webp" alt="MetaArc 剪辑台：深色预览、时间线和轨道" width="2880" height="1800">
-        </div>
-        <div class="monitor-neck" aria-hidden="true"></div>
-        <div class="monitor-foot" aria-hidden="true"></div>
-      </figure>
+<main id="top">
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">AI 原生视听创作成片平台</p>
+      <h1>让文字，<br>拥有自己的银幕。</h1>
     </div>
-    <div class="desk-wood" aria-hidden="true"></div>
+    <div class="hero-aside">
+      <p>从小说明、剧本到视听创作。<br>把故事交给智能体，创作始终由你掌控。</p>
+      <a class="btn" id="primary-dl" href="#download">查看下载状态</a>
     </div>
-  </cv-scene>
-
-  <!-- ============ SC.02 一条指令跑完全程 ============ -->
-  <cv-scene id="run" class="sc run" zone>
-    <cv-animate class="anchor" duration="6000" aria-hidden="true"></cv-animate>
-
-    <div class="slate mono" aria-hidden="true">
-      <span><b>SC.02</b>&nbsp;&nbsp;一条指令跑完全程</span>
-      <span class="slate-swap">
-        <cv-animate fx="keyframes(swap-first)" at="0% 17%" duration="200">TASK 01 / 06</cv-animate>
-        <cv-animate fx="keyframes(swap)" at="16% 34%" duration="200">TASK 02 / 06</cv-animate>
-        <cv-animate fx="keyframes(swap)" at="33% 51%" duration="200">TASK 03 / 06</cv-animate>
-        <cv-animate fx="keyframes(swap)" at="50% 67%" duration="200">TASK 04 / 06</cv-animate>
-        <cv-animate fx="keyframes(swap)" at="66% 84%" duration="200">TASK 05 / 06</cv-animate>
-        <cv-animate fx="keyframes(swap-last)" at="83% 100%" duration="200">TASK 06 / 06</cv-animate>
-      </span>
-      <span class="slate-swap">
-        <cv-animate fx="keyframes(swap-first)" at="0% 17%" duration="200">00:00:42:10</cv-animate>
-        <cv-animate fx="keyframes(swap)" at="16% 34%" duration="200">00:06:18:02</cv-animate>
-        <cv-animate fx="keyframes(swap)" at="33% 51%" duration="200">00:12:04:08</cv-animate>
-        <cv-animate fx="keyframes(swap)" at="50% 67%" duration="200">00:23:51:16</cv-animate>
-        <cv-animate fx="keyframes(swap)" at="66% 84%" duration="200">00:41:17:02</cv-animate>
-        <cv-animate fx="keyframes(swap-last)" at="83% 100%" duration="200">00:47:30:00</cv-animate>
-      </span>
-    </div>
-
-    <div class="run-grid">
-      <div class="run-copy">
-        <h2 class="h2">一句话，<br>智能体自己走完六步</h2>
-        <p class="run-cmd"><span class="cmd-p">›</span>把第一卷改编成短剧，做出第一集的成片</p>
-        <ol class="steps">
-          <li class="step">
-            <cv-animate class="step-on" fx="keyframes(lit-first)" at="0% 17%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
-            <span class="n mono">01<cv-animate class="done" fx="keyframes(on)" at="17% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">读原著</span><em class="m mono">文本模型</em>
-            <cv-animate class="d" fx="keyframes(swap-first)" at="0% 17%" duration="200"><span>检索章节与设定，梳理人物和主线</span></cv-animate>
-          </li>
-          <li class="step">
-            <cv-animate class="step-on" fx="keyframes(lit)" at="16% 34%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
-            <span class="n mono">02<cv-animate class="done" fx="keyframes(on)" at="34% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">改编剧本</span><em class="m mono">文本模型</em>
-            <cv-animate class="d" fx="keyframes(swap)" at="16% 34%" duration="200"><span>对照原著拆分剧集与场次，写对白和动作</span></cv-animate>
-          </li>
-          <li class="step">
-            <cv-animate class="step-on" fx="keyframes(lit)" at="33% 51%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
-            <span class="n mono">03<cv-animate class="done" fx="keyframes(on)" at="51% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">拆分镜</span><em class="m mono">文本模型</em>
-            <cv-animate class="d" fx="keyframes(swap)" at="33% 51%" duration="200"><span>按场次铺分镜节点，逐镜写提示词</span></cv-animate>
-          </li>
-          <li class="step">
-            <cv-animate class="step-on" fx="keyframes(lit)" at="50% 67%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
-            <span class="n mono">04<cv-animate class="done" fx="keyframes(on)" at="67% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">生成素材</span><em class="m mono">图像 · 视频模型</em>
-            <cv-animate class="d" fx="keyframes(swap)" at="50% 67%" duration="200"><span>角色定妆、参考图、视频片段</span></cv-animate>
-          </li>
-          <li class="step">
-            <cv-animate class="step-on" fx="keyframes(lit)" at="66% 84%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
-            <span class="n mono">05<cv-animate class="done" fx="keyframes(on)" at="84% 100%" duration="200" aria-hidden="true"><span>✓</span></cv-animate></span><span class="t">剪辑</span><em class="m mono">剪辑台工具</em>
-            <cv-animate class="d" fx="keyframes(swap)" at="66% 84%" duration="200"><span>素材上轨、分割修剪、加字幕</span></cv-animate>
-          </li>
-          <li class="step">
-            <cv-animate class="step-on" fx="keyframes(lit-last)" at="83% 100%" duration="200"><span class="mark" aria-hidden="true"></span></cv-animate>
-            <span class="n mono">06</span><span class="t">成片</span><em class="m mono">视觉模型</em>
-            <cv-animate class="d" fx="keyframes(swap-last)" at="83% 100%" duration="200"><span>渲染预览，抽帧检查画面</span></cv-animate>
-          </li>
-        </ol>
-      </div>
-
-      <div class="run-figure">
-        <div class="win">
-          <cv-animate class="shot" fx="keyframes(swap-first)" at="0% 17%" duration="200">
-            <img src="assets/s1_novel.webp" alt="小说编辑器：章节列表、正文和右侧的智能体面板" loading="lazy">
-          </cv-animate>
-          <cv-animate class="shot shot-adapt" fx="keyframes(swap)" at="16% 34%" duration="200">
-            <img class="adapt-main" src="assets/s2_screenplay.webp" alt="剧本编辑器：按场次排好的剧本" loading="lazy">
-            <img class="adapt-source" src="assets/s2_source.webp" alt="对照用的原著窗口" loading="lazy">
-          </cv-animate>
-          <cv-animate class="shot" fx="keyframes(swap)" at="33% 51%" duration="200">
-            <img src="assets/s3_canvas.webp" alt="画布：角色定妆、生成素材和按场次排开的分镜节点" loading="lazy">
-          </cv-animate>
-          <cv-animate class="shot shot-zoom" fx="keyframes(swap)" at="50% 67%" duration="200">
-            <img src="assets/s3_canvas.webp" alt="画布上生成的参考图与视频片段" loading="lazy">
-          </cv-animate>
-          <cv-animate class="shot" fx="keyframes(swap)" at="66% 84%" duration="200">
-            <img src="assets/s6_editing.webp" alt="剪辑台：预览画面与六轨时间线" loading="lazy">
-          </cv-animate>
-          <cv-animate class="shot shot-still" fx="keyframes(swap-last)" at="83% 100%" duration="200">
-            <img src="assets/still_blade.webp" alt="用 MetaArc 生成的第一集成片画面" loading="lazy">
-            <span class="still-tag mono">▶ 第一集 · 成片预览</span>
-          </cv-animate>
-        </div>
-        <div class="reel" aria-hidden="true">
-          <cv-animate class="reel-seg" fx="wipe(left)" at="0% 16%" duration="200"><span></span></cv-animate>
-          <cv-animate class="reel-seg" fx="wipe(left)" at="16% 33%" duration="200"><span></span></cv-animate>
-          <cv-animate class="reel-seg" fx="wipe(left)" at="33% 50%" duration="200"><span></span></cv-animate>
-          <cv-animate class="reel-seg" fx="wipe(left)" at="50% 66%" duration="200"><span></span></cv-animate>
-          <cv-animate class="reel-seg" fx="wipe(left)" at="66% 83%" duration="200"><span></span></cv-animate>
-          <cv-animate class="reel-seg" fx="wipe(left)" at="83% 98%" duration="200"><span></span></cv-animate>
-        </div>
-        <div class="reel-labels mono" aria-hidden="true"><span>小说</span><span>剧本</span><span>画布</span><span>素材</span><span>剪辑</span><span>成片</span></div>
-      </div>
-    </div>
-  </cv-scene>
-
-  <!-- ============ SC.03 为什么是 Agent Native ============ -->
-  <cv-scene id="agent" class="sc agent">
-    <div class="sec-head">
-      <p class="label mono"><b>SC.03</b>&nbsp;&nbsp;AGENT NATIVE</p>
-      <cv-animate fx="rise(soft)" duration="700"><h2 class="h2">模块就是工具，<br>过程全程可见</h2></cv-animate>
-    </div>
-    <div class="agent-grid">
-      <ol class="points">
-        <li><cv-animate fx="rise(soft)" duration="700">
-          <span class="n mono">01</span>
-          <h3>每个模块都开放给智能体</h3>
-          <p>小说、剧本、画布、导演台、剪辑台都以工具形式提供。智能体自己拆解任务、按顺序执行、检查结果。</p>
-        </cv-animate></li>
-        <li><cv-animate fx="rise(soft)" delay="120" duration="700">
-          <span class="n mono">02</span>
-          <h3>读完整部作品再动手</h3>
-          <p>按需检索章节、设定和人物，不用每次重新交代上下文，角色和画面前后保持一致。</p>
-        </cv-animate></li>
-        <li><cv-animate fx="rise(soft)" delay="240" duration="700">
-          <span class="n mono">03</span>
-          <h3>任务和改动摆在眼前</h3>
-          <p>任务列表、执行过程、改动记录全程可见，不满意随时回滚。云端算力调度与S3永久资产存储，保障成片交付安全。</p>
-        </cv-animate></li>
-      </ol>
-      <cv-animate class="agent-figure" fx="reveal(left, soft)" on="enter(partial)" duration="1000">
-        <div class="win"><img src="assets/s8_chat.webp" alt="智能体对话与实时更新的任务列表" loading="lazy"></div>
-      </cv-animate>
-    </div>
-  </cv-scene>
-
-  <!-- ============ SC.04 你也可以亲自上手（横向胶片） ============ -->
-  <cv-scene id="studio" class="sc studio" track="x">
-    <div class="studio-lead">
-      <p class="label mono"><b>SC.04</b>&nbsp;&nbsp;STUDIO</p>
-      <h2 class="h2">每一步，<br>你也能亲手接管</h2>
-      <p class="lead">智能体用的工具，就是你用的工作台。哪一步想自己来，随时接过去。</p>
-    </div>
-    <figure class="frame">
-      <div class="frame-img"><img src="assets/s1_novel.webp" alt="小说编辑器" loading="lazy"></div>
-      <figcaption><span class="mono">01</span><b>小说</b>章节、设定库、关系图谱</figcaption>
+    <figure class="hero-figure">
+      <img src="assets/story-ridge.jpg" width="1280" height="720" alt="概念影像：山间石拱桥上亮着窗的列车，一位旅人站在崖边。这不是产品成片。">
+      <p class="hero-flag">非产品成片 / 概念影像</p>
+      <figcaption>
+        <strong>一个念头，一段旅程。</strong>
+        <span>让故事走出文字，走向可能。</span>
+      </figcaption>
     </figure>
-    <figure class="frame">
-      <div class="frame-img"><img src="assets/s2_screenplay.webp" alt="剧本编辑器" loading="lazy"></div>
-      <figcaption><span class="mono">02</span><b>剧本</b>对照原著改编，拆分剧集与场次</figcaption>
-    </figure>
-    <figure class="frame">
-      <div class="frame-img"><img src="assets/s3_canvas.webp" alt="无限画布" loading="lazy"></div>
-      <figcaption><span class="mono">03</span><b>画布</b>分镜节点、提示词、生图生视频</figcaption>
-    </figure>
-    <figure class="frame">
-      <div class="frame-img"><img src="assets/s5_director.webp" alt="3D 导演台" loading="lazy"></div>
-      <figcaption><span class="mono">04</span><b>导演台</b>3D 布景、机位、运镜预演</figcaption>
-    </figure>
-    <figure class="frame">
-      <div class="frame-img"><img src="assets/s6_editing.webp" alt="多轨剪辑台" loading="lazy"></div>
-      <figcaption><span class="mono">05</span><b>剪辑</b>6 轨时间线，直接导出成片</figcaption>
-    </figure>
-  </cv-scene>
+  </section>
 
-  <!-- ============ SC.05 模型与算力中枢 ============ -->
-  <cv-scene id="models" class="sc models">
-    <div class="sec-head">
-      <p class="label mono"><b>SC.05</b>&nbsp;&nbsp;UNIFIED AI GATEWAY</p>
-      <cv-animate fx="rise(soft)" duration="700"><h2 class="h2">统一算力中枢，<br>多模型无缝切换</h2></cv-animate>
-      <p class="lead">MetaArc 统一集成 New-API 高性能算力网关，提供点数计量、渠道容灾与秒级流式响应。同时也支持创作者自带 Key (BYOK)。</p>
+  <section class="chapter" id="method">
+    <p class="index">01 / 从文字到画面</p>
+    <div class="chapter-head">
+      <h2>六步走向成片，<br>每一步都可以亲手接管。</h2>
+      <p>不是再多打开几个工具。让故事在一条路径里向前。</p>
     </div>
-    <div class="model-groups">
-      <cv-animate fx="rise(soft)" duration="700"><div class="group"><h3 class="mono">文本与推理</h3><ul><li>Claude 3.5 Sonnet</li><li>GPT-4o</li><li>Gemini 1.5 Pro</li><li>DeepSeek-V3 / R1</li><li>Qwen</li></ul></div></cv-animate>
-      <cv-animate fx="rise(soft)" delay="100" duration="700"><div class="group"><h3 class="mono">图像生成</h3><ul><li>Seedream 5.0</li><li>通义万相 2.7</li><li>DALL-E 3</li><li>Gemini Flash Image</li></ul></div></cv-animate>
-      <cv-animate fx="rise(soft)" delay="200" duration="700"><div class="group"><h3 class="mono">视频生成</h3><ul><li>Doubao Seedance 2.5</li><li>MiniMax H3</li><li>万相 Wan 2.7</li><li>可灵 Kling 3.0</li></ul></div></cv-animate>
-    </div>
-  </cv-scene>
+    <ol class="steps">
+      <li><span>01</span><h3>读原著</h3><p>章节、人物与设定</p></li>
+      <li><span>02</span><h3>改编本</h3><p>剧集、场次与对白</p></li>
+      <li><span>03</span><h3>拆分镜</h3><p>镜头、节奏与提示</p></li>
+      <li><span>04</span><h3>生成素材</h3><p>角色、图像与视频</p></li>
+      <li><span>05</span><h3>剪辑</h3><p>修剪、字幕与编排</p></li>
+      <li><span>06</span><h3>成片</h3><p>预览、检查与导出</p></li>
+    </ol>
+  </section>
 
-  <!-- ============ SC.06 套餐定价与算力点数 ============ -->
-  <cv-scene id="pricing" class="sc pricing">
-    <div class="pricing-header">
-      <p class="label mono"><b>SC.06</b>&nbsp;&nbsp;PLANS & QUOTA</p>
-      <h2 class="h2">套餐</h2>
-      <p>名称、价格和点数只显示套餐接口的返回。接口失败时不显示价格。支付尚未开通，不能下单。</p>
+  <section class="chapter" id="control">
+    <p class="index">02 / 创作始终由你掌控</p>
+    <div class="chapter-head">
+      <h2>智能体向前，<br>你随时接手。</h2>
+    </div>
+    <div class="points">
+      <article>
+        <h3>上下文连贯</h3>
+        <p>围绕章节、设定和人物组织创作，不必反复交代。</p>
+      </article>
+      <article>
+        <h3>过程可追踪</h3>
+        <p>任务与改动看得见。创作不必是一只黑箱。</p>
+      </article>
+      <article>
+        <h3>工具可接管</h3>
+        <p>小说、剧本、画布、导演台与剪辑台，按需亲手创作。</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="chapter" id="pricing">
+    <p class="index">03 / 套餐与权益</p>
+    <div class="chapter-head">
+      <h2>先了解，再决定。</h2>
+      <p>公开套餐参考：在线支付尚未开通，当前不能购买或续费。名称、价格和点数只在套餐接口返回后显示。</p>
     </div>
     <p class="pricing-status" id="pricing-status">正在读取套餐…</p>
     <div class="pricing-grid" id="pricing-grid" hidden></div>
-  </cv-scene>
+  </section>
 
-  <!-- ============ SC.07 片尾与客户端下载 ============ -->
-  <cv-scene id="download" class="sc ending">
-    <div class="ending-body">
-      <cv-animate fx="rise(soft)" duration="700"><h2 class="ending-title">客户端下载</h2></cv-animate>
-      <p class="lead" id="download-lead">尚未发布。下面是各平台占位，没有可下载的安装包。</p>
-      <div class="dl-cards">
-        <div class="dl is-unreleased" data-os="mac">
-          <span class="dl-os">macOS</span><span class="dl-meta mono">Apple Silicon</span><span class="dl-go">尚未发布</span>
-        </div>
-        <div class="dl is-unreleased" id="download-windows" data-os="win">
-          <span class="dl-os">Windows</span><span class="dl-meta mono">64 位</span><span class="dl-go">尚未发布</span>
-        </div>
-        <div class="dl is-unreleased" data-os="android">
-          <span class="dl-os">Android</span><span class="dl-meta mono">arm64</span><span class="dl-go">尚未发布</span>
-        </div>
+  <section class="chapter release" id="download">
+    <div class="release-band">
+      <div>
+        <p class="index">04 / 开始之前</p>
+        <h2>从第一段文字开始。</h2>
+        <p id="download-lead">正在核对更新清单。没有安装包时，下面保持尚未发布。</p>
+        <div id="download-notes"></div>
+      </div>
+      <div class="release-actions">
+        <a class="btn" href="/help/#install">下载与安装说明</a>
+        <a class="text-link" href="/help/#support">安装遇到问题？查看帮助与诊断</a>
       </div>
     </div>
-    <footer class="bar bar-bottom mono">
-      <span>SC.07 片尾 · © MetaArc 元弧 · MetaArc.COM.CN</span>
-      <span>开源改编 · <a href="https://github.com/looplj/reveric">Reveric</a>（AGPL-3.0）。Based on Reveric by looplj.</span>
-      <span><a href="mailto:contact@metaarc.com.cn">商业合作与授权</a></span>
-    </footer>
-  </cv-scene>
+    <div class="dl-cards">
+      <div class="dl is-unreleased" id="download-windows">
+        <span class="dl-os">Windows</span><span class="dl-meta">64 位</span><span class="dl-go">尚未发布</span>
+      </div>
+      <div class="dl is-unreleased" id="download-macos">
+        <span class="dl-os">macOS</span><span class="dl-meta">Apple 芯片</span><span class="dl-go">尚未发布</span>
+      </div>
+      <div class="dl is-unreleased" id="download-android">
+        <span class="dl-os">Android</span><span class="dl-meta">arm64</span><span class="dl-go">尚未发布</span>
+      </div>
+    </div>
+  </section>
+</main>
 
-</cv-stage>
-
-<script src="landing.js?v=4e803628ba"></script>
+<footer class="site-footer">
+  <div class="footer-grid">
+    <a href="#method">工作方式</a>
+    <a href="#pricing">套餐权益</a>
+    <a href="/help/">帮助中心</a>
+  </div>
+  <p class="footer-legal">© MetaArc 元弧 · 开源改编 · <a href="https://github.com/looplj/reveric">Reveric</a>（AGPL-3.0）。Based on Reveric by looplj. · <a href="mailto:contact@metaarc.com.cn">联系</a></p>
+  <p class="footer-note">概念影像不代表产品成片。套餐价格在支付开通前只供了解。</p>
+</footer>
+<script src="landing.js"></script>
 <script src="metaarc.js"></script>
 </body>
 </html>

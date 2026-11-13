@@ -59,5 +59,6 @@ chmod +x nginx/certbot-init.sh
 
 - [ ] **官网**：访问 `https://metaarc.com.cn`，确认页面正常打开。顶栏「账号」进入 `https://metaarc.com.cn/account`。未登录不出现配额数字。支付按钮保持不可用。
 - [ ] **健康探针**：访问 `https://metaarc.com.cn/health`，应返回 `{"status":"ok","brand":"MetaArc","db":"connected"}`。
-- [ ] **账号路径**：`POST /api/auth/login` 与 `POST /api/login` 对同一请求返回相同结果。没有公开管理后台。
+- [ ] **账号路径**：`POST /api/auth/login` 与 `POST /api/login` 对同一请求返回相同结果。`/admin` 未登录不能操作；支付接口返回尚未开通。
+- [ ] **数据库**：已有库在服务监听前会补 `users.session_version` 和 `admin_audit_logs`，重复启动不会再加一列。新库由 `migrations/003_session_and_audit.sql` 随初始化执行。回滚代码时这两处可以留下。不要 `docker compose down -v`，也不要覆盖 `.env`、`downloads/` 和 `updates/latest.json`。生产目录是 `/opt/metaarc/server`。
 - [ ] **客户端**：桌面端会员弹窗默认服务器为 `https://metaarc.com.cn`。移动端还没有账号入口。

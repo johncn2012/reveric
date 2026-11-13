@@ -58,15 +58,13 @@ const plans = [
   },
 ];
 
-test('四档价格来自接口，只有创作者版带推荐，支付按钮全部不可用', () => {
+test('四档价格来自接口，支付保持不可用', () => {
   const portal = loadPortal();
   const html = plans.map((plan) => portal.renderPlanCard(plan)).join('\n');
-  assert.match(html, /class="plan-card featured" data-plan-slug="creator"/);
-  assert.match(html, /class="plan-badge">推荐</);
-  assert.equal(html.match(/plan-card featured/g).length, 1);
-  assert.equal(html.match(/plan-badge/g).length, 1);
-  assert.equal(html.match(/disabled>支付尚未开通/g).length, 4);
-  assert.doesNotMatch(html, /btn-plan" href|立即支付|立即订阅|checkout/);
+  assert.match(html, /class="plan-card" data-plan-slug="creator"/);
+  assert.equal(html.match(/class="plan-card"/g).length, 4);
+  assert.equal(html.match(/支付尚未开通/g).length, 4);
+  assert.doesNotMatch(html, /<a |立即支付|立即订阅|checkout|btn-plan/);
   assert.match(html, /¥0/);
   assert.match(html, /¥29/);
   assert.match(html, /¥99/);
@@ -77,7 +75,7 @@ test('四档价格来自接口，只有创作者版带推荐，支付按钮全�
   assert.match(html, /<span>100GB 独享存储与自定义域名 CDN<\/span>/);
 });
 
-test('没有 slug 时，名称以创作者版开头仍标为推荐', () => {
+test('没有 slug 时仍展示价格和未开通状态', () => {
   const portal = loadPortal();
   const html = portal.renderPlanCard({
     name: '创作者版（月付）',
@@ -85,12 +83,13 @@ test('没有 slug 时，名称以创作者版开头仍标为推荐', () => {
     billing_cycle: 'monthly',
     quota_points: 3000,
   });
-  assert.match(html, /plan-card featured/);
-  assert.match(html, /推荐/);
-  assert.match(html, /disabled>支付尚未开通/);
+  assert.match(html, /class="plan-card"/);
+  assert.match(html, /支付尚未开通/);
+  assert.match(html, /¥29/);
+  assert.doesNotMatch(html, /<a |立即支付|checkout/);
 });
 
-test('slug 大小写不影响创作者版，其它档位不标推荐', () => {
+test('slug 原样写入卡片，价格来自传入数据', () => {
   const portal = loadPortal();
   const creator = portal.renderPlanCard({
     name: 'Creator',
@@ -99,10 +98,12 @@ test('slug 大小写不影响创作者版，其它档位不标推荐', () => {
     quota_points: 3000,
   });
   assert.match(creator, /data-plan-slug=" Creator "/);
-  assert.match(creator, /featured/);
+  assert.match(creator, /支付尚未开通/);
 
   const pro = portal.renderPlanCard(plans[2]);
-  assert.doesNotMatch(pro, /featured|推荐/);
+  assert.match(pro, /data-plan-slug="pro"/);
+  assert.match(pro, /¥99/);
   const free = portal.renderPlanCard(plans[0]);
-  assert.doesNotMatch(free, /featured|推荐/);
+  assert.match(free, /data-plan-slug="free"/);
+  assert.match(free, /¥0/);
 });

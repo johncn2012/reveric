@@ -46,10 +46,32 @@ export function createApp() {
   // 同域账号中心。/account 与 /account/ 都返回这一页，不另开子域。
   app.get('/account', sendAccountPage);
   app.get('/account/', sendAccountPage);
+  // 管理员工作台与账号中心同一页，入口仍要先登录，角色不符时页面不会打开操作区。
+  app.get('/admin', sendAccountPage);
+  app.get('/admin/', sendAccountPage);
+  const helpPage = path.join(websiteDist, 'help', 'index.html');
+  const sendHelpPage: express.RequestHandler = (_req, res) => {
+    res.sendFile(helpPage, (err) => {
+      if (err && !res.headersSent) {
+        res.status(404).type('text/plain').send('help page missing');
+      }
+    });
+  };
+  app.get('/help', sendHelpPage);
+  app.get('/help/', sendHelpPage);
   app.use(express.static(websiteDist));
 
   // 健康检查。/api/health 与 /health 共用同一探针。
   // 必须写在下方 /api 路由之前：未命中的 /api/* 会落到管理路由的鉴权中间件并返回 401。
+  app.get('/api/portal/capabilities', (_req, res) => {
+    res.json({
+      payment: 'unavailable',
+      password_reset: 'unavailable',
+      diagnostics_inbox: 'not_connected',
+      email: 'not_configured',
+    });
+  });
+
   app.get(['/health', '/api/health'], async (_req, res) => {
     try {
       await pool.query('SELECT 1');
@@ -81,15 +103,16 @@ function isDirectRun() {
 }
 
 if (isDirectRun()) {
-  void initDbSchema();
   const PORT = process.env.PORT || 8080;
-  app.listen(PORT, () => {
-    console.log(`=================================================`);
-    console.log(`🚀 MetaArc (元弧) BaaS 业务中台与运营网关已启动`);
-    console.log(`📡 服务端口: ${PORT}`);
-    console.log(`🌐 绑定域名: ${process.env.APP_DOMAIN || 'MetaArc.COM.CN'}`);
-    console.log(`🔌 New-API 节点: ${process.env.NEW_API_BASE_URL || '未配置'}`);
-    console.log(`📦 对象存储桶: ${process.env.S3_BUCKET || 'metaarc-media-prod'}`);
-    console.log(`=================================================`);
+  void initDbSchema().finally(() => {
+    app.listen(PORT, () => {
+      console.log(`=================================================`);
+      console.log(`🚀 MetaArc (元弧) BaaS 业务中台与运营网关已启动`);
+      console.log(`📡 服务端口: ${PORT}`);
+      console.log(`🌐 绑定域名: ${process.env.APP_DOMAIN || 'MetaArc.COM.CN'}`);
+      console.log(`🔌 New-API 节点: ${process.env.NEW_API_BASE_URL || '未配置'}`);
+      console.log(`📦 对象存储桶: ${process.env.S3_BUCKET || 'metaarc-media-prod'}`);
+      console.log(`=================================================`);
+    });
   });
 }

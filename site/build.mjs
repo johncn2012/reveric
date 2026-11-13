@@ -19,7 +19,7 @@ const SRC = join(ROOT, 'designs', 'website');
 const DIST = join(SITE, 'dist');
 
 // 页面和它引用的资源；directions.html 等设计过程文件不发布
-const PAGE_FILES = ['index.html', 'landing.css', 'landing.js', 'metaarc.css', 'metaarc.js', 'assets', 'fonts', 'vendor'];
+const PAGE_FILES = ['index.html', 'landing.css', 'landing.js', 'metaarc.css', 'metaarc.js', 'assets', 'fonts', 'vendor', 'help'];
 
 // 这些字符串一旦出现，说明设计稿又把旧仓库安装包、假后台或演示配额写了回来。
 const FORBIDDEN = [
@@ -70,6 +70,7 @@ function assertHonest(html, script) {
 
 // 页面新增了字体子集里没有的字时提醒重新裁剪，否则这些字会回退到系统字体
 function checkFontCoverage(html) {
+  if (!html.includes('NotoSerifSC')) return;
   const covered = new Set(readFileSync(join(SRC, 'fonts', 'NotoSerifSC-subset.chars.txt'), 'utf8'));
   const text = html.replace(/<[^>]+>/g, ' ');
   const missing = [...new Set(text)].filter((c) => c.trim() && !covered.has(c));
@@ -112,9 +113,13 @@ if (existsSync(PUBLIC)) {
     'assets/mark-black.svg',
     'assets/icon-dark.svg',
     'assets/icon-light.svg',
+    'assets/story-ridge.jpg',
+    'fonts/NotoSansSC-400.woff2',
+    'fonts/NotoSansSC-700.woff2',
   ]) {
     cpSync(join(DIST, name), join(PUBLIC, name));
   }
+  cpSync(join(DIST, 'help'), join(PUBLIC, 'help'), { recursive: true });
   console.log('已同步首页和 L1 图标到 server/metaarc/public/。账号页不在这次复制里。');
 }
 
