@@ -151,58 +151,61 @@ class MetaArcPortal {
     const lead = document.getElementById('download-lead');
     const notes = document.getElementById('download-notes');
     const primary = document.getElementById('primary-dl');
-    const available = windows && windows.has_update === true && this.packageUrl(windows, 'windows');
+    const action = document.getElementById('windows-download');
+    const url = windows && windows.has_update === true ? this.packageUrl(windows, 'windows') : '';
+    const signed = windows && windows.signed === true;
+    const label = url ? (signed ? '下载 Windows' : '下载 Windows 内测版') : '查看下载状态';
     if (lead) {
-      if (!available) {
-        lead.textContent = '更新清单没有可下载的安装包。Windows、macOS 与 Android 保持尚未发布。';
+      if (!url) {
+        lead.textContent = '当前没有可下载的安装包。Windows、macOS 与 Android 保持尚未发布。';
       } else {
-        const version = windows.version ? ` ${windows.version}` : '';
-        const signed = windows.signed === true ? '已签名' : '未签名内测';
-        lead.textContent = `Windows${version} ${signed}。macOS 与 Android 以各自清单为准，没有安装包时保持尚未发布。`;
+        const version = windows.version ? windows.version : '';
+        const signText = signed ? '已签名' : '未签名内测';
+        lead.textContent = version
+          ? `Windows ${version} ${signText}。macOS 与 Android 没有安装包时保持尚未发布。`
+          : `Windows ${signText}。macOS 与 Android 没有安装包时保持尚未发布。`;
       }
     }
-    if (primary) {
-      primary.textContent = available ? '查看 Windows 下载说明' : '查看下载状态';
-      primary.href = '#download';
-    }
+    [primary, action].forEach((node) => {
+      if (!node) return;
+      node.textContent = label;
+      if (url) {
+        node.href = url;
+        node.setAttribute('rel', 'noopener');
+      } else {
+        node.href = '#download';
+        node.removeAttribute('rel');
+      }
+    });
     if (notes) {
       notes.replaceChildren();
-      if (available && windows.release_notes) {
+      if (url && windows.release_notes) {
         const block = document.createElement('div');
         block.className = 'note-block';
-        const title = document.createElement('strong');
-        title.textContent = '这份 Windows 包的说明';
         const body = document.createElement('p');
         body.textContent = String(windows.release_notes);
-        block.append(title, body);
+        block.append(body);
         notes.append(block);
       }
     }
   }
 
   applyDownload(id, data, platform) {
-    const card = document.getElementById(id);
-    if (!card || !data) return;
+    const row = document.getElementById(id);
+    if (!row || !data) return;
     const url = data.has_update === true ? this.packageUrl(data, platform) : '';
     const meta = this.releaseMeta(data, platform);
-    const go = url ? (data.signed === true ? '下载' : '下载内测包') : '尚未发布';
-    if (!url) {
-      const metaNode = card.querySelector('.dl-meta');
-      const goNode = card.querySelector('.dl-go');
-      if (metaNode) metaNode.textContent = meta;
-      if (goNode) goNode.textContent = go;
-      return;
+    const metaNode = row.querySelector('.dl-meta');
+    const goNode = row.querySelector('.dl-go');
+    if (metaNode) metaNode.textContent = meta;
+    if (goNode) goNode.textContent = url ? '可下载' : '尚未发布';
+    if (url && platform !== 'windows') {
+      const link = document.createElement('a');
+      link.href = url;
+      link.rel = 'noopener';
+      link.textContent = '下载';
+      if (goNode) goNode.replaceChildren(link);
     }
-    const link = document.createElement('a');
-    link.className = 'dl';
-    link.href = url;
-    link.rel = 'noopener';
-    link.replaceChildren(
-      this.span('dl-os', card.querySelector('.dl-os')?.textContent || platform),
-      this.span('dl-meta', meta),
-      this.span('dl-go', go),
-    );
-    card.replaceWith(link);
   }
 
   span(className, text) {
@@ -212,6 +215,14 @@ class MetaArcPortal {
     return node;
   }
 
+  channelLabel(channel) {
+    const value = typeof channel === 'string' ? channel.trim().toLowerCase() : '';
+    if (value === 'internal') return '内测';
+    if (value === 'beta') return '测试';
+    if (value === 'stable') return '正式版';
+    return '';
+  }
+
   releaseMeta(data, platform) {
     const parts = [];
     if (platform === 'windows') parts.push('64 位');
@@ -219,7 +230,8 @@ class MetaArcPortal {
     if (platform === 'android') parts.push('arm64');
     if (data.version) parts.push(String(data.version));
     if (data.has_update === true) parts.push(data.signed === true ? '已签名' : '未签名');
-    if (data.channel) parts.push(String(data.channel));
+    const channel = this.channelLabel(data.channel);
+    if (channel) parts.push(channel);
     return parts.join(' · ');
   }
 

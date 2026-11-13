@@ -11,6 +11,7 @@
 </head>
 <body>
 <header class="topbar">
+  <div class="frame topbar-inner">
   <a class="brand" href="/"><img class="brand-mark" src="/assets/mark-black.svg" alt="" width="36" height="36"><span class="brand-name">MetaArc <span>元弧</span></span></a>
   <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="topnav">菜单</button>
   <nav class="topnav" id="topnav">
@@ -20,8 +21,9 @@
     <a href="/help/" aria-current="page">帮助中心</a>
   </nav>
   <a class="btn btn-small" href="/account">进入用户中心</a>
+  </div>
 </header>
-<main class="help">
+<main class="frame help">
   <p class="kicker">帮助中心</p>
   <h1>安装、账号和发布状态</h1>
   <p class="lede">这里只说明现在能做的事。支付、找回密码和诊断工单还没有接通，页面不会显示一个不存在的订单号或工单号。</p>
@@ -49,7 +51,7 @@
 
   <section id="plans">
     <h2>套餐与点数</h2>
-    <p>官网和用户中心的套餐名称、价格、点数来自套餐接口。在线支付尚未开通，不能购买、续费或开发票。没有订单时，订单页保持空态。</p>
+    <p>在线支付尚未开通，不能购买、续费或开发票。没有订单时，订单页保持空态。页面上的价格只在能读到套餐时显示。</p>
     <p>账户上的剩余点数和累计发放来自账号资料。文本、图像、视频还没有分开记账，页面不会编造分类用量。</p>
   </section>
 
@@ -60,12 +62,14 @@
   </section>
 </main>
 <footer class="site-footer">
+  <div class="frame">
   <div class="footer-grid">
     <a href="/#method">工作方式</a>
     <a href="/#pricing">套餐权益</a>
     <a href="/help/">帮助中心</a>
   </div>
   <p class="footer-legal">© MetaArc 元弧 · 开源改编 · <a href="https://github.com/looplj/reveric">Reveric</a>（AGPL-3.0）。Based on Reveric by looplj.</p>
+  </div>
 </footer>
 <script src="/landing.js"></script>
 </body>

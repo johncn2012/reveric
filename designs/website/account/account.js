@@ -91,6 +91,13 @@
     const found = plans.find(function (plan) { return plan.slug === slug; });
     return found ? found.name : (slug || '未知套餐');
   }
+  function channelLabel(channel) {
+    const value = typeof channel === 'string' ? channel.trim().toLowerCase() : '';
+    if (value === 'internal') return '内测';
+    if (value === 'beta') return '测试';
+    if (value === 'stable') return '正式版';
+    return '';
+  }
   function person(row) {
     return row.nickname || row.email || row.phone || row.account || '未命名';
   }
@@ -347,7 +354,7 @@
       const data = item[1].ok ? item[1].data : null;
       if (!data) detail.textContent = '暂时无法读取';
       else if (data.has_update && data.download_url) {
-        detail.textContent = [data.version, data.signed === true ? '已签名' : '未签名', data.channel].filter(Boolean).join(' · ');
+        detail.textContent = [data.version, data.signed === true ? '已签名' : '未签名', channelLabel(data.channel)].filter(Boolean).join(' · ');
         const link = document.createElement('a');
         link.href = data.download_url;
         link.rel = 'noopener';

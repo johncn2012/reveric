@@ -20,25 +20,27 @@
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="#top"><img class="brand-mark" src="assets/mark-black.svg" alt="" width="36" height="36"><span class="brand-name">MetaArc <span>元弧</span></span></a>
-  <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="topnav">菜单</button>
-  <nav class="topnav" id="topnav">
-    <a href="#method">工作方式</a>
-    <a href="#pricing">套餐权益</a>
-    <a href="#download">下载更新</a>
-    <a href="/help/">帮助中心</a>
-  </nav>
-  <a class="btn btn-small" href="/account">进入用户中心</a>
+  <div class="frame topbar-inner">
+    <a class="brand" href="#top"><img class="brand-mark" src="assets/mark-black.svg" alt="" width="36" height="36"><span class="brand-name">MetaArc <span>元弧</span></span></a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="topnav">菜单</button>
+    <nav class="topnav" id="topnav">
+      <a href="#method">工作方式</a>
+      <a href="#pricing">套餐权益</a>
+      <a href="#download">下载更新</a>
+      <a href="/help/">帮助中心</a>
+    </nav>
+    <a class="btn btn-small" href="/account">进入用户中心</a>
+  </div>
 </header>
 
-<main id="top">
+<main id="top" class="frame">
   <section class="hero">
     <div class="hero-copy">
       <p class="eyebrow">AI 原生视听创作成片平台</p>
       <h1>让文字，<br>拥有自己的银幕。</h1>
     </div>
     <div class="hero-aside">
-      <p>从小说明、剧本到视听创作。<br>把故事交给智能体，创作始终由你掌控。</p>
+      <p>从小说、剧本到视听创作。<br>把故事交给智能体，创作始终由你掌控。</p>
       <a class="btn" id="primary-dl" href="#download">查看下载状态</a>
     </div>
     <figure class="hero-figure">
@@ -53,86 +55,96 @@
 
   <section class="chapter" id="method">
     <p class="index">01 / 从文字到画面</p>
-    <div class="chapter-head">
-      <h2>六步走向成片，<br>每一步都可以亲手接管。</h2>
-      <p>不是再多打开几个工具。让故事在一条路径里向前。</p>
+    <div class="chapter-main">
+      <div class="split-head">
+        <h2>六步走向成片，<br><span class="keep">每一步都可以亲手接管。</span></h2>
+        <p>不是再多打开几个工具。让故事在一条路径里向前。</p>
+      </div>
+      <ol class="steps">
+        <li><span>01</span><h3>读原著</h3><p>章节、人物与设定</p></li>
+        <li><span>02</span><h3>改编剧本</h3><p>剧集、场次与对白</p></li>
+        <li><span>03</span><h3>拆分镜</h3><p>镜头、节奏与提示</p></li>
+        <li><span>04</span><h3>生成素材</h3><p>角色、图像与视频</p></li>
+        <li><span>05</span><h3>剪辑</h3><p>修剪、字幕与编排</p></li>
+        <li><span>06</span><h3>成片</h3><p>预览、检查与导出</p></li>
+      </ol>
     </div>
-    <ol class="steps">
-      <li><span>01</span><h3>读原著</h3><p>章节、人物与设定</p></li>
-      <li><span>02</span><h3>改编本</h3><p>剧集、场次与对白</p></li>
-      <li><span>03</span><h3>拆分镜</h3><p>镜头、节奏与提示</p></li>
-      <li><span>04</span><h3>生成素材</h3><p>角色、图像与视频</p></li>
-      <li><span>05</span><h3>剪辑</h3><p>修剪、字幕与编排</p></li>
-      <li><span>06</span><h3>成片</h3><p>预览、检查与导出</p></li>
-    </ol>
   </section>
 
-  <section class="chapter" id="control">
-    <p class="index">02 / 创作始终由你掌控</p>
-    <div class="chapter-head">
-      <h2>智能体向前，<br>你随时接手。</h2>
-    </div>
-    <div class="points">
-      <article>
-        <h3>上下文连贯</h3>
-        <p>围绕章节、设定和人物组织创作，不必反复交代。</p>
-      </article>
-      <article>
-        <h3>过程可追踪</h3>
-        <p>任务与改动看得见。创作不必是一只黑箱。</p>
-      </article>
-      <article>
-        <h3>工具可接管</h3>
-        <p>小说、剧本、画布、导演台与剪辑台，按需亲手创作。</p>
-      </article>
+  <section class="chapter chapter-control" id="control">
+    <div class="control-grid">
+      <div>
+        <p class="index">02 / 创作始终由你掌控</p>
+        <h2>智能体向前，<br><span class="keep">你随时接手。</span></h2>
+      </div>
+      <div class="points">
+        <article>
+          <h3>上下文连贯</h3>
+          <p>围绕章节、设定和人物组织创作，不必反复交代。</p>
+        </article>
+        <article>
+          <h3>过程可追踪</h3>
+          <p>任务与改动看得见。创作不必是一只黑箱。</p>
+        </article>
+        <article>
+          <h3>工具可接管</h3>
+          <p>小说、剧本、画布、导演台与剪辑台，按需亲手创作。</p>
+        </article>
+      </div>
     </div>
   </section>
 
   <section class="chapter" id="pricing">
     <p class="index">03 / 套餐与权益</p>
-    <div class="chapter-head">
-      <h2>先了解，再决定。</h2>
-      <p>公开套餐参考：在线支付尚未开通，当前不能购买或续费。名称、价格和点数只在套餐接口返回后显示。</p>
+    <div class="chapter-main">
+      <div class="split-head">
+        <h2>先了解，再决定。</h2>
+        <p>在线支付尚未开通，当前不能购买或续费。</p>
+      </div>
+      <p class="pricing-status" id="pricing-status">正在读取套餐…</p>
+      <div class="pricing-grid" id="pricing-grid" hidden></div>
     </div>
-    <p class="pricing-status" id="pricing-status">正在读取套餐…</p>
-    <div class="pricing-grid" id="pricing-grid" hidden></div>
   </section>
 
-  <section class="chapter release" id="download">
-    <div class="release-band">
-      <div>
-        <p class="index">04 / 开始之前</p>
+  <section class="chapter" id="download">
+    <p class="index">04 / 开始之前</p>
+    <div class="chapter-main">
+      <div class="split-head release-head">
         <h2>从第一段文字开始。</h2>
-        <p id="download-lead">正在核对更新清单。没有安装包时，下面保持尚未发布。</p>
-        <div id="download-notes"></div>
+        <div>
+          <p id="download-lead">正在核对更新清单。没有安装包时，下面保持尚未发布。</p>
+          <div class="release-actions">
+            <a class="btn" id="windows-download" href="#download">查看下载状态</a>
+            <a class="text-link" href="/help/#install">安装说明</a>
+          </div>
+          <div id="download-notes"></div>
+        </div>
       </div>
-      <div class="release-actions">
-        <a class="btn" href="/help/#install">下载与安装说明</a>
-        <a class="text-link" href="/help/#support">安装遇到问题？查看帮助与诊断</a>
-      </div>
-    </div>
-    <div class="dl-cards">
-      <div class="dl is-unreleased" id="download-windows">
-        <span class="dl-os">Windows</span><span class="dl-meta">64 位</span><span class="dl-go">尚未发布</span>
-      </div>
-      <div class="dl is-unreleased" id="download-macos">
-        <span class="dl-os">macOS</span><span class="dl-meta">Apple 芯片</span><span class="dl-go">尚未发布</span>
-      </div>
-      <div class="dl is-unreleased" id="download-android">
-        <span class="dl-os">Android</span><span class="dl-meta">arm64</span><span class="dl-go">尚未发布</span>
-      </div>
+      <ul class="status-list">
+        <li id="download-windows">
+          <span class="dl-os">Windows</span><span class="dl-meta">64 位</span><span class="dl-go">尚未发布</span>
+        </li>
+        <li id="download-macos">
+          <span class="dl-os">macOS</span><span class="dl-meta">Apple 芯片</span><span class="dl-go">尚未发布</span>
+        </li>
+        <li id="download-android">
+          <span class="dl-os">Android</span><span class="dl-meta">arm64</span><span class="dl-go">尚未发布</span>
+        </li>
+      </ul>
     </div>
   </section>
 </main>
 
 <footer class="site-footer">
-  <div class="footer-grid">
-    <a href="#method">工作方式</a>
-    <a href="#pricing">套餐权益</a>
-    <a href="/help/">帮助中心</a>
+  <div class="frame">
+    <div class="footer-grid">
+      <a href="#method">工作方式</a>
+      <a href="#pricing">套餐权益</a>
+      <a href="/help/">帮助中心</a>
+    </div>
+    <p class="footer-legal">© MetaArc 元弧 · 开源改编 · <a href="https://github.com/looplj/reveric">Reveric</a>（AGPL-3.0）。Based on Reveric by looplj. · <a href="mailto:contact@metaarc.com.cn">联系</a></p>
+    <p class="footer-note">概念影像不代表产品成片。支付开通前不能购买。</p>
   </div>
-  <p class="footer-legal">© MetaArc 元弧 · 开源改编 · <a href="https://github.com/looplj/reveric">Reveric</a>（AGPL-3.0）。Based on Reveric by looplj. · <a href="mailto:contact@metaarc.com.cn">联系</a></p>
-  <p class="footer-note">概念影像不代表产品成片。套餐价格在支付开通前只供了解。</p>
 </footer>
 <script src="landing.js"></script>
 <script src="metaarc.js"></script>
