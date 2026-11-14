@@ -23,12 +23,17 @@ const anonymousReportingBaseUrl = '';
 /// MetaArc 官方门户与商业中台主页地址。
 const metaArcOfficialWebsiteUrl = 'https://metaarc.com.cn';
 
+/// MetaArc GitHub 仓库地址。
+const metaArcGitHubRepoUrl = 'https://github.com/johncn2012/MetaArc';
+
+/// MetaArc 问题反馈与需求建议地址。
+const metaArcGitHubIssuesUrl = 'https://github.com/johncn2012/MetaArc/issues';
+
+/// MetaArc 官方联系与反馈邮箱。
+const metaArcContactEmail = 'contact@metaarc.com.cn';
+
 /// 上游项目地址。关于页展示该链接，满足 AGPL 署名。下载和更新检查不使用它。
 const revericGitHubRepoUrl = 'https://github.com/looplj/reveric';
-
-/// QQ 交流群官方邀请链接。
-const revericQqGroupJoinUrl = 'https://qm.qq.com/q/Ap8pfOWHDO';
-const revericQqGroupNumber = '924148054';
 
 /// 技能广场只读取公开链接目录，导入沿用各来源平台的现有流程。
 /// 目录仓库是 https://github.com/johncn2012/skills 。客户端拉取该仓库 main 上的 catalog.json。
@@ -40,7 +45,7 @@ const revericSkillsCatalogUrl =
 const revericAttribution = 'MetaArc 元弧. Based on Reveric by looplj.';
 
 /// 接收用户通过邮件私下发送的反馈与诊断文件。
-const revericFeedbackEmail = 'bababaa261@gmail.com';
+const revericFeedbackEmail = 'contact@metaarc.com.cn';
 
 /// 产品线编码，通过 X-Product-Code 请求头发送给匿名诊断接收端。
 const revericProductCode = 'writer';

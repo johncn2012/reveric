@@ -1,4 +1,4 @@
-// 职责: 展示应用版本、更新检查、本地日志与诊断上传、QQ 群交流与开源署名入口，供桌面和移动端设置使用。
+// 职责: 展示应用版本、更新检查、本地日志与诊断上传、问题反馈与开源署名入口，供桌面和移动端设置使用。
 // 关联文件:
 //   lib/shared/components/reveric_button.dart
 //   lib/shared/providers/update_providers.dart
@@ -25,8 +25,8 @@ import '../../app_config.dart'
         revericAttribution,
         revericGitHubRepoUrl,
         metaArcOfficialWebsiteUrl,
-        revericQqGroupJoinUrl,
-        revericQqGroupNumber;
+        metaArcContactEmail,
+        metaArcGitHubIssuesUrl;
 import '../../components/dialog_feedback.dart';
 import '../../localization/app_localization.dart';
 import '../../localization/locale_keys.dart';
@@ -38,7 +38,7 @@ import '../../theme/theme.dart';
 
 final _log = AppLogger.forModule('AboutSettings');
 
-/// 关于设置 section：版本、更新、本地日志与诊断上传、QQ 群交流和开源署名。
+/// 关于设置 section：版本、更新、本地日志与诊断上传、问题反馈和开源署名。
 class AboutSettingsSection extends HookConsumerWidget {
   const AboutSettingsSection({super.key, this.compact = false});
 
@@ -124,12 +124,23 @@ class AboutSettingsSection extends HookConsumerWidget {
           _buildExternalLinkButton(
             colors,
             typo,
-            label:
-                '${context.t(LocaleKeys.settingsAboutJoinQqGroup)} · $revericQqGroupNumber',
+            label: context.t(LocaleKeys.settingsAboutOpenIssues),
             onTap: () => _openExternalUrl(
               context,
-              Uri.parse(revericQqGroupJoinUrl),
-              LocaleKeys.settingsAboutQqOpenFailed,
+              Uri.parse(metaArcGitHubIssuesUrl),
+              LocaleKeys.settingsAboutOpenIssuesFailed,
+            ),
+          ),
+          SizedBox(height: descriptionGap),
+          _buildExternalLinkButton(
+            colors,
+            typo,
+            label:
+                '${context.t(LocaleKeys.settingsAboutContactEmail)} · $metaArcContactEmail',
+            onTap: () => _openExternalUrl(
+              context,
+              Uri.parse('mailto:$metaArcContactEmail'),
+              LocaleKeys.settingsAboutContactEmailFailed,
             ),
           ),
           SizedBox(height: sectionGap),
