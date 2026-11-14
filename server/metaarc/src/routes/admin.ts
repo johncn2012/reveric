@@ -2146,14 +2146,16 @@ adminRouter.post('/admin/releases/manifest', async (req: Request, res: Response)
     fs.writeFileSync(tmpPath, JSON.stringify(newManifest, null, 2), 'utf8');
     fs.renameSync(tmpPath, manifestPath);
 
-    await insertAudit({
-      actorId: actorId(req),
-      action: 'update_release_manifest',
-      targetType: 'system_updates',
-      targetId: 'latest.json',
-      reason: cleanReason(reason),
-      beforeValue,
-      afterValue: newManifest,
+    await runMutation(async (client) => {
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'update_release_manifest',
+        targetType: 'system_updates',
+        targetId: 'latest.json',
+        reason: cleanReason(reason),
+        beforeValue,
+        afterValue: newManifest,
+      }, client);
     });
 
     return res.json({
