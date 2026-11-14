@@ -1855,7 +1855,7 @@ adminRouter.get('/admin/users/:id/detail', async (req: Request, res: Response) =
         [id],
       ),
       query(
-        `SELECT id, type, prompt, status, duration_ms, cost_points, created_at
+        `SELECT id, task_type, prompt, status, progress, duration_ms, created_at
          FROM user_tasks
          WHERE user_id = $1
          ORDER BY created_at DESC LIMIT 5`,

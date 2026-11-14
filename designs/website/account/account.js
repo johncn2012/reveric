@@ -1156,14 +1156,14 @@
       taskSec.append(empty('暂无创作任务'));
     } else {
       taskSec.append(table([
-        { label: '类型', fill: function (td, r) { td.textContent = r.type; } },
+        { label: '类型', fill: function (td, r) { td.textContent = r.task_type || r.type || '—'; } },
         { label: '提示词/内容', fill: function (td, r) { td.textContent = (r.prompt || '—').slice(0, 30); } },
         { label: '状态', fill: function (td, r) {
           td.innerHTML = r.status === 'completed' ? '<span class="badge badge-success">完成</span>' :
                          r.status === 'failed' ? '<span class="badge badge-danger">失败</span>' :
                          '<span class="badge badge-warning">' + r.status + '</span>';
         } },
-        { label: '点数消耗', fill: function (td, r) { td.textContent = r.cost_points ?? '0'; } },
+        { label: '执行耗时', fill: function (td, r) { td.textContent = r.duration_ms ? (r.duration_ms + 'ms') : '—'; } },
         { label: '创建时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
       ], d.recentTasks));
     }

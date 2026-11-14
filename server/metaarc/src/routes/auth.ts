@@ -118,6 +118,30 @@ const registerAccount = async (req: Request, res: Response) => {
     if (!cleanEmail && !cleanPhone) {
       return res.status(400).json({ error: 'invalid_account', message: '必须提供手机号或邮箱' });
     }
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'invalid_email', message: '邮箱格式不正确' });
+    }
+    if (cleanPhone && !/^\+?[0-9]{5,20}$/.test(cleanPhone)) {
+      return res.status(400).json({ error: 'invalid_phone', message: '手机号格式不正确' });
+    }
+
+    const clientIp = getClientIp(req);
+    const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
+    const location = resolveIpLocation(clientIp, req.headers);
+
+    // 防脚本批量灌水注册: 同 IP 1 小时内最多注册 10 个账号
+    const regCheck = await query(
+      `SELECT count(*) FROM users
+       WHERE last_login_ip = $1 AND created_at >= NOW() - INTERVAL '1 hour'`,
+      [clientIp]
+    );
+    const regCount = parseInt(regCheck.rows[0]?.count || '0', 10);
+    if (regCount >= 10) {
+      return res.status(429).json({
+        error: 'too_many_registrations',
+        message: '当前网络来源注册请求过于频繁，请稍后再试。',
+      });
+    }
 
     // 检查是否已存在
     const checkSql = 'SELECT id FROM users WHERE (email IS NOT NULL AND email = $1) OR (phone IS NOT NULL AND phone = $2)';
@@ -132,12 +156,31 @@ const registerAccount = async (req: Request, res: Response) => {
 
     // 插入本地用户
     const insertSql = `
-      INSERT INTO users (email, phone, password_hash, nickname, plan, quota, total_quota, role)
-      VALUES ($1, $2, $3, $4, 'free', $5, $5, 'user')
+      INSERT INTO users (email, phone, password_hash, nickname, plan, quota, total_quota, role, last_login_ip, last_login_location, last_login_at)
+      VALUES ($1, $2, $3, $4, 'free', $5, $5, 'user', $6, $7, NOW())
       RETURNING id, email, phone, nickname, plan, quota, total_quota, role, created_at
     `;
-    const userRes = await query(insertSql, [cleanEmail || null, cleanPhone || null, passwordHash, cleanNickname || '创作者', initialQuota]);
+    const userRes = await query(insertSql, [
+      cleanEmail || null,
+      cleanPhone || null,
+      passwordHash,
+      cleanNickname || '创作者',
+      initialQuota,
+      clientIp,
+      location,
+    ]);
     const newUser = userRes.rows[0];
+
+    // 记录首次注册安全日志
+    await recordLoginLog({
+      userId: newUser.id,
+      account: cleanEmail || cleanPhone,
+      ip: clientIp,
+      location,
+      userAgent,
+      status: 'success',
+      failReason: 'registration',
+    });
 
     // 联动 New-API: 自动化创建 New-API 账号并签发专属 Token
     let newApiUserId: number | null = null;
