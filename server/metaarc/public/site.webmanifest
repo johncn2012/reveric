@@ -1,0 +1,29 @@
+{
+  "name": "MetaArc 元弧 — AI 原生视听创作成片平台",
+  "short_name": "MetaArc 元弧",
+  "description": "让文字拥有自己的银幕。从小说到成片，AI 原生多智能体视听创作工作台与算力中枢",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/assets/icon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

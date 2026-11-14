@@ -19,7 +19,7 @@ const SRC = join(ROOT, 'designs', 'website');
 const DIST = join(SITE, 'dist');
 
 // 页面和它引用的资源；directions.html 等设计过程文件不发布
-const PAGE_FILES = ['index.html', 'landing.css', 'landing.js', 'metaarc.css', 'metaarc.js', 'assets', 'fonts', 'vendor', 'help'];
+const PAGE_FILES = ['index.html', 'landing.css', 'landing.js', 'metaarc.css', 'metaarc.js', 'site.webmanifest', 'assets', 'fonts', 'vendor', 'help'];
 
 // 这些字符串一旦出现，说明设计稿又把旧仓库安装包、假后台或演示配额写了回来。
 const FORBIDDEN = [
@@ -42,7 +42,8 @@ function cacheBust(html) {
   for (const file of ['landing.css', 'landing.js']) {
     const hash = createHash('sha256').update(readFileSync(join(SRC, file))).digest('hex').slice(0, 10);
     const before = out;
-    out = out.replace(`"${file}"`, `"${file}?v=${hash}"`);
+    const re = new RegExp(`"${file}(?:\\?v=[a-f0-9]+)?"`, 'g');
+    out = out.replace(re, `"${file}?v=${hash}"`);
     if (out === before) throw new Error(`页面里没有引用 ${file}`);
   }
   return out;
@@ -106,6 +107,7 @@ if (existsSync(PUBLIC)) {
     'landing.js',
     'metaarc.css',
     'metaarc.js',
+    'site.webmanifest',
     'assets/icon-32.png',
     'assets/icon-180.png',
     'assets/icon-512.png',

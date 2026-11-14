@@ -288,3 +288,16 @@ h2 {
   .dl-meta { grid-column: 1 / -1; }
   .plan-amount { font-size: 32px; }
 }
+
+/* 仅供搜索引擎和屏幕阅读器识别的语义文本，无视觉占位 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

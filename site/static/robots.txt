@@ -1,4 +1,29 @@
+# MetaArc Robots Policy
 User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /account/api/
+
+# Major Search Engine Spiders explicitly allowed
+User-agent: Googlebot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: 360Spider
+Allow: /
+
+User-agent: Sogouspider
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Yisouspider
 Allow: /
 
 Sitemap: https://metaarc.com.cn/sitemap.xml
