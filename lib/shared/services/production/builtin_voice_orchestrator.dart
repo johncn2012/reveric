@@ -42,7 +42,7 @@ class BuiltinVoiceOrchestrator {
         throw const FormatException('Built-in voice integrity check failed');
       }
       temporary = await Directory.systemTemp.createTemp(
-        'reveric_builtin_voice_',
+        'metaarc_builtin_voice_',
       );
       final file = await File(
         '${temporary.path}/${voice.id}.wav',

@@ -111,7 +111,7 @@ class UpdateService {
       }
       final destPath = p.join(
         tempDir.path,
-        'reveric_update_${info.version}$ext',
+        'metaarc_update_${info.version}$ext',
       );
 
       _log.info(
@@ -581,7 +581,7 @@ class UpdateService {
     final tempDir = await getTemporaryDirectory();
     final scriptPath = p.join(
       tempDir.path,
-      'reveric_restart_${DateTime.now().millisecondsSinceEpoch}.sh',
+      'metaarc_restart_${DateTime.now().millisecondsSinceEpoch}.sh',
     );
     final scriptFile = File(scriptPath);
     await scriptFile.writeAsString('''
@@ -615,7 +615,7 @@ exec "\$executable"
     final tempDir = await getTemporaryDirectory();
     final scriptPath = p.join(
       tempDir.path,
-      'reveric_restart_${DateTime.now().millisecondsSinceEpoch}.sh',
+      'metaarc_restart_${DateTime.now().millisecondsSinceEpoch}.sh',
     );
     final scriptFile = File(scriptPath);
     await scriptFile.writeAsString(

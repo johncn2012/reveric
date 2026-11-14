@@ -1,6 +1,6 @@
 # MetaArc
 
-MetaArc is a creative client modified from Reveric, plus an account portal that is still incomplete. It supports Windows, macOS, and Android.
+MetaArc is an AI-native audiovisual creation and production platform, plus an integrated account portal. It supports Windows, macOS, and Android.
 
 [简体中文](README.md)
 

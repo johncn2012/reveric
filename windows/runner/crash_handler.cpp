@@ -64,13 +64,13 @@ void WriteNativeState() {
   HANDLE file = ::CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
       FILE_ATTRIBUTE_NORMAL, nullptr);
   if (file == INVALID_HANDLE_VALUE) {
-    ::OutputDebugStringW(L"Reveric: cannot write native exit state\n");
+    ::OutputDebugStringW(L"MetaArc: cannot write native exit state\n");
     return;
   }
   DWORD written = 0;
   if (!::WriteFile(file, data, static_cast<DWORD>(length), &written, nullptr) ||
       written != static_cast<DWORD>(length) || !::FlushFileBuffers(file)) {
-    ::OutputDebugStringW(L"Reveric: native exit state write/flush failed\n");
+    ::OutputDebugStringW(L"MetaArc: native exit state write/flush failed\n");
   }
   ::CloseHandle(file);
 }
@@ -245,13 +245,13 @@ void WriteCrashReport(EXCEPTION_POINTERS* exception_pointers,
   WriteNativeState();
 }
 
-LONG WINAPI RevericUnhandledExceptionFilter(
+LONG WINAPI MetaArcUnhandledExceptionFilter(
     EXCEPTION_POINTERS* exception_pointers) {
   WriteCrashReport(exception_pointers, "unhandled_exception");
   return EXCEPTION_EXECUTE_HANDLER;
 }
 
-void RevericAbortHandler(int) {
+void MetaArcAbortHandler(int) {
   WriteCrashReport(nullptr, "abort");
   ::_exit(134);
 }
@@ -264,10 +264,10 @@ void Install() {
   g_crash_dump_dir = ResolveCrashDumpDirectory();
   ::SHCreateDirectoryExW(nullptr, g_crash_dump_dir.c_str(), nullptr);
 
-  ::SetUnhandledExceptionFilter(&RevericUnhandledExceptionFilter);
+  ::SetUnhandledExceptionFilter(&MetaArcUnhandledExceptionFilter);
   // 让 abort() 走我们的 SIGABRT handler 写 dump，而不是直接交给 WER。
   _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
-  std::signal(SIGABRT, &RevericAbortHandler);
+  std::signal(SIGABRT, &MetaArcAbortHandler);
 }
 
 std::wstring GetCrashDumpDirectory() { return g_crash_dump_dir; }

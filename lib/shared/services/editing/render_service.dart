@@ -140,7 +140,7 @@ class EditingRenderService {
       await projects.verify(document, cancellation);
       final size = ProductionSettings.dimensions(document.ratio, '480p');
       final temporary = await Directory.systemTemp.createTemp(
-        'reveric_editing_frames_',
+        'metaarc_editing_frames_',
       );
       final captures = <Uint8List>[];
       try {
@@ -296,7 +296,7 @@ class EditingRenderService {
       preview ? '480p' : resolution,
     );
     final temporary = await Directory.systemTemp.createTemp(
-      'reveric_editing_render_',
+      'metaarc_editing_render_',
     );
     try {
       final cache = preview ? await _cacheDirectory() : null;
@@ -490,7 +490,7 @@ class EditingRenderService {
     path,
   ];
   Future<String> _fontFile() => _font ??= () async {
-    final dir = await Directory.systemTemp.createTemp('reveric_editing_font_');
+    final dir = await Directory.systemTemp.createTemp('metaarc_editing_font_');
     final file = File('${dir.path}/subtitle.ttf');
     final data = await rootBundle.load('assets/fonts/LXGWWenKai-Regular.ttf');
     await file.writeAsBytes(data.buffer.asUint8List(), flush: true);

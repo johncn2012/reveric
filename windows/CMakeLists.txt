@@ -77,7 +77,7 @@ install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 
 set(DEPTH_RUNTIME_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../build/depth-native/product-windows")
-if(NOT EXISTS "${DEPTH_RUNTIME_DIR}/bin/reveric-depth-native.exe")
+if(NOT EXISTS "${DEPTH_RUNTIME_DIR}/bin/metaarc-depth-native.exe")
   message(FATAL_ERROR "Depth runtime missing: run third/depth-native/prepare-product-windows.ps1")
 endif()
 install(CODE "file(REMOVE \"\${CMAKE_INSTALL_PREFIX}/depth/bin/depth-native.exe\")"

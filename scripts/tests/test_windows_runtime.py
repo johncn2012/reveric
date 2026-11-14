@@ -227,7 +227,7 @@ class WindowsRuntimeTest(unittest.TestCase):
     def setUpClass(cls):
         if not shutil.which("fpc"):
             raise RuntimeError("Install Free Pascal (fpc) to run these tests")
-        cls.temp = tempfile.TemporaryDirectory(prefix="reveric-runtime-test-")
+        cls.temp = tempfile.TemporaryDirectory(prefix="metaarc-runtime-test-")
         cls.addClassCleanup(cls.temp.cleanup)
         directory = Path(cls.temp.name)
         installer = ROOT / "windows/packaging/exe/inno_setup.iss"

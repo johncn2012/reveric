@@ -295,7 +295,7 @@ Future<EntityGraphPngSaveResult> saveEntityGraphPng(
   );
 }
 
-const String _exportCacheDirName = 'reveric_graph_exports';
+const String _exportCacheDirName = 'metaarc_graph_exports';
 
 Future<void> _cleanupExpiredExports(Directory cacheRoot) async {
   final expiredBefore = DateTime.now().subtract(const Duration(days: 1));

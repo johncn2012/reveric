@@ -16,7 +16,7 @@ SCRIPT = ROOT / "macos/architectures.py"
 class ArchitectureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture = tempfile.TemporaryDirectory(prefix="reveric-macho-")
+        cls.fixture = tempfile.TemporaryDirectory(prefix="metaarc-macho-")
         cls.root = Path(cls.fixture.name)
         source = cls.root / "probe.c"
         source.write_text("int main(void) { return 0; }\n")
@@ -34,7 +34,7 @@ class ArchitectureTests(unittest.TestCase):
         cls.fixture.cleanup()
 
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="reveric-arm64-app-")
+        self.temp = tempfile.TemporaryDirectory(prefix="metaarc-arm64-app-")
         self.addCleanup(self.temp.cleanup)
         self.app = Path(self.temp.name) / "Fixture.app"
         (self.app / "Contents/MacOS").mkdir(parents=True)

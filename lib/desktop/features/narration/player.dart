@@ -35,7 +35,7 @@ class DesktopNarrationPlayer implements NarrationPlayer {
     await initializeRuntime();
     final temp = await getTemporaryDirectory();
     await temp.create(recursive: true);
-    final directory = await temp.createTemp('reveric_narration_');
+    final directory = await temp.createTemp('metaarc_narration_');
     VideoPlayerController? controller;
     try {
       final file = File('${directory.path}/speech.${audio.extension}');

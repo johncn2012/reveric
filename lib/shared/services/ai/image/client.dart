@@ -277,7 +277,7 @@ abstract class ImageClient {
     final random = Random().nextInt(10000);
     final filePath = p.join(
       directory.path,
-      'reveric_image_result_${timestamp}_$random.$ext.part',
+      'metaarc_image_result_${timestamp}_$random.$ext.part',
     );
 
     final file = await File(filePath).create(exclusive: true);

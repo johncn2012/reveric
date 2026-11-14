@@ -306,7 +306,7 @@ Uint8List? _useStill(
   final still = useState<Uint8List?>(null);
   final frames = useMemoized(() => <String, Uint8List>{});
   final folder = useMemoized(
-    () => Directory.systemTemp.createTemp('reveric_editing_still_'),
+    () => Directory.systemTemp.createTemp('metaarc_editing_still_'),
   );
   final pending = useRef<MediaCancellation?>(null);
   final timer = useRef<Timer?>(null);

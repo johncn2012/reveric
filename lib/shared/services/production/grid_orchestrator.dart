@@ -263,7 +263,7 @@ class GridOrchestrator {
       files[member.sortOrder] = canvas.library.resolve(asset);
     }
     final temporary = await Directory.systemTemp.createTemp(
-      'reveric_grid_stitch_',
+      'metaarc_grid_stitch_',
     );
     try {
       final file = File('${temporary.path}/stitch.png');
@@ -319,7 +319,7 @@ class GridOrchestrator {
           ProductionInput.node(sourceNodeId, VideoInputRole.reference_image),
         );
     final temporary = await Directory.systemTemp.createTemp(
-      'reveric_grid_split_',
+      'metaarc_grid_split_',
     );
     try {
       final crops = await splitProductionGrid(

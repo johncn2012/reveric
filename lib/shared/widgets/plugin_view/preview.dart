@@ -100,7 +100,7 @@ class PluginUiPreviewPanel extends HookWidget {
           await session.start(
             source: source,
             scope: {
-              'plugin': {'id': 'reveric.preview', 'version': '1.0.0'},
+              'plugin': {'id': 'metaarc.preview', 'version': '1.0.0'},
               'request': {
                 'requestId': session.tree.surface,
                 'sessionId': session.tree.surface,

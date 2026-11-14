@@ -1,6 +1,6 @@
 # 开发与构建
 
-本指南面向从源码运行和打包 Reveric 的开发者。支持 Windows、macOS、Android；桌面应用需要在对应操作系统上构建。当前发布架构为 macOS arm64、Windows x64、Android arm64-v8a。
+本指南面向从源码运行和打包 MetaArc 的开发者。支持 Windows、macOS、Android；桌面应用需要在对应操作系统上构建。当前发布架构为 macOS arm64、Windows x64、Android arm64-v8a。
 
 除特别注明外，命令均在仓库根目录执行。本地 Flutter 命令统一使用 `fvm flutter`，避免误用系统 PATH 中的其他 SDK。
 
@@ -192,7 +192,7 @@ bash build-android.sh
 bash build-android.sh 1.2.3+42
 ```
 
-脚本构建 Release arm64 APK，处理 SQLite hook 和产物路径校验，输出到 `dist/<版本号>/reveric-android-arm64-v8a-v<版本号>.apk`。它会备份并还原 `pubspec.yaml`。构建期间不要并行运行其他 Flutter 命令，以免重写插件注册文件。
+脚本构建 Release arm64 APK，处理 SQLite hook 和产物路径校验，输出到 `dist/<版本号>/MetaArc-android-arm64-v8a-v<版本号>.apk`。它会备份并还原 `pubspec.yaml`。构建期间不要并行运行其他 Flutter 命令，以免重写插件注册文件。
 
 正式发布前配置本机 `android/key.properties`，例如：
 

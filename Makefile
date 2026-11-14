@@ -30,7 +30,7 @@ BASE ?= $(shell git rev-parse --abbrev-ref HEAD)
 .PHONY: build-all build-all-release run-macos run-windows run-linux clean clean-build codegen deps check-agent-rules
 
 help: ## 显示帮助信息
-	@echo "Reveric 构建与管理命令"
+	@echo "MetaArc 构建与管理命令"
 	@echo "======================="
 	@echo ""
 	@echo "用法: make <command>"
@@ -166,12 +166,12 @@ build-windows-release: ## 构建 Windows 客户端 (release)
 build-linux: ## 构建 Linux 客户端 (debug)
 	@echo "🐧 构建 Linux 客户端 (debug)..."
 	@fvm flutter build linux --debug
-	@echo "✅ Linux 构建完成: $(BUILD_DIR)/linux/x64/debug/bundle/reveric"
+	@echo "✅ Linux 构建完成: $(BUILD_DIR)/linux/x64/debug/bundle/metaarc"
 
 build-linux-release: ## 构建 Linux 客户端 (release)
 	@echo "🐧 构建 Linux 客户端 (release)..."
 	@fvm flutter build linux --release
-	@echo "✅ Linux 构建完成: $(BUILD_DIR)/linux/x64/release/bundle/reveric"
+	@echo "✅ Linux 构建完成: $(BUILD_DIR)/linux/x64/release/bundle/metaarc"
 
 build-all: ## 构建所有桌面端客户端 (debug)
 	@echo "🏗️  构建所有桌面端客户端 (debug)..."
@@ -290,4 +290,4 @@ site-build: site-fonts ## 构建官网到 site/dist（下载区保持尚未发�
 	node site/build.mjs
 
 site-deploy: site-build ## 构建并部署官网到 Cloudflare Pages
-	npx wrangler pages deploy site/dist --project-name=reveric-site --branch=unstable --commit-dirty=true
+	npx wrangler pages deploy site/dist --project-name=metaarc-site --branch=unstable --commit-dirty=true

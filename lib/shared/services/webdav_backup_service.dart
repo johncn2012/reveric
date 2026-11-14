@@ -158,7 +158,7 @@ class WebDavBackupService {
     try {
       final tempDirectory = await getTemporaryDirectory();
       final restoreDirectory = Directory(
-        p.join(tempDirectory.path, 'reveric_webdav_restore'),
+        p.join(tempDirectory.path, 'metaarc_webdav_restore'),
       );
       await restoreDirectory.create(recursive: true);
       destination = File(

@@ -45,7 +45,10 @@ Future<String?> _decodeClipboardId(
 
 const _draftFormat = clip.SimpleValueFormat<String>(
   fallback: clip.SimplePlatformCodec(
-    formats: ['application/x-reveric-chat-draft'],
+    formats: [
+      'application/x-metaarc-chat-draft',
+      'application/x-reveric-chat-draft',
+    ],
     onDecode: _decodeClipboardId,
   ),
 );

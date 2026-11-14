@@ -110,7 +110,7 @@ class PanoramaService {
       );
       try {
         final temporary = await Directory.systemTemp.createTemp(
-          'reveric_panorama_capture_',
+          'metaarc_panorama_capture_',
         );
         try {
           final completed = <CanvasNode>[];

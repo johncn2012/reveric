@@ -1,4 +1,4 @@
-# Reveric 深度原生模块
+# MetaArc 深度原生模块
 
 此模块提供 `metaarc-depth-native` 独立任务进程、ONNX Runtime 构建打包及性能验证工具。
 上游来源、版本和本地改动见 [depth-native_UPSTREAM.md](../depth-native_UPSTREAM.md)。

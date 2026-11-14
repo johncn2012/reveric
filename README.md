@@ -1,6 +1,6 @@
 # MetaArc（元弧）
 
-MetaArc 是基于 Reveric（幻界）修改的创作客户端，另外带有仍在搭建的账号门户。支持 Windows、macOS、Android。
+MetaArc（元弧）是多智能体视听创作成片平台与创作客户端，另外带有同域账号门户。支持 Windows、macOS、Android。
 
 [English](README.en-US.md)
 

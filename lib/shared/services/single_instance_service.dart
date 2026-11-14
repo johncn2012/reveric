@@ -40,7 +40,7 @@ class SingleInstanceService {
 
   static String get _lockFilePath {
     final dir = Directory.systemTemp.path;
-    return '$dir${Platform.pathSeparator}reveric-$_buildMode-instance.lock';
+    return '$dir${Platform.pathSeparator}metaarc-$_buildMode-instance.lock';
   }
 
   /// 激活端口 sidecar 文件：记录第一实例的监听端口，供后启动实例读取。

@@ -66,7 +66,7 @@ class FfmpegCommand {
     }
     final source = await CommandPaths(files).resolve(path);
     final temporary = await Directory.systemTemp.createTemp(
-      'reveric_ffmpeg_frames_',
+      'metaarc_ffmpeg_frames_',
     );
     try {
       final copy = File(

@@ -254,7 +254,7 @@ class MediaService {
     MediaCancellation cancellation,
   ) async {
     final temporary = await Directory.systemTemp.createTemp(
-      'reveric_media_transform_',
+      'metaarc_media_transform_',
     );
     final output = File(p.join(temporary.path, 'result$extension'));
     try {
@@ -293,7 +293,7 @@ class MediaService {
     MediaCancellation cancellation,
   ) async {
     final temporary = await Directory.systemTemp.createTemp(
-      'reveric_media_encode_',
+      'metaarc_media_encode_',
     );
     final output = File(p.join(temporary.path, 'result.mp4'));
     try {

@@ -109,11 +109,13 @@ class RevericPaths {
   /// 图片客户端拥有的未登记结果，仅允许 file_workspaces 根目录下的专用 .part 文件。
   static bool isImageResultPart(Directory root, String path) {
     final absolute = p.normalize(p.absolute(path));
+    final base = p.basename(absolute);
     return p.equals(
           p.dirname(absolute),
           p.join(root.absolute.path, 'file_workspaces'),
         ) &&
-        p.basename(absolute).startsWith('reveric_image_result_') &&
+        (base.startsWith('metaarc_image_result_') ||
+            base.startsWith('reveric_image_result_')) &&
         absolute.endsWith('.part');
   }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# build-android.sh — 本地与 CI 构建 Reveric Android APK
+# build-android.sh — 本地与 CI 构建 MetaArc Android APK
 #
 # 流程:
 #   1. 备份 pubspec.yaml
@@ -27,7 +27,7 @@ CURRENT_VERSION="$(awk '/^version:/{print $2; exit}' "$SCRIPT_DIR/pubspec.yaml")
 PACKAGE_VERSION="${VERSION:-$CURRENT_VERSION}"
 VERSION_NAME="${PACKAGE_VERSION%%+*}"
 DIST_VERSION_DIR="$SCRIPT_DIR/dist/$VERSION_NAME"
-ANDROID_RELEASE_NAME="reveric-android-arm64-v8a-v${VERSION_NAME}.apk"
+ANDROID_RELEASE_NAME="MetaArc-android-arm64-v8a-v${VERSION_NAME}.apk"
 
 cd "$SCRIPT_DIR"
 
@@ -144,9 +144,9 @@ info "${FLUTTER[*]} pub get..."
 
 # ----- 构建 APK -----
 info "按 ABI 构建 Android APK (${FLUTTER[*]} build apk --release --split-per-abi --target-platform android-arm64)..."
-BUILD_LOG="$(mktemp "${TMPDIR:-/tmp}/reveric-android-build.XXXXXX")"
+BUILD_LOG="$(mktemp "${TMPDIR:-/tmp}/metaarc-android-build.XXXXXX")"
 # 记录构建起点，用于判断产物是本次生成的还是上次遗留的。
-BUILD_STAMP="$(mktemp "${TMPDIR:-/tmp}/reveric-android-stamp.XXXXXX")"
+BUILD_STAMP="$(mktemp "${TMPDIR:-/tmp}/metaarc-android-stamp.XXXXXX")"
 
 set +e
 "${FLUTTER[@]}" build apk --release --split-per-abi --target-platform android-arm64 2>&1 | tee "$BUILD_LOG"

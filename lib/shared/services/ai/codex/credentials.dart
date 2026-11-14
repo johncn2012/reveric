@@ -178,7 +178,7 @@ class CodexCredentials {
     Directory? staging;
     try {
       // 同一文件系统上的 rename 才能原子替换，避免截断原文件。
-      staging = await file.parent.createTemp('.reveric-auth-');
+      staging = await file.parent.createTemp('.metaarc-auth-');
       final candidate = File(p.join(staging.path, 'auth.json'));
       await candidate.create();
       if (!Platform.isWindows) {

@@ -205,7 +205,7 @@ class BackupService {
       final tempDir = Directory(
         p.join(
           (await getTemporaryDirectory()).path,
-          'reveric_backup_${DateTime.now().millisecondsSinceEpoch}',
+          'metaarc_backup_${DateTime.now().millisecondsSinceEpoch}',
         ),
       );
       await tempDir.create(recursive: true);
@@ -313,7 +313,7 @@ class BackupService {
     final outputDir = Directory(
       p.join(
         (await getTemporaryDirectory()).path,
-        'reveric_backup_share_${DateTime.now().microsecondsSinceEpoch}',
+        'metaarc_backup_share_${DateTime.now().microsecondsSinceEpoch}',
       ),
     );
     await outputDir.create(recursive: true);
@@ -538,7 +538,7 @@ class BackupService {
     final timestamp = DateTime.now().toUtc().microsecondsSinceEpoch;
     final safetyPath = p.join(
       safetyDirectory.path,
-      'reveric_before_restore_$timestamp.zip',
+      'metaarc_before_restore_$timestamp.zip',
     );
     await File(sourcePath).rename(safetyPath);
     _log.info('Restore safety backup created path=$safetyPath');
@@ -552,7 +552,7 @@ Future<Directory> _createRestoreExtractDirectory() async {
   final directory = Directory(
     p.join(
       (await getTemporaryDirectory()).path,
-      'reveric_restore_${DateTime.now().microsecondsSinceEpoch}',
+      'metaarc_restore_${DateTime.now().microsecondsSinceEpoch}',
     ),
   );
   await directory.create(recursive: true);
@@ -1138,7 +1138,7 @@ class _RollbackLedger {
     }
     final rollbackDirectory = await Directory(
       p.dirname(normalizedTarget),
-    ).createTemp('.reveric_restore_rollback_');
+    ).createTemp('.metaarc_restore_rollback_');
     final rollbackPath = p.join(rollbackDirectory.path, 'original');
     await _renameEntity(normalizedTarget, rollbackPath, type);
     _entries[normalizedTarget] = _RollbackEntry(
@@ -1227,7 +1227,7 @@ Future<void> _ensureOutputDirectoryWritable(String outputDir) async {
   final probe = File(
     p.join(
       outputDir,
-      '.reveric_backup_probe_${DateTime.now().millisecondsSinceEpoch}',
+      '.metaarc_backup_probe_${DateTime.now().millisecondsSinceEpoch}',
     ),
   );
   try {
@@ -1615,7 +1615,9 @@ bool _uncommittedBackupPath(String path, {required Directory root}) => p
           part.endsWith('.part') ||
           part.endsWith('.pending') ||
           part.endsWith('.staging') ||
+          part.startsWith('.metaarc_copy_') ||
           part.startsWith('.reveric_copy_') ||
+          part.startsWith('.metaarc_restore_rollback_') ||
           part.startsWith('.reveric_restore_rollback_'),
     );
 
