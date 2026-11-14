@@ -210,6 +210,99 @@ th { color: var(--muted); font-weight: 400; }
 .dl b { display: block; }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; word-break: break-all; }
 
+/* 分页控件 */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.pagination .page-btns {
+  display: flex;
+  gap: 6px;
+}
+.pagination button {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+.pagination button:hover:not(:disabled) {
+  border-color: var(--link);
+  color: var(--link);
+}
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 批量操作工具栏 */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #eef4fc;
+  border: 1px solid #d0e1f9;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #194680;
+  flex-wrap: wrap;
+}
+.batch-bar .batch-title { font-weight: 700; margin-right: 4px; }
+.batch-bar button {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid #c2d7f5;
+  background: #fff;
+  color: #194680;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.batch-bar button:hover {
+  background: #194680;
+  color: #fff;
+}
+
+/* 状态徽标 */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.badge-success { background: #e6f6ee; color: #0f6b45; }
+.badge-warning { background: #fef7e6; color: #9c6800; }
+.badge-danger { background: #fdeeed; color: #b42318; }
+.badge-neutral { background: #f0f2f5; color: var(--muted); }
+
+/* 媒体资源微缩预览 */
+.thumb-preview {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--wash);
+  display: inline-block;
+}
+
 @media (max-width: 860px) {
   .gate-bar, .gate-layout { width: min(1240px, calc(100% - 32px)); }
   .gate-layout { grid-template-columns: 1fr; gap: 20px; padding-top: 8px; }

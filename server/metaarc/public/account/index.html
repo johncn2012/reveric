@@ -119,6 +119,7 @@
       <button type="button" data-view="workspace">工作台概览</button>
       <button type="button" data-view="users">用户与权限</button>
       <button type="button" data-view="plans">套餐权益</button>
+      <button type="button" data-view="orders-admin">订单管理</button>
       <button type="button" data-view="usage-review">用量核对</button>
       <p class="side-label">运营与系统</p>
       <button type="button" data-view="releases">发布更新</button>
@@ -249,6 +250,7 @@
       <div id="workspace-stats"><p class="empty">正在读取工作台…</p></div>
       <div class="jump-row">
         <button type="button" data-jump="users">用户与权限</button>
+        <button type="button" data-jump="orders-admin">订单管理</button>
         <button type="button" data-jump="usage-review">用量核对</button>
         <button type="button" data-jump="releases">发布记录</button>
         <button type="button" data-jump="audit">审计日志</button>
@@ -267,6 +269,7 @@
           <h2>用户与权限</h2>
           <button class="btn" id="btn-create-user" type="button">新建账号</button>
         </div>
+        <div id="users-batch-bar" class="batch-bar" hidden></div>
         <form id="user-search" class="row">
           <input id="user-keyword" type="search" placeholder="邮箱、手机或昵称" autocomplete="off">
           <button class="btn btn-line" type="submit">查找</button>
@@ -280,14 +283,40 @@
           <button type="button" data-user-filter="status:suspended">已封禁</button>
         </div>
         <div id="users-slot"><p class="empty">尚未读取用户。</p></div>
+        <div id="users-pages"></div>
       </article>
     </section>
 
     <section data-panel="plans" hidden>
       <article class="card">
-        <h2>套餐</h2>
-        <p class="fine">上下架需要填写原因，并写入审计。支付未开通，下架只影响展示，不会产生订单。</p>
+        <div class="row">
+          <h2>套餐与定价</h2>
+          <button class="btn" id="btn-create-plan" type="button">新建套餐</button>
+        </div>
+        <p class="fine">上下架与编辑配置需要填写原因并写入审计。可在线维护套餐价格、算力点数与排序。</p>
         <div id="plans-slot"><p class="empty">正在读取套餐…</p></div>
+      </article>
+    </section>
+
+    <section data-panel="orders-admin" hidden>
+      <article class="card">
+        <div class="row">
+          <h2>订单管理</h2>
+          <button class="btn" id="btn-create-order" type="button">手工录单</button>
+        </div>
+        <p class="fine">线上支付未开通时，支持管理员在此录入线下对账转账订单，或审核确认待付款订单并自动发点。</p>
+        <form id="order-search" class="row">
+          <input id="order-keyword" type="search" placeholder="订单号、账号、交易单号" autocomplete="off">
+          <button class="btn btn-line" type="submit">查找</button>
+        </form>
+        <div class="filters" id="order-filters">
+          <button type="button" data-order-filter="" class="is-on">全部</button>
+          <button type="button" data-order-filter="status:pending">待支付 / 待核对</button>
+          <button type="button" data-order-filter="status:paid">已完成</button>
+          <button type="button" data-order-filter="status:cancelled">已取消</button>
+        </div>
+        <div id="admin-orders-slot"><p class="empty">尚未读取订单。</p></div>
+        <div id="admin-orders-pages"></div>
       </article>
     </section>
 
@@ -299,6 +328,7 @@
           <button class="btn btn-line" type="submit">查找</button>
         </form>
         <div id="quota-review-slot"><p class="empty">正在读取流水…</p></div>
+        <div id="quota-review-pages"></div>
       </article>
     </section>
 
@@ -311,13 +341,20 @@
 
     <section data-panel="diagnostics" hidden>
       <article class="card">
-        <h2>诊断与健康</h2>
+        <h2>安全风控与防护指标</h2>
+        <p class="fine">实时监测恶意登录尝试与异常 IP 聚类。</p>
+        <div id="security-stats-slot"><p class="empty">正在读取安全态势…</p></div>
+      </article>
+      <article class="card">
+        <h2>诊断与运行健康</h2>
         <p class="empty">诊断工单尚未接入。健康状态来自本服务探针；未配置的依赖显示待接入。</p>
         <div id="health-slot"><p class="empty">正在读取健康状态…</p></div>
-        <h3>创作任务</h3>
+        <h3>创作任务队列</h3>
         <div id="admin-tasks-slot"><p class="empty">正在读取任务…</p></div>
-        <h3>文件索引</h3>
+        <div id="admin-tasks-pages"></div>
+        <h3>文件存储索引</h3>
         <div id="admin-media-slot"><p class="empty">正在读取文件索引…</p></div>
+        <div id="admin-media-pages"></div>
       </article>
     </section>
 
@@ -326,8 +363,12 @@
         <h2>变更审计</h2>
         <p class="fine">记录操作者、对象、原因和变更前后。登录记录单独列出。</p>
         <div id="audit-slot"><p class="empty">正在读取审计…</p></div>
+        <div id="audit-pages"></div>
         <h3>登录记录</h3>
         <div id="admin-login-slot"><p class="empty">正在读取登录记录…</p></div>
+        <div id="admin-login-pages"></div>
+      </article>
+    </section>
       </article>
     </section>
 
