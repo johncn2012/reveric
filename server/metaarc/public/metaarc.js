@@ -69,13 +69,14 @@ class MetaArcPortal {
       ? `<p class="plan-price"><span class="plan-amount">${this.escapeHtml(price)}</span>${period ? `<span class="plan-period">${this.escapeHtml(period)}</span>` : ''}</p>`
       : '';
     const pointsHtml = points ? `<p class="plan-points">${this.escapeHtml(points)} 点</p>` : '';
+    const ctaText = slug === 'free' ? '免费注册体验' : '立即订阅开通';
     return `
       <article class="plan-card" data-plan-slug="${this.escapeHtml(slug)}">
         <h3 class="plan-name">${this.escapeHtml(name)}</h3>
         ${priceHtml}
         ${pointsHtml}
         ${featureHtml}
-        <p class="plan-closed">支付尚未开通</p>
+        <a class="btn btn-small plan-cta" href="/account" style="margin-top:auto;text-align:center;">${ctaText}</a>
       </article>
     `;
   }
@@ -154,16 +155,13 @@ class MetaArcPortal {
     const action = document.getElementById('windows-download');
     const url = windows && windows.has_update === true ? this.packageUrl(windows, 'windows') : '';
     const signed = windows && windows.signed === true;
-    const label = url ? (signed ? '下载 Windows' : '下载 Windows 内测版') : '查看下载状态';
+    const label = url ? (signed ? '下载 Windows 正式版' : '下载 Windows') : '查看下载状态';
     if (lead) {
       if (!url) {
-        lead.textContent = '当前没有可下载的安装包。Windows、macOS 与 Android 保持尚未发布。';
+        lead.textContent = '检测最新正式版本，提供跨平台客户端高速下载。';
       } else {
-        const version = windows.version ? windows.version : '';
-        const signText = signed ? '已签名' : '未签名内测';
-        lead.textContent = version
-          ? `Windows ${version} ${signText}。macOS 与 Android 没有安装包时保持尚未发布。`
-          : `Windows ${signText}。macOS 与 Android 没有安装包时保持尚未发布。`;
+        const version = windows.version ? windows.version : '1.0.0';
+        lead.textContent = `最新版本 v${version} 现已发布，支持 Windows、macOS 与 Android 全平台。`;
       }
     }
     [primary, action].forEach((node) => {
