@@ -44,6 +44,7 @@ Write-Host "4. 远端解压、热替换静态资源并重构容器..." -Foregrou
 $RemoteScript = @"
 set -e
 tar -xzf /tmp/server-deploy.tar.gz -C /opt/metaarc/server
+rm -f /opt/metaarc/server/public/assets/qq-group.jpg
 echo "$Commit" > /opt/metaarc/server/.deployed-commit
 date -u '+%Y-%m-%dT%H:%M:%SZ' > /opt/metaarc/server/.deployed-at
 rm -f /tmp/server-deploy.tar.gz
