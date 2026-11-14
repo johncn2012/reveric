@@ -9,9 +9,11 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "🚀 开始 MetaArc 生产环境全自动部署..." -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
-# 1. 确保 designs/website/account 与 server/metaarc/public/account 严格一致
+# 1. 确保 designs/website 与 server/metaarc/public 严格一致
 Write-Host "1. 同步前端设计稿与服务静态目录..." -ForegroundColor Gray
 Copy-Item -Path "designs/website/account/*" -Destination "server/metaarc/public/account/" -Force -Recurse
+Copy-Item -Path "designs/website/help/*" -Destination "server/metaarc/public/help/" -Force -Recurse
+Copy-Item -Path "designs/website/index.html" -Destination "server/metaarc/public/index.html" -Force
 
 # 2. 生成部署归档包
 $TarPath = "server-deploy.tar.gz"

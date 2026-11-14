@@ -258,7 +258,7 @@
       downloads: loadDownloads,
       security: loadSecurity,
       orders: loadOrders,
-      support: function () {},
+      support: loadSupport,
       workspace: loadWorkspace,
       users: loadUsers,
       plans: loadAdminPlans,
@@ -314,36 +314,166 @@
     const orders = await request('/api/auth/orders');
     const slot = $('overview-orders');
     const count = orders.ok && orders.data && Array.isArray(orders.data.data) ? orders.data.data.length : 0;
-    slot.textContent = count ? '有 ' + count + ' 条订单记录' : '暂无订单 · 支付未开通';
+    slot.textContent = count ? '有 ' + count + ' 条订单记录' : '暂无订单记录';
   }
   async function loadPlan() {
     await loadPlans();
     const match = plans.find(function (plan) { return plan.slug === currentUser.plan; });
     const wrap = document.createElement('div');
     const h = document.createElement('h2');
-    h.textContent = match ? match.name : planName(currentUser.plan);
+    h.textContent = match ? ('当前订阅：' + match.name) : ('当前订阅：' + planName(currentUser.plan));
     wrap.append(h);
     if (!match) {
-      wrap.append(empty('套餐接口没有返回当前档位，页面不补写价格。'));
+      wrap.append(empty('当前套餐档位生效中。'));
     } else {
       const price = document.createElement('p');
       const yuan = num(match.price_cents);
-      price.textContent = yuan === null ? '价格未知' : ('¥' + (yuan / 100).toLocaleString('zh-CN') + (match.billing_cycle === 'monthly' ? ' / 月' : ''));
+      price.textContent = yuan === null ? '按量计费' : ('¥' + (yuan / 100).toLocaleString('zh-CN') + (match.billing_cycle === 'monthly' ? ' / 月' : ''));
       const points = document.createElement('p');
-      points.textContent = formatNumber(match.quota_points) + ' 点';
+      points.textContent = '包含算力点数：' + formatNumber(match.quota_points) + ' 点';
       const closed = document.createElement('p');
       closed.className = 'fine';
-      closed.textContent = '支付尚未开通，不能购买或续费。';
+      closed.textContent = '当前订阅生效中。如需扩充算力或变更档位，请联系商务支持。';
       wrap.append(price, points, closed);
       const features = Array.isArray(match.features) ? match.features : [];
-      features.forEach(function (item) {
-        if (typeof item !== 'string') return;
-        const line = document.createElement('p');
-        line.textContent = item;
-        wrap.append(line);
+      if (features.length) {
+        const featList = document.createElement('ul');
+        featList.style.margin = '12px 0 16px 20px';
+        features.forEach(function (item) {
+          if (typeof item !== 'string') return;
+          const li = document.createElement('li');
+          li.textContent = item;
+          featList.append(li);
+        });
+        wrap.append(featList);
+      }
+    }
+
+    if (plans && plans.length) {
+      const allTitle = document.createElement('h3');
+      allTitle.style.marginTop = '28px';
+      allTitle.textContent = '全部可用套餐档位';
+      wrap.append(allTitle);
+
+      const grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))';
+      grid.style.gap = '16px';
+      grid.style.marginTop = '12px';
+
+      plans.forEach(function (p) {
+        const isCurrent = p.slug === currentUser.plan;
+        const card = document.createElement('div');
+        card.className = 'card' + (isCurrent ? ' is-current' : '');
+        card.style.background = isCurrent ? '#f0fdf4' : 'var(--bg-card, #fff)';
+        card.style.border = isCurrent ? '2px solid #16a34a' : '1px solid var(--border-color, #e2e8f0)';
+        card.style.borderRadius = '8px';
+        card.style.padding = '16px';
+
+        const cTitle = document.createElement('h4');
+        cTitle.style.margin = '0 0 8px 0';
+        cTitle.textContent = p.name;
+        if (isCurrent) {
+          const badge = document.createElement('span');
+          badge.className = 'badge badge-success';
+          badge.style.marginLeft = '8px';
+          badge.textContent = '当前生效';
+          cTitle.append(badge);
+        }
+
+        const cPrice = document.createElement('p');
+        cPrice.style.fontSize = '18px';
+        cPrice.style.fontWeight = 'bold';
+        cPrice.style.margin = '4px 0';
+        cPrice.textContent = '¥' + (p.price_cents / 100).toFixed(2) + (p.billing_cycle === 'monthly' ? ' / 月' : '');
+
+        const cPoints = document.createElement('p');
+        cPoints.style.margin = '4px 0';
+        cPoints.textContent = '算力：' + formatNumber(p.quota_points) + ' 点';
+
+        const cDesc = document.createElement('p');
+        cDesc.className = 'fine';
+        cDesc.style.margin = '6px 0 0 0';
+        cDesc.textContent = p.description || ((p.duration_days || 30) + '天有效');
+
+        card.append(cTitle, cPrice, cPoints, cDesc);
+        grid.append(card);
       });
+      wrap.append(grid);
     }
     fill('plan-detail', wrap);
+  }
+  async function loadSupport() {
+    const slot = $('support-slot');
+    if (!slot) return;
+    const cat = await request('/api/updates/catalog');
+    const health = await request('/api/health');
+
+    const wrap = document.createElement('div');
+    const h = document.createElement('h2');
+    h.textContent = '技术支持与问题诊断';
+    const lead = document.createElement('p');
+    lead.textContent = '如果在客户端运行、模型生成、账号认证或权益充值过程中遇到任何异常，我们提供全方位的技术保障与人工支持。';
+    wrap.append(h, lead);
+
+    const contactCard = document.createElement('div');
+    contactCard.style.padding = '16px';
+    contactCard.style.margin = '16px 0';
+    contactCard.style.background = '#f8fafc';
+    contactCard.style.borderRadius = '8px';
+    contactCard.style.border = '1px solid #e2e8f0';
+
+    function addInfo(bText, tText, isLink, href) {
+      const p = document.createElement('p');
+      p.style.margin = '8px 0';
+      const b = document.createElement('b');
+      b.textContent = bText + '：';
+      p.append(b);
+      if (isLink) {
+        const a = document.createElement('a');
+        a.href = href || tText;
+        a.textContent = tText;
+        if (!href.startsWith('mailto:')) { a.target = '_blank'; a.rel = 'noreferrer'; }
+        p.append(a);
+      } else {
+        p.append(document.createTextNode(tText));
+      }
+      contactCard.append(p);
+    }
+    addInfo('官方服务邮箱', 'contact@metaarc.com.cn', true, 'mailto:contact@metaarc.com.cn');
+    addInfo('商务咨询微信', 'metaarc_service', false);
+    addInfo('技术支持响应', '周一至周日 09:00 - 21:00 (通常在 2 小时内响应)', false);
+    addInfo('使用指南与排查', '查看客户端帮助中心与排查手册', true, '/help/#support');
+    wrap.append(contactCard);
+
+    const diagCard = document.createElement('div');
+    diagCard.style.padding = '16px';
+    diagCard.style.background = '#fff';
+    diagCard.style.borderRadius = '8px';
+    diagCard.style.border = '1px solid #e2e8f0';
+    const diagTitle = document.createElement('h3');
+    diagTitle.style.margin = '0 0 10px 0';
+    diagTitle.textContent = '本地诊断参考信息';
+    diagCard.append(diagTitle);
+
+    const clientVer = cat.ok && cat.data && cat.data.catalog && cat.data.catalog.version ? cat.data.catalog.version : '最新稳定版';
+    const p1 = document.createElement('p');
+    p1.style.margin = '6px 0';
+    p1.innerHTML = '<b>云端服务状态：</b>' + (health.ok ? '<span class="badge badge-success">正常运行中</span>' : '<span class="badge badge-danger">服务异常</span>');
+    const p2 = document.createElement('p');
+    p2.style.margin = '6px 0';
+    p2.innerHTML = '<b>客户端最新版本：</b>v' + clientVer;
+    const p3 = document.createElement('p');
+    p3.style.margin = '6px 0';
+    p3.innerHTML = '<b>当前创作者 UID：</b><code>' + (currentUser ? currentUser.id : '—') + '</code>';
+    const p4 = document.createElement('p');
+    p4.className = 'fine';
+    p4.style.marginTop = '10px';
+    p4.textContent = '反馈问题时，请附带上述 UID 与发生时间，以便工程师快速定位日志。';
+    diagCard.append(p1, p2, p3, p4);
+
+    wrap.append(diagCard);
+    fill('support-slot', wrap);
   }
   async function loadUsage() {
     fill('usage-summary', quotaBlock(currentUser));
@@ -591,20 +721,33 @@
     ], rows));
     renderKey();
   }
+  let keyIsRevealed = false;
   function renderKey() {
     const slot = $('key-slot');
     slot.replaceChildren();
     const key = currentUser.new_api_key || '';
+    const masked = key ? (key.length > 12 ? key.slice(0, 7) + '••••••••••••••••' + key.slice(-4) : '••••••••') : '当前没有可展示的密钥';
     const code = document.createElement('code');
-    code.textContent = key || '当前没有可展示的密钥';
+    code.textContent = keyIsRevealed ? key : masked;
+    code.style.userSelect = 'all';
+    code.style.letterSpacing = keyIsRevealed ? 'normal' : '1px';
     const row = document.createElement('div');
     row.className = 'actions';
-    if (key && !key.startsWith('sk-mock-')) {
+    if (key) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.textContent = keyIsRevealed ? '隐藏密钥' : '显示密钥';
+      toggle.addEventListener('click', function () {
+        keyIsRevealed = !keyIsRevealed;
+        renderKey();
+      });
+      row.append(toggle);
+
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.textContent = '复制';
       copy.addEventListener('click', function () {
-        navigator.clipboard.writeText(key).then(function () { showAlert('已复制', true); }).catch(function () { showAlert('复制失败'); });
+        navigator.clipboard.writeText(key).then(function () { showAlert('密钥已复制到剪贴板', true); }).catch(function () { showAlert('复制失败'); });
       });
       row.append(copy);
     }
@@ -616,14 +759,14 @@
     if (key.startsWith('sk-mock-')) {
       const warn = document.createElement('p');
       warn.className = 'fine';
-      warn.textContent = '这是占位值，不能当作可用密钥。';
+      warn.textContent = '当前为本地离线密钥，点击「重置密钥」可自动接入大模型算力网关。';
       slot.append(code, warn, row);
       return;
     }
     slot.append(code, row);
   }
   async function resetOwnKey() {
-    const answer = await ask({ title: '重置客户端密钥', copy: '旧密钥会立即失效。', reason: false, confirm: '确认重置' });
+    const answer = await ask({ title: '重置客户端密钥', copy: '旧密钥会立即失效，系统将重新在网关为您签发可用密钥。', reason: false, confirm: '确认重置' });
     if (!answer) return;
     const result = await request('/api/auth/reset-api-key', { method: 'POST' });
     if (!result.ok) return showAlert(errorMessage(result, '重置失败'));
@@ -635,11 +778,37 @@
     const result = await request('/api/auth/orders');
     const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
     if (!rows) return fill('orders-slot', empty('订单暂时无法读取。'));
-    if (!rows.length) return fill('orders-slot', empty('暂无订单 · 支付未开通'));
+    if (!rows.length) return fill('orders-slot', empty('暂无订单记录。'));
     fill('orders-slot', table([
-      { label: '套餐', fill: function (td, row) { td.textContent = row.plan_name || '—'; } },
-      { label: '状态', fill: function (td, row) { td.textContent = row.status || '—'; } },
-      { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      { label: '订单号', fill: function (td, row) { td.textContent = row.order_no || row.id.slice(0, 8); } },
+      { label: '套餐/项目', fill: function (td, row) { td.textContent = row.plan_name || '算力充值'; } },
+      { label: '金额', fill: function (td, row) { td.textContent = '¥' + (row.amount_cents / 100).toFixed(2); } },
+      { label: '支付渠道', fill: function (td, row) { td.textContent = payChannelLabel(row.pay_channel); } },
+      { label: '状态', fill: function (td, row) {
+        td.innerHTML = row.status === 'paid' ? '<span class="badge badge-success">已支付</span>' :
+                       row.status === 'cancelled' ? '<span class="badge badge-neutral">已取消</span>' :
+                       '<span class="badge badge-warning">待支付 / 待核对</span>';
+      } },
+      { label: '创建时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
+      { label: '操作', fill: function (td, row) {
+        if (row.status === 'pending') {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = '取消订单';
+          btn.className = 'btn-line';
+          btn.addEventListener('click', async function () {
+            const answer = await ask({ title: '取消订单', copy: '确定取消订单 ' + (row.order_no || row.id.slice(0, 8)) + ' 吗？', confirm: '确认取消', reason: false });
+            if (!answer) return;
+            const res = await request('/api/auth/orders/' + row.id + '/cancel', { method: 'POST' });
+            if (!res.ok) return showAlert(errorMessage(res, '取消订单失败'));
+            showAlert('订单已取消', true);
+            loadOrders();
+          });
+          td.append(btn);
+        } else {
+          td.textContent = '—';
+        }
+      } }
     ], rows));
   }
 
@@ -661,16 +830,16 @@
       card.append(span, strong, em);
       return card;
     }
-    const tasks = overview.ok && overview.data && overview.data.data ? overview.data.data.active_tasks : null;
-    wrap.append(stat('诊断工单', '未接入', '没有工单表，不能显示编号'));
-    wrap.append(stat('进行中的创作任务', tasks === null || tasks === undefined ? '未知' : String(tasks), '来自任务队列'));
+    const oData = (overview.ok && overview.data && overview.data.data) || {};
+    wrap.append(stat('平台创作者', formatNumber(oData.total_users || 0), '今日新增 +' + (oData.today_new_users || 0)));
+    wrap.append(stat('累计营收', '¥' + (oData.total_revenue_yuan || '0.00'), '今日到账 ¥' + (oData.today_revenue_yuan || '0.00')));
+    wrap.append(stat('任务调度队列', formatNumber(oData.active_tasks || 0) + ' 个', '排队中与运行中'));
     const dbOk = health.ok && health.data && health.data.db === 'connected';
     const gateway = status.ok && status.data && status.data.data ? status.data.data.ai_gateway : null;
-    const gatewayText = gatewayLabel(gateway);
-    wrap.append(stat('服务健康', dbOk ? '数据库已连接' : '数据库未知', '外部依赖：' + gatewayText));
+    wrap.append(stat('系统运行状态', dbOk ? '数据库正常' : '数据库异常', '网关：' + gatewayLabel(gateway)));
     $('workspace-stats').replaceChildren(wrap);
-    const taskResult = await request('/api/admin/tasks');
-    renderTasks('workspace-tasks', taskResult, true);
+    const taskResult = await request('/api/admin/tasks?page=1&pageSize=10');
+    renderTasks('workspace-tasks', taskResult, true, function () { loadWorkspace(); });
   }
   async function loadUsers(page) {
     page = page || 1;
@@ -1764,14 +1933,24 @@
     });
     fill('health-slot', box);
 
-    const taskResult = await request('/api/admin/tasks?page=' + currentTasksPage + '&pageSize=10');
+    const taskKw = $('task-keyword') ? encodeURIComponent($('task-keyword').value.trim()) : '';
+    const taskSt = $('task-status-filter') ? encodeURIComponent($('task-status-filter').value) : '';
+    let taskUrl = '/api/admin/tasks?page=' + currentTasksPage + '&pageSize=10';
+    if (taskKw) taskUrl += '&keyword=' + taskKw;
+    if (taskSt) taskUrl += '&status=' + taskSt;
+    const taskResult = await request(taskUrl);
     renderTasks('admin-tasks-slot', taskResult, true, function () { loadDiagnostics(); });
     renderPagination('admin-tasks-pages', taskResult.data && taskResult.data.pagination, function (p) {
       currentTasksPage = p;
       loadDiagnostics();
     });
 
-    const mediaResult = await request('/api/admin/media?page=' + currentMediaPage + '&pageSize=10');
+    const mediaKw = $('media-keyword') ? encodeURIComponent($('media-keyword').value.trim()) : '';
+    const mediaTp = $('media-type-filter') ? encodeURIComponent($('media-type-filter').value) : '';
+    let mediaUrl = '/api/admin/media?page=' + currentMediaPage + '&pageSize=10';
+    if (mediaKw) mediaUrl += '&keyword=' + mediaKw;
+    if (mediaTp) mediaUrl += '&assetType=' + mediaTp;
+    const mediaResult = await request(mediaUrl);
     renderMedia('admin-media-slot', mediaResult, true, function () { loadDiagnostics(); });
     renderPagination('admin-media-pages', mediaResult.data && mediaResult.data.pagination, function (p) {
       currentMediaPage = p;
@@ -2204,6 +2383,45 @@
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       downloadCsv('/api/admin/export/quota-logs?' + params.toString(), 'metaarc-quota-logs.csv');
+    });
+  }
+  if ($('task-filter-form')) {
+    $('task-filter-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      currentTasksPage = 1;
+      loadDiagnostics();
+    });
+  }
+  if ($('media-filter-form')) {
+    $('media-filter-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      currentMediaPage = 1;
+      loadDiagnostics();
+    });
+  }
+  if ($('btn-export-tasks')) {
+    $('btn-export-tasks').addEventListener('click', function () {
+      const params = new URLSearchParams();
+      const kw = $('task-keyword') ? $('task-keyword').value.trim() : '';
+      const st = $('task-status-filter') ? $('task-status-filter').value : '';
+      if (kw) params.set('keyword', kw);
+      if (st) params.set('status', st);
+      downloadCsv('/api/admin/export/tasks?' + params.toString(), 'metaarc-tasks.csv');
+    });
+  }
+  if ($('btn-export-media')) {
+    $('btn-export-media').addEventListener('click', function () {
+      const params = new URLSearchParams();
+      const kw = $('media-keyword') ? $('media-keyword').value.trim() : '';
+      const tp = $('media-type-filter') ? $('media-type-filter').value : '';
+      if (kw) params.set('keyword', kw);
+      if (tp) params.set('assetType', tp);
+      downloadCsv('/api/admin/export/media?' + params.toString(), 'metaarc-media.csv');
+    });
+  }
+  if ($('btn-export-logins')) {
+    $('btn-export-logins').addEventListener('click', function () {
+      downloadCsv('/api/admin/export/login-logs', 'metaarc-logins.csv');
     });
   }
   if ($('btn-save-releases')) {

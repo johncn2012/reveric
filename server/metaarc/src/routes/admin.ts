@@ -1145,7 +1145,7 @@ adminRouter.get('/admin/system-status', async (_req: Request, res: Response) => 
 // 10. 管理员获取全平台任务调度队列 (带标准分页)
 adminRouter.get('/admin/tasks', async (req: Request, res: Response) => {
   try {
-    const { status, userId, limit = '50', offset = '0', page, pageSize } = req.query;
+    const { status, taskType, keyword, startDate, endDate, userId, limit = '50', offset = '0', page, pageSize } = req.query;
 
     let sql = `
       SELECT t.id, t.user_id, t.task_type, t.status, t.progress, t.prompt, t.client_ip,
@@ -1158,6 +1158,16 @@ adminRouter.get('/admin/tasks', async (req: Request, res: Response) => {
     const params: any[] = [];
     const whereClauses: string[] = [];
 
+    if (keyword && typeof keyword === 'string' && keyword.trim()) {
+      params.push(`%${keyword.trim()}%`);
+      whereClauses.push(`(t.prompt ILIKE $${params.length} OR t.task_type ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`);
+    }
+
+    if (taskType && typeof taskType === 'string' && taskType.trim()) {
+      params.push(taskType.trim());
+      whereClauses.push(`t.task_type = $${params.length}`);
+    }
+
     if (status && typeof status === 'string' && status.trim()) {
       params.push(status.trim());
       whereClauses.push(`t.status = $${params.length}`);
@@ -1166,6 +1176,14 @@ adminRouter.get('/admin/tasks', async (req: Request, res: Response) => {
       params.push(userId.trim());
       whereClauses.push(`t.user_id = $${params.length}`);
     }
+    if (startDate && typeof startDate === 'string' && startDate.trim()) {
+      params.push(startDate.trim());
+      whereClauses.push(`t.created_at >= $${params.length}::timestamptz`);
+    }
+    if (endDate && typeof endDate === 'string' && endDate.trim()) {
+      params.push(endDate.trim());
+      whereClauses.push(`t.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+    }
 
     if (whereClauses.length > 0) {
       sql += ` WHERE ${whereClauses.join(' AND ')}`;
@@ -1173,6 +1191,7 @@ adminRouter.get('/admin/tasks', async (req: Request, res: Response) => {
 
     const countSql = `
       SELECT count(*) FROM user_tasks t
+      LEFT JOIN users u ON t.user_id = u.id
       ${whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''}
     `;
     const countRes = await query(countSql, params);
@@ -1234,7 +1253,7 @@ adminRouter.post('/admin/tasks/:id/cancel', async (req: Request, res: Response) 
 // 12. 管理员查看云端媒体资源与存储统计 (带标准分页)
 adminRouter.get('/admin/media', async (req: Request, res: Response) => {
   try {
-    const { assetType, userId, limit = '50', offset = '0', page, pageSize } = req.query;
+    const { assetType, keyword, startDate, endDate, userId, limit = '50', offset = '0', page, pageSize } = req.query;
 
     const statsRes = await query(`
       SELECT COUNT(*) as total_assets,
@@ -1253,6 +1272,11 @@ adminRouter.get('/admin/media', async (req: Request, res: Response) => {
     const params: any[] = [];
     const whereClauses: string[] = [];
 
+    if (keyword && typeof keyword === 'string' && keyword.trim()) {
+      params.push(`%${keyword.trim()}%`);
+      whereClauses.push(`(m.storage_key ILIKE $${params.length} OR m.cdn_url ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`);
+    }
+
     if (assetType && typeof assetType === 'string' && assetType.trim()) {
       params.push(assetType.trim());
       whereClauses.push(`m.asset_type = $${params.length}`);
@@ -1261,6 +1285,14 @@ adminRouter.get('/admin/media', async (req: Request, res: Response) => {
       params.push(userId.trim());
       whereClauses.push(`m.user_id = $${params.length}`);
     }
+    if (startDate && typeof startDate === 'string' && startDate.trim()) {
+      params.push(startDate.trim());
+      whereClauses.push(`m.created_at >= $${params.length}::timestamptz`);
+    }
+    if (endDate && typeof endDate === 'string' && endDate.trim()) {
+      params.push(endDate.trim());
+      whereClauses.push(`m.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+    }
 
     if (whereClauses.length > 0) {
       listSql += ` WHERE ${whereClauses.join(' AND ')}`;
@@ -1268,6 +1300,7 @@ adminRouter.get('/admin/media', async (req: Request, res: Response) => {
 
     const countSql = `
       SELECT count(*) FROM media_assets m
+      LEFT JOIN users u ON m.user_id = u.id
       ${whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''}
     `;
     const countRes = await query(countSql, params);
@@ -2043,6 +2076,125 @@ adminRouter.get('/admin/export/:entity', async (req: Request, res: Response) => 
         r.balance_after,
         r.type,
         r.remark || '',
+        r.created_at ? new Date(r.created_at).toISOString() : '',
+      ]);
+    } else if (entity === 'tasks') {
+      const params: any[] = [];
+      const where: string[] = [];
+      if (keyword && typeof keyword === 'string' && keyword.trim()) {
+        params.push(`%${keyword.trim()}%`);
+        where.push(`(t.prompt ILIKE $${params.length} OR t.task_type ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length})`);
+      }
+      if (status && typeof status === 'string' && status.trim()) {
+        params.push(status.trim());
+        where.push(`t.status = $${params.length}`);
+      }
+      if (startDate && typeof startDate === 'string' && startDate.trim()) {
+        params.push(startDate.trim());
+        where.push(`t.created_at >= $${params.length}::timestamptz`);
+      }
+      if (endDate && typeof endDate === 'string' && endDate.trim()) {
+        params.push(endDate.trim());
+        where.push(`t.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+      }
+      const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const sql = `
+        SELECT t.id, t.task_type, t.status, t.progress, t.prompt, t.duration_ms, t.created_at,
+               u.email, u.phone, u.nickname
+        FROM user_tasks t
+        LEFT JOIN users u ON t.user_id = u.id
+        ${whereSql}
+        ORDER BY t.created_at DESC LIMIT 5000
+      `;
+      const result = await query(sql, params);
+      headers = ['任务ID', '创作者', '手机号/邮箱', '任务类型', '执行状态', '进度(%)', '耗时(ms)', 'Prompt提示词', '提交时间'];
+      rows = result.rows.map(r => [
+        r.id,
+        r.nickname || r.email || r.phone || '',
+        [r.phone, r.email].filter(Boolean).join(' / '),
+        r.task_type,
+        r.status,
+        r.progress,
+        r.duration_ms || 0,
+        r.prompt || '',
+        r.created_at ? new Date(r.created_at).toISOString() : '',
+      ]);
+    } else if (entity === 'media') {
+      const params: any[] = [];
+      const where: string[] = [];
+      if (keyword && typeof keyword === 'string' && keyword.trim()) {
+        params.push(`%${keyword.trim()}%`);
+        where.push(`(m.storage_key ILIKE $${params.length} OR m.cdn_url ILIKE $${params.length} OR u.email ILIKE $${params.length})`);
+      }
+      if (status && typeof status === 'string' && status.trim()) {
+        params.push(status.trim());
+        where.push(`m.asset_type = $${params.length}`);
+      }
+      if (startDate && typeof startDate === 'string' && startDate.trim()) {
+        params.push(startDate.trim());
+        where.push(`m.created_at >= $${params.length}::timestamptz`);
+      }
+      if (endDate && typeof endDate === 'string' && endDate.trim()) {
+        params.push(endDate.trim());
+        where.push(`m.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+      }
+      const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const sql = `
+        SELECT m.id, m.asset_type, m.storage_key, m.cdn_url, m.byte_size, m.mime_type, m.created_at,
+               u.email, u.phone, u.nickname
+        FROM media_assets m
+        LEFT JOIN users u ON m.user_id = u.id
+        ${whereSql}
+        ORDER BY m.created_at DESC LIMIT 5000
+      `;
+      const result = await query(sql, params);
+      headers = ['资产ID', '创作者', '资产类型', '对象存储Key', '访问URL', '体积(Bytes)', 'MIME类型', '登记时间'];
+      rows = result.rows.map(r => [
+        r.id,
+        r.nickname || r.email || r.phone || '',
+        r.asset_type,
+        r.storage_key,
+        r.cdn_url,
+        r.byte_size,
+        r.mime_type || '',
+        r.created_at ? new Date(r.created_at).toISOString() : '',
+      ]);
+    } else if (entity === 'login-logs') {
+      const params: any[] = [];
+      const where: string[] = [];
+      if (keyword && typeof keyword === 'string' && keyword.trim()) {
+        params.push(`%${keyword.trim()}%`);
+        where.push(`(l.account ILIKE $${params.length} OR l.ip ILIKE $${params.length} OR l.ip_location ILIKE $${params.length})`);
+      }
+      if (status && typeof status === 'string' && status.trim()) {
+        params.push(status.trim());
+        where.push(`l.status = $${params.length}`);
+      }
+      if (startDate && typeof startDate === 'string' && startDate.trim()) {
+        params.push(startDate.trim());
+        where.push(`l.created_at >= $${params.length}::timestamptz`);
+      }
+      if (endDate && typeof endDate === 'string' && endDate.trim()) {
+        params.push(endDate.trim());
+        where.push(`l.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+      }
+      const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const sql = `
+        SELECT l.id, l.account, l.ip, l.ip_location, l.user_agent, l.status, l.fail_reason, l.created_at
+        FROM login_logs l
+        ${whereSql}
+        ORDER BY l.created_at DESC LIMIT 5000
+      `;
+      const result = await query(sql, params);
+      headers = ['日志ID', '登录账号', '来源IP', 'IP归属地', '登录状态', '失败原因', 'User-Agent客户端', '尝试时间'];
+      rows = result.rows.map(r => [
+        r.id,
+        r.account,
+        r.ip,
+        r.ip_location || '',
+        r.status,
+        r.fail_reason || '',
+        r.user_agent || '',
         r.created_at ? new Date(r.created_at).toISOString() : '',
       ]);
     } else {

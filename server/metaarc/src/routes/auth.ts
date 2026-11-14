@@ -216,6 +216,28 @@ const loginAccount = async (req: Request, res: Response) => {
     const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
     const location = resolveIpLocation(clientIp, req.headers);
 
+    // 防暴力撞库与恶意扫描: 5 分钟内同 IP 连续失败 >= 10 次则临时封锁
+    const bruteForceCheck = await query(
+      `SELECT count(*) FROM login_logs
+       WHERE ip = $1 AND status = 'failed' AND created_at >= NOW() - INTERVAL '5 minutes'`,
+      [clientIp]
+    );
+    const failCount = parseInt(bruteForceCheck.rows[0]?.count || '0', 10);
+    if (failCount >= 10) {
+      await recordLoginLog({
+        account: cleanAccount,
+        ip: clientIp,
+        location,
+        userAgent,
+        status: 'failed',
+        failReason: 'rate_limited: 连续登录失败频次过高',
+      });
+      return res.status(429).json({
+        error: 'too_many_attempts',
+        message: '登录失败频次过高，该来源 IP 已被临时锁定 5 分钟，请稍后再试。',
+      });
+    }
+
     // 支持手机号或邮箱登录
     const sql = 'SELECT * FROM users WHERE email = $1 OR phone = $1 LIMIT 1';
     const userRes = await query(sql, [cleanAccount]);

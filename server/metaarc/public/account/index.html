@@ -86,15 +86,14 @@
       <button class="text" id="register-back" type="button">返回登录</button>
     </form>
     <form id="forgot-form" hidden>
-      <p class="forgot-copy">找回密码尚未开通。请写信到 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>。这里不会发送重置邮件，也不会显示发送成功。</p>
-      <button class="btn" type="submit">查看找回状态</button>
+      <p class="forgot-copy">如需重置密码，请发送账号信息至官方支持邮箱 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>，我们将在核验身份后为您协助处理。</p>
       <button class="text" id="forgot-back" type="button">返回登录</button>
     </form>
     <div class="gate-links" id="login-links">
       <button type="button" id="show-register">注册账号</button>
       <button type="button" id="show-forgot">忘记密码</button>
     </div>
-    <p class="gate-foot">支付尚未开通</p>
+    <p class="gate-foot">MetaArc 元弧 · 创作者生产力引擎</p>
     </main>
   </div>
 </div>
@@ -146,7 +145,7 @@
       <div class="grid-2">
         <article class="card">
           <h2>开始之前，先准备好你的创作空间。</h2>
-          <p>安装客户端，核对权益。诊断工单还没有接通。</p>
+          <p>安装客户端，核对账号权益与算力用量。</p>
           <a class="btn" href="/help/#install">查看安装说明</a>
         </article>
         <ol class="path">
@@ -162,12 +161,12 @@
       <div class="grid-2">
         <article class="card">
           <h2>订单记录</h2>
-          <p id="overview-orders" class="empty">暂无订单 · 支付未开通</p>
+          <p id="overview-orders" class="empty">暂无订单记录</p>
           <button class="text" type="button" data-jump="orders">查看订单</button>
         </article>
         <article class="card">
           <h2>需要帮助？</h2>
-          <p>安装、登录或生成遇到问题，可以查看说明。这里不能开出工单编号。</p>
+          <p>安装、登录、生成或订单遇到问题，可查阅官方指南或联系技术支持。</p>
           <a class="text" href="/help/#support">查看诊断与支持</a>
         </article>
       </div>
@@ -232,21 +231,21 @@
 
     <section data-panel="orders" hidden>
       <article class="card">
-        <h2>支付尚未开通</h2>
-        <p>不能在这里下单、续费或开发票。</p>
-        <div id="orders-slot"><p class="empty">暂无订单 · 支付未开通</p></div>
+        <h2>订单记录</h2>
+        <p>查看订阅与算力充值订单。待支付订单可自主取消。</p>
+        <div id="orders-slot"><p class="empty">正在读取订单记录…</p></div>
       </article>
     </section>
 
     <section data-panel="support" hidden>
       <article class="card" id="support-slot">
-        <h2>诊断还没有工单</h2>
-        <p>本站不能提交诊断、不能生成工单编号，也看不到独立上传服务里的文件。请把平台、版本和现象写到 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>，或先看<a href="/help/#support">帮助说明</a>。</p>
+        <h2>技术支持与问题诊断</h2>
+        <p>正在读取诊断与支持服务…</p>
       </article>
     </section>
 
     <section data-panel="workspace" hidden>
-      <p class="lead">待办、用户、用量、发布和审计分开看。没有数据来源的位置保持未知或未接入。</p>
+      <p class="lead">平台运营大盘、创作者、算力用量、发布更新与安全审计综合管控台。</p>
       <div id="workspace-stats"><p class="empty">正在读取工作台…</p></div>
       <div class="jump-row">
         <button type="button" data-jump="users">用户与权限</button>
@@ -256,9 +255,8 @@
         <button type="button" data-jump="audit">审计日志</button>
       </div>
       <article class="card">
-        <h2>诊断处理队列</h2>
-        <p class="empty">诊断工单尚未接入，不能显示编号。</p>
-        <h3>创作任务</h3>
+        <h2>进行中创作任务队列</h2>
+        <p class="fine">实时展示创作者提交的模型生成调度队列。</p>
         <div id="workspace-tasks"><p class="empty">正在读取任务…</p></div>
       </article>
     </section>
@@ -371,12 +369,43 @@
       </article>
       <article class="card">
         <h2>诊断与运行健康</h2>
-        <p class="empty">诊断工单尚未接入。健康状态来自本服务探针；未配置的依赖显示待接入。</p>
+        <p class="fine">实时服务运行状态探针，监控数据库、内存、外部大模型网关与对象存储。</p>
         <div id="health-slot"><p class="empty">正在读取健康状态…</p></div>
-        <h3>创作任务队列</h3>
+        
+        <div class="row" style="margin-top:20px;">
+          <h3>创作任务队列</h3>
+          <button class="btn btn-line" id="btn-export-tasks" type="button">导出任务 CSV</button>
+        </div>
+        <form id="task-filter-form" class="search-row">
+          <input id="task-keyword" type="search" placeholder="提示词、任务ID、账号" autocomplete="off">
+          <select id="task-status-filter">
+            <option value="">全部状态</option>
+            <option value="pending">排队中 (pending)</option>
+            <option value="running">运行中 (running)</option>
+            <option value="completed">已完成 (completed)</option>
+            <option value="failed">已失败 (failed)</option>
+            <option value="cancelled">已取消 (cancelled)</option>
+          </select>
+          <button class="btn btn-line" type="submit">筛选任务</button>
+        </form>
         <div id="admin-tasks-slot"><p class="empty">正在读取任务…</p></div>
         <div id="admin-tasks-pages"></div>
-        <h3>文件存储索引</h3>
+
+        <div class="row" style="margin-top:24px;">
+          <h3>文件存储索引</h3>
+          <button class="btn btn-line" id="btn-export-media" type="button">导出资产 CSV</button>
+        </div>
+        <form id="media-filter-form" class="search-row">
+          <input id="media-keyword" type="search" placeholder="存储Key、URL、账号" autocomplete="off">
+          <select id="media-type-filter">
+            <option value="">全部类型</option>
+            <option value="image">图像 (image)</option>
+            <option value="video">视频 (video)</option>
+            <option value="audio">音频 (audio)</option>
+            <option value="export">导出文件 (export)</option>
+          </select>
+          <button class="btn btn-line" type="submit">筛选资产</button>
+        </form>
         <div id="admin-media-slot"><p class="empty">正在读取文件索引…</p></div>
         <div id="admin-media-pages"></div>
       </article>
@@ -388,18 +417,19 @@
         <p class="fine">记录操作者、对象、原因和变更前后。登录记录单独列出。</p>
         <div id="audit-slot"><p class="empty">正在读取审计…</p></div>
         <div id="audit-pages"></div>
-        <h3>登录记录</h3>
+        <div class="row" style="margin-top:24px;">
+          <h3>全局登录与安全审计</h3>
+          <button class="btn btn-line" id="btn-export-logins" type="button">导出登录记录 CSV</button>
+        </div>
         <div id="admin-login-slot"><p class="empty">正在读取登录记录…</p></div>
         <div id="admin-login-pages"></div>
-      </article>
-    </section>
       </article>
     </section>
 
     <section id="admin-denied" hidden>
       <article class="card">
         <h2>需要管理员权限</h2>
-        <p>这个账号不能打开工作台。页面没有因此放宽任何权限。</p>
+        <p>当前账号不具备管理员权限，如需开通请联系超级管理员。</p>
         <a class="btn" href="/account">返回用户中心</a>
       </article>
     </section>

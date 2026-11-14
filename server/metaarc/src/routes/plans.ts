@@ -6,8 +6,8 @@ export const plansRouter = Router();
 plansRouter.get('/plans', async (_req: Request, res: Response) => {
   try {
     const sql = `
-      SELECT id, name, slug, price_cents, billing_cycle, quota_points, 
-             features, is_active, sort_order
+      SELECT id, name, slug, description, price_cents, billing_cycle, quota_points, 
+             storage_limit_mb, max_concurrency, duration_days, features, is_active, sort_order
       FROM plans
       WHERE is_active = true
       ORDER BY sort_order ASC
