@@ -108,6 +108,8 @@ if (existsSync(PUBLIC)) {
     'metaarc.css',
     'metaarc.js',
     'site.webmanifest',
+    'robots.txt',
+    'sitemap.xml',
     'assets/icon-32.png',
     'assets/icon-180.png',
     'assets/icon-512.png',
