@@ -61,6 +61,41 @@ function publicNewApiBaseUrl(): string {
   return (process.env.NEW_API_PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
 }
 
+async function ensureNewApiAccount(user: { id: string; email?: string; phone?: string; nickname?: string; quota?: string | number }) {
+  try {
+    const initialQuota = parseFloat(String(user.quota || '0'));
+    const provision = await newApi.provisionUserAccount({
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      nickname: user.nickname,
+    });
+    const newApiUserId = provision.user.id;
+    const newApiKey = provision.token.key;
+
+    if (initialQuota > 0) {
+      try {
+        await newApi.topUpUserQuota({
+          newApiUserId,
+          metaarcPoints: initialQuota,
+          remark: '账号补建同步初始点数',
+        });
+      } catch (topUpErr) {
+        console.warn(`[Auto-heal New-API] 充值同步失败:`, topUpErr);
+      }
+    }
+
+    await query(
+      'UPDATE users SET new_api_user_id = $1, new_api_key = $2, updated_at = NOW() WHERE id = $3',
+      [newApiUserId, newApiKey, user.id]
+    );
+    return { newApiUserId, newApiKey };
+  } catch (err) {
+    console.warn(`[Auto-heal New-API] Failed for user ${user.id}:`, err);
+    return null;
+  }
+}
+
 function mount(method: 'get' | 'post', paths: string[], handler: (req: Request, res: Response) => Promise<unknown>) {
   for (const path of paths) {
     authRouter[method](path, (req, res) => {
@@ -238,6 +273,17 @@ const loginAccount = async (req: Request, res: Response) => {
       [clientIp, location, user.id]
     );
 
+    // 若用户未绑定 New-API 账号，尝试延迟补建
+    if (!user.new_api_user_id) {
+      try {
+        const healed = await ensureNewApiAccount(user);
+        if (healed) {
+          user.new_api_user_id = healed.newApiUserId;
+          user.new_api_key = healed.newApiKey;
+        }
+      } catch (_) {}
+    }
+
     const token = signJwt({
       userId: user.id,
       email: user.email,
@@ -284,6 +330,17 @@ const readProfile = async (req: Request, res: Response) => {
 
     const user = userRes.rows[0];
     let quota = parseFloat(user.quota);
+
+    // 如果未绑定 New-API 用户，尝试延迟补建
+    if (!user.new_api_user_id) {
+      try {
+        const healed = await ensureNewApiAccount(user);
+        if (healed) {
+          user.new_api_user_id = healed.newApiUserId;
+          user.new_api_key = healed.newApiKey;
+        }
+      } catch (_) {}
+    }
 
     // 如果关联了 New-API 用户，尝试实时查询 New-API 中的剩余配额
     if (user.new_api_user_id) {
@@ -403,11 +460,20 @@ const resetApiKey = async (req: Request, res: Response) => {
 
     const user = userRes.rows[0];
     let newApiKey = '';
+    let newApiUserId = user.new_api_user_id;
 
-    if (user.new_api_user_id) {
+    if (!newApiUserId) {
+      const healed = await ensureNewApiAccount(user);
+      if (healed) {
+        newApiUserId = healed.newApiUserId;
+        newApiKey = healed.newApiKey;
+      }
+    }
+
+    if (newApiUserId && !newApiKey) {
       try {
         const token = await newApi.createTokenForUser({
-          userId: user.new_api_user_id,
+          userId: newApiUserId,
           tokenName: `MetaArc Key - ${Date.now().toString(36)}`,
         });
         newApiKey = token.key;
@@ -415,7 +481,7 @@ const resetApiKey = async (req: Request, res: Response) => {
         console.warn('[Reset API Key] New-API 签发异常，降级生成标准离线 Key', tokenErr);
         newApiKey = `sk-metaarc-${crypto.randomBytes(16).toString('hex')}`;
       }
-    } else {
+    } else if (!newApiKey) {
       newApiKey = `sk-metaarc-${crypto.randomBytes(16).toString('hex')}`;
     }
 

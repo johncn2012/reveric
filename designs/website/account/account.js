@@ -182,7 +182,11 @@
     const head = document.createElement('tr');
     columns.forEach(function (column) {
       const th = document.createElement('th');
-      th.textContent = column.label;
+      if (typeof column.header === 'function') {
+        column.header(th);
+      } else {
+        th.textContent = column.label;
+      }
       head.append(th);
     });
     const thead = document.createElement('thead');
@@ -260,7 +264,7 @@
       plans: loadAdminPlans,
       'orders-admin': loadAdminOrders,
       'usage-review': loadQuotaReview,
-      releases: loadDownloads,
+      releases: surface === 'admin' ? loadReleasesAdmin : loadDownloads,
       diagnostics: loadDiagnostics,
       audit: loadAudit,
     };
@@ -676,6 +680,10 @@
     if (keyword) params.set('keyword', keyword);
     if (userFilter.indexOf('plan:') === 0) params.set('plan', userFilter.slice(5));
     if (userFilter.indexOf('status:') === 0) params.set('status', userFilter.slice(7));
+    const startDate = $('user-start-date') ? $('user-start-date').value.trim() : '';
+    const endDate = $('user-end-date') ? $('user-end-date').value.trim() : '';
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
     params.set('page', String(page));
     params.set('pageSize', '20');
 
@@ -690,17 +698,37 @@
     }
 
     fill('users-slot', table([
-      { label: '选择', fill: function (td, row) {
-        const chk = document.createElement('input');
-        chk.type = 'checkbox';
-        chk.checked = selectedUserIds.has(row.id);
-        chk.addEventListener('change', function () {
-          if (chk.checked) selectedUserIds.add(row.id);
-          else selectedUserIds.delete(row.id);
-          updateBatchBar();
-        });
-        td.append(chk);
-      } },
+      {
+        label: '选择',
+        header: function (th) {
+          const masterChk = document.createElement('input');
+          masterChk.type = 'checkbox';
+          masterChk.title = '全选/取消本页';
+          const allSelected = rows.length > 0 && rows.every(function (r) { return selectedUserIds.has(r.id); });
+          const someSelected = rows.some(function (r) { return selectedUserIds.has(r.id); });
+          masterChk.checked = allSelected;
+          masterChk.indeterminate = !allSelected && someSelected;
+          masterChk.addEventListener('change', function () {
+            rows.forEach(function (r) {
+              if (masterChk.checked) selectedUserIds.add(r.id);
+              else selectedUserIds.delete(r.id);
+            });
+            loadUsers(currentUserPage);
+          });
+          th.append(masterChk);
+        },
+        fill: function (td, row) {
+          const chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.checked = selectedUserIds.has(row.id);
+          chk.addEventListener('change', function () {
+            if (chk.checked) selectedUserIds.add(row.id);
+            else selectedUserIds.delete(row.id);
+            updateBatchBar();
+          });
+          td.append(chk);
+        }
+      },
       { label: '账号', fill: function (td, row) { td.textContent = person(row); } },
       { label: '邮箱 / 手机', fill: function (td, row) { td.textContent = [row.email, row.phone].filter(Boolean).join(' / ') || '—'; } },
       { label: '套餐', fill: function (td, row) { td.textContent = planName(row.plan); } },
@@ -858,6 +886,7 @@
       button.addEventListener('click', handler);
       box.append(button);
     }
+    add('画像', function () { return showUserDetail(row); });
     add('权限', function () { return changeRole(row); });
     add('套餐', function () { return changePlan(row); });
     add('状态', function () { return changeStatus(row); });
@@ -868,6 +897,160 @@
     add('资料', function () { return updateProfile(row); });
     add('日志', function () { return showUserLoginLogs(row); });
     return box;
+  }
+
+  async function showUserDetail(row) {
+    showAlert('正在获取创作者全貌画像…', true);
+    const res = await request('/api/admin/users/' + row.id + '/detail');
+    if (!res.ok) return showAlert(errorMessage(res, '无法获取创作者画像'));
+    const d = res.data.data;
+    const u = d.user;
+    const s = d.stats;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'stack';
+
+    // 基础信息网格
+    const basicSec = document.createElement('div');
+    basicSec.className = 'detail-section';
+    basicSec.innerHTML = '<h4>基本资料与账号档案</h4>';
+    const grid1 = document.createElement('div');
+    grid1.className = 'detail-grid';
+
+    function item(title, val) {
+      const div = document.createElement('div');
+      div.className = 'detail-item';
+      const span = document.createElement('span');
+      span.textContent = title;
+      const b = document.createElement('b');
+      b.textContent = val == null || val === '' ? '—' : String(val);
+      div.append(span, b);
+      return div;
+    }
+
+    grid1.append(
+      item('用户 ID', u.id),
+      item('账号名称', person(u)),
+      item('邮箱', u.email || '—'),
+      item('手机号', u.phone || '—'),
+      item('套餐方案', planName(u.plan)),
+      item('账号角色', u.role === 'admin' ? '管理员' : '普通创作者'),
+      item('账号状态', u.status === 'suspended' ? '已封禁' : '正常'),
+      item('套餐有效期', u.expires_at ? formatWhen(u.expires_at) : '长期有效'),
+      item('注册时间', formatWhen(u.created_at)),
+      item('最后登录时间', formatWhen(u.last_login_at)),
+      item('最后登录 IP', (u.last_login_ip || '—') + (u.last_login_location ? ' (' + u.last_login_location + ')' : '')),
+    );
+    basicSec.append(grid1);
+
+    // 权益与算力网关状态
+    const quotaSec = document.createElement('div');
+    quotaSec.className = 'detail-section';
+    quotaSec.innerHTML = '<h4>算力与大模型网关探测</h4>';
+    const grid2 = document.createElement('div');
+    grid2.className = 'detail-grid';
+    grid2.append(
+      item('本地剩余点数', formatNumber(u.quota)),
+      item('累计发放点数', formatNumber(u.total_quota)),
+      item('累计订单消费', '¥ ' + (s.total_spent_yuan || '0.00') + ' (' + (s.paid_orders_count || 0) + ' 笔)'),
+      item('New-API 用户 ID', u.new_api_user_id ? String(u.new_api_user_id) : '未绑定 (自愈待机)'),
+      item('网关实时探测点数', d.liveNewApi ? formatNumber(d.liveNewApi.quota) : (u.new_api_user_id ? '探测失败/无响应' : '未连接网关')),
+      item('网关累计消耗点数', d.liveNewApi ? formatNumber(d.liveNewApi.used_quota) : '—'),
+    );
+    quotaSec.append(grid2);
+
+    // 最近 5 笔订单
+    const orderSec = document.createElement('div');
+    orderSec.className = 'detail-section';
+    orderSec.innerHTML = '<h4>最近 5 笔订单记录</h4>';
+    if (!d.recentOrders || !d.recentOrders.length) {
+      orderSec.append(empty('暂无订单记录'));
+    } else {
+      orderSec.append(table([
+        { label: '订单号', fill: function (td, r) { td.textContent = r.order_no; } },
+        { label: '套餐/项目', fill: function (td, r) { td.textContent = r.plan_name || '自定义'; } },
+        { label: '金额', fill: function (td, r) { td.textContent = '¥' + (r.amount_cents / 100).toFixed(2); } },
+        { label: '状态', fill: function (td, r) {
+          td.innerHTML = r.status === 'paid' ? '<span class="badge badge-success">已支付</span>' :
+                         r.status === 'cancelled' ? '<span class="badge badge-neutral">已取消</span>' :
+                         '<span class="badge badge-warning">待支付</span>';
+        } },
+        { label: '下单时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
+      ], d.recentOrders));
+    }
+
+    // 最近 5 个任务
+    const taskSec = document.createElement('div');
+    taskSec.className = 'detail-section';
+    taskSec.innerHTML = '<h4>最近 5 个创作任务</h4>';
+    if (!d.recentTasks || !d.recentTasks.length) {
+      taskSec.append(empty('暂无创作任务'));
+    } else {
+      taskSec.append(table([
+        { label: '类型', fill: function (td, r) { td.textContent = r.type; } },
+        { label: '提示词/内容', fill: function (td, r) { td.textContent = (r.prompt || '—').slice(0, 30); } },
+        { label: '状态', fill: function (td, r) {
+          td.innerHTML = r.status === 'completed' ? '<span class="badge badge-success">完成</span>' :
+                         r.status === 'failed' ? '<span class="badge badge-danger">失败</span>' :
+                         '<span class="badge badge-warning">' + r.status + '</span>';
+        } },
+        { label: '点数消耗', fill: function (td, r) { td.textContent = r.cost_points ?? '0'; } },
+        { label: '创建时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
+      ], d.recentTasks));
+    }
+
+    // 最近 5 次登录记录
+    const loginSec = document.createElement('div');
+    loginSec.className = 'detail-section';
+    loginSec.innerHTML = '<h4>最近 5 次安全登录记录</h4>';
+    if (!d.recentLogins || !d.recentLogins.length) {
+      loginSec.append(empty('暂无登录记录'));
+    } else {
+      loginSec.append(table([
+        { label: '时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
+        { label: 'IP / 归属地', fill: function (td, r) { td.textContent = (r.ip || '—') + (r.ip_location ? ' · ' + r.ip_location : ''); } },
+        { label: '状态', fill: function (td, r) {
+          td.innerHTML = r.status === 'success' ? '<span class="badge badge-success">成功</span>' : '<span class="badge badge-danger">失败</span>';
+        } },
+        { label: '终端', fill: function (td, r) { td.textContent = (r.user_agent || '—').slice(0, 32); } },
+      ], d.recentLogins));
+    }
+
+    // 快捷操作栏
+    const actSec = document.createElement('div');
+    actSec.className = 'detail-section';
+    actSec.innerHTML = '<h4>快捷管理操作</h4>';
+    const actBox = document.createElement('div');
+    actBox.className = 'actions';
+    function makeBtn(text, handler) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-line';
+      b.textContent = text;
+      b.style.marginRight = '8px';
+      b.addEventListener('click', async function () {
+        $('modal-cancel').click();
+        await handler(row);
+      });
+      actBox.append(b);
+    }
+    makeBtn('调整点数', adjustQuota);
+    makeBtn('修改套餐', changePlan);
+    makeBtn('切换状态', changeStatus);
+    makeBtn('重置密码', resetPassword);
+    makeBtn('轮换密钥', resetApiKey);
+    makeBtn('查看全部流水', showUserLedger);
+    actSec.append(actBox);
+
+    wrap.append(basicSec, quotaSec, orderSec, taskSec, loginSec, actSec);
+
+    await ask({
+      title: '创作者 360° 全貌画像 — ' + person(u),
+      extra: wrap,
+      reason: false,
+      confirm: '关闭',
+      modalClass: 'modal-lg',
+    });
   }
 
   async function resetPassword(row) {
@@ -1262,6 +1445,10 @@
     const keyword = $('order-keyword') ? $('order-keyword').value.trim() : '';
     if (keyword) params.set('keyword', keyword);
     if (orderFilter.indexOf('status:') === 0) params.set('status', orderFilter.slice(7));
+    const startDate = $('order-start-date') ? $('order-start-date').value.trim() : '';
+    const endDate = $('order-end-date') ? $('order-end-date').value.trim() : '';
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
     params.set('page', String(page));
     params.set('pageSize', '20');
 
@@ -1475,8 +1662,16 @@
   async function loadQuotaReview(page) {
     page = page || 1;
     currentQuotaReviewPage = page;
-    const keyword = $('quota-keyword').value.trim();
-    const result = await request('/api/admin/quota-logs?page=' + page + '&pageSize=20' + (keyword ? '&keyword=' + encodeURIComponent(keyword) : ''));
+    const params = new URLSearchParams();
+    const keyword = $('quota-keyword') ? $('quota-keyword').value.trim() : '';
+    if (keyword) params.set('keyword', keyword);
+    const startDate = $('quota-start-date') ? $('quota-start-date').value.trim() : '';
+    const endDate = $('quota-end-date') ? $('quota-end-date').value.trim() : '';
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    params.set('page', String(page));
+    params.set('pageSize', '20');
+    const result = await request('/api/admin/quota-logs?' + params.toString());
     const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
     if (!rows) return fill('quota-review-slot', empty('用量流水暂时无法读取。'));
     if (!rows.length) {
@@ -1523,6 +1718,29 @@
     secBox.append(secStat('今日活跃来源IP', formatNumber(secData.today_ips || 0), '独立公网 IP'));
     secBox.append(secStat('已封禁账号数', formatNumber(secData.suspended_users || 0), '受限账号'));
     fill('security-stats-slot', secBox);
+
+    // 威胁分析: 异常高频失败 IP
+    const threatRes = await request('/api/admin/security/threat-ips');
+    const threats = threatRes.ok && threatRes.data && Array.isArray(threatRes.data.data) ? threatRes.data.data : [];
+    if (!threats.length) {
+      fill('threat-ips-slot', empty('近 48 小时未检测到高危撞库攻击行为。'));
+    } else {
+      fill('threat-ips-slot', table([
+        { label: '攻击来源 IP', fill: function (td, r) { td.textContent = r.ip; } },
+        { label: '归属地', fill: function (td, r) { td.textContent = r.ip_location || '未知'; } },
+        { label: '48h 失败尝试', fill: function (td, r) {
+          td.innerHTML = '<b style="color:#b42318;">' + r.fail_count + ' 次</b>';
+        } },
+        { label: '针对账号数', fill: function (td, r) {
+          td.textContent = (r.targeted_accounts_count || 1) + ' 个';
+        } },
+        { label: '受攻击账号样本', fill: function (td, r) {
+          const accounts = Array.isArray(r.sample_accounts) ? r.sample_accounts : [];
+          td.innerHTML = accounts.slice(0, 3).map(function (a) { return '<span class="threat-tag">' + a + '</span>'; }).join('') + (accounts.length > 3 ? ' 等' : '');
+        } },
+        { label: '最后尝试时间', fill: function (td, r) { td.textContent = formatWhen(r.last_attempt_at); } },
+      ], threats));
+    }
 
     const lines = [];
     lines.push(health.ok && health.data && health.data.db === 'connected' ? '数据库：已连接' : '数据库：未知');
@@ -1625,6 +1843,10 @@
     return new Promise(function (resolve) {
       $('modal-title').textContent = options.title || '确认';
       $('modal-copy').textContent = options.copy || '';
+      const card = modal.querySelector('.modal-card');
+      if (card) {
+        card.className = 'modal-card' + (options.modalClass ? ' ' + options.modalClass : '');
+      }
       const extra = $('modal-extra');
       extra.replaceChildren();
       if (options.extra) extra.append(options.extra);
@@ -1638,6 +1860,7 @@
       modal.hidden = false;
       function finish(value) {
         modal.hidden = true;
+        if (card) card.className = 'modal-card';
         modalForm.removeEventListener('submit', onSubmit);
         $('modal-cancel').removeEventListener('click', onCancel);
         resolve(value);
@@ -1724,6 +1947,198 @@
     currentUser = null;
     showGate('login');
   });
+  async function downloadCsv(url, fallbackName) {
+    showAlert('正在导出数据，请稍候…', true);
+    try {
+      const t = token();
+      const res = await fetch(url, {
+        headers: t ? { Authorization: 'Bearer ' + t } : {}
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(function () { return {}; });
+        return showAlert(json.message || '导出失败');
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get('content-disposition');
+      let filename = fallbackName;
+      if (disposition && disposition.indexOf('filename=') !== -1) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+      showAlert('已成功导出：' + filename, true);
+    } catch (err) {
+      console.error('Export error', err);
+      showAlert('导出请求异常');
+    }
+  }
+
+  let currentReleasesManifest = null;
+  async function loadReleasesAdmin() {
+    loadDownloads();
+    const slot = $('releases-admin-slot');
+    if (!slot) return;
+    const res = await request('/api/admin/releases/manifest');
+    if (!res.ok || !res.data || !res.data.data) {
+      return fill('releases-admin-slot', empty('无法读取更新配置清单'));
+    }
+    const manifest = res.data.data;
+    currentReleasesManifest = manifest;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'stack';
+
+    const globalRow = document.createElement('div');
+    globalRow.className = 'search-row';
+    globalRow.style.marginBottom = '16px';
+    globalRow.innerHTML = '<span style="font-size:13px;font-weight:600;margin-right:8px;">全局默认通道：</span>';
+    const channelSel = document.createElement('select');
+    channelSel.id = 'rel-global-channel';
+    ['stable', 'beta', 'internal'].forEach(function (c) {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c === 'stable' ? '正式稳定版 (stable)' : c === 'beta' ? '公测版 (beta)' : '内部测试版 (internal)';
+      if (manifest.channel === c) opt.selected = true;
+      channelSel.append(opt);
+    });
+    globalRow.append(channelSel);
+    wrap.append(globalRow);
+
+    const platforms = [
+      { platform: 'windows', arch: 'x64', title: 'Windows 桌面客户端 (x64)' },
+      { platform: 'macos', arch: 'arm64', title: 'macOS Apple Silicon (arm64)' },
+      { platform: 'android', arch: 'arm64', title: 'Android 移动创作者端 (arm64)' },
+    ];
+
+    const releasesList = Array.isArray(manifest.releases) ? manifest.releases : [];
+
+    platforms.forEach(function (item) {
+      const found = releasesList.find(function (r) {
+        return r.platform === item.platform && (r.arch === item.arch || !r.arch);
+      }) || { platform: item.platform, arch: item.arch, version: '1.0.0', download_url: '', file_size: 0, release_notes: '', signed: true };
+
+      const card = document.createElement('div');
+      card.className = 'release-card';
+      card.dataset.platform = item.platform;
+      card.dataset.arch = item.arch;
+
+      const h4 = document.createElement('h4');
+      h4.innerHTML = '<span>' + item.title + '</span><span class="badge badge-neutral">' + item.platform + ' / ' + item.arch + '</span>';
+
+      const grid = document.createElement('div');
+      grid.className = 'detail-grid';
+
+      function makeInput(label, key, val, type, placeholder) {
+        const div = document.createElement('div');
+        div.className = 'detail-item';
+        const span = document.createElement('span');
+        span.textContent = label;
+        const inp = document.createElement('input');
+        inp.type = type || 'text';
+        inp.placeholder = placeholder || '';
+        inp.dataset.key = key;
+        inp.value = val ?? '';
+        inp.style.width = '100%';
+        inp.style.marginTop = '4px';
+        inp.style.padding = '6px 8px';
+        inp.style.border = '1px solid var(--line)';
+        inp.style.borderRadius = '4px';
+        inp.style.fontSize = '13px';
+        div.append(span, inp);
+        return div;
+      }
+
+      grid.append(
+        makeInput('版本号 (如 1.0.0)', 'version', found.version, 'text', '1.0.0'),
+        makeInput('安装包下载地址 (URL)', 'download_url', found.download_url, 'text', 'https://metaarc.com.cn/downloads/...'),
+        makeInput('安装包字节大小 (Bytes)', 'file_size', found.file_size, 'number', '80000000'),
+      );
+
+      const notesDiv = document.createElement('div');
+      notesDiv.className = 'detail-item';
+      notesDiv.style.gridColumn = '1 / -1';
+      const notesSpan = document.createElement('span');
+      notesSpan.textContent = '版本更新说明与 Release Notes';
+      const textarea = document.createElement('textarea');
+      textarea.dataset.key = 'release_notes';
+      textarea.value = found.release_notes || '';
+      textarea.rows = 2;
+      textarea.style.width = '100%';
+      textarea.style.marginTop = '4px';
+      textarea.style.padding = '6px 8px';
+      textarea.style.border = '1px solid var(--line)';
+      textarea.style.borderRadius = '4px';
+      textarea.style.fontSize = '13px';
+      notesDiv.append(notesSpan, textarea);
+
+      card.append(h4, grid, notesDiv);
+      wrap.append(card);
+    });
+
+    slot.replaceChildren(wrap);
+  }
+
+  async function saveReleaseManifest() {
+    const cards = document.querySelectorAll('.release-card');
+    if (!cards.length) return showAlert('尚未加载发布卡片');
+
+    const globalChannel = $('rel-global-channel') ? $('rel-global-channel').value : 'stable';
+    const releases = [];
+
+    cards.forEach(function (card) {
+      const platform = card.dataset.platform;
+      const arch = card.dataset.arch;
+      const versionInput = card.querySelector('input[data-key="version"]');
+      const urlInput = card.querySelector('input[data-key="download_url"]');
+      const sizeInput = card.querySelector('input[data-key="file_size"]');
+      const notesInput = card.querySelector('textarea[data-key="release_notes"]');
+
+      const version = versionInput ? versionInput.value.trim() : '1.0.0';
+      const download_url = urlInput ? urlInput.value.trim() : '';
+      const file_size = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : undefined;
+      const release_notes = notesInput ? notesInput.value.trim() : '';
+
+      releases.push({
+        platform,
+        arch,
+        version,
+        download_url: download_url || undefined,
+        file_size: file_size > 0 ? file_size : undefined,
+        release_notes: release_notes || undefined,
+        signed: true,
+        channel: globalChannel,
+      });
+    });
+
+    const answer = await ask({
+      title: '确认保存客户端发布清单',
+      copy: '更新将即时同步至 latest.json，影响全平台客户端版本检查与下载中心。',
+      confirm: '确认保存发布',
+    });
+    if (!answer) return;
+
+    const result = await request('/api/admin/releases/manifest', {
+      method: 'POST',
+      body: {
+        channel: globalChannel,
+        signed: true,
+        releases: releases,
+        reason: answer.reason,
+      },
+    });
+
+    if (!result.ok) return showAlert(errorMessage(result, '保存发布清单失败'));
+    showAlert('客户端发布清单已保存并即时生效', true);
+    loadReleasesAdmin();
+  }
+
   document.body.addEventListener('click', function (event) {
     const jump = event.target.closest('[data-jump]');
     if (jump) showView(jump.getAttribute('data-jump'));
@@ -1752,6 +2167,48 @@
   if ($('btn-create-user')) $('btn-create-user').addEventListener('click', createUser);
   if ($('btn-create-plan')) $('btn-create-plan').addEventListener('click', createPlanModal);
   if ($('btn-create-order')) $('btn-create-order').addEventListener('click', createManualOrder);
+  if ($('btn-export-users')) {
+    $('btn-export-users').addEventListener('click', function () {
+      const params = new URLSearchParams();
+      const keyword = $('user-keyword') ? $('user-keyword').value.trim() : '';
+      if (keyword) params.set('keyword', keyword);
+      if (userFilter.indexOf('plan:') === 0) params.set('plan', userFilter.slice(5));
+      if (userFilter.indexOf('status:') === 0) params.set('status', userFilter.slice(7));
+      const startDate = $('user-start-date') ? $('user-start-date').value.trim() : '';
+      const endDate = $('user-end-date') ? $('user-end-date').value.trim() : '';
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      downloadCsv('/api/admin/export/users?' + params.toString(), 'metaarc-users.csv');
+    });
+  }
+  if ($('btn-export-orders')) {
+    $('btn-export-orders').addEventListener('click', function () {
+      const params = new URLSearchParams();
+      const keyword = $('order-keyword') ? $('order-keyword').value.trim() : '';
+      if (keyword) params.set('keyword', keyword);
+      if (orderFilter.indexOf('status:') === 0) params.set('status', orderFilter.slice(7));
+      const startDate = $('order-start-date') ? $('order-start-date').value.trim() : '';
+      const endDate = $('order-end-date') ? $('order-end-date').value.trim() : '';
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      downloadCsv('/api/admin/export/orders?' + params.toString(), 'metaarc-orders.csv');
+    });
+  }
+  if ($('btn-export-quota')) {
+    $('btn-export-quota').addEventListener('click', function () {
+      const params = new URLSearchParams();
+      const keyword = $('quota-keyword') ? $('quota-keyword').value.trim() : '';
+      if (keyword) params.set('keyword', keyword);
+      const startDate = $('quota-start-date') ? $('quota-start-date').value.trim() : '';
+      const endDate = $('quota-end-date') ? $('quota-end-date').value.trim() : '';
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      downloadCsv('/api/admin/export/quota-logs?' + params.toString(), 'metaarc-quota-logs.csv');
+    });
+  }
+  if ($('btn-save-releases')) {
+    $('btn-save-releases').addEventListener('click', saveReleaseManifest);
+  }
   $('form-update-profile').addEventListener('submit', async function (event) {
     event.preventDefault();
     const result = await request('/api/auth/update-profile', { method: 'POST', body: { nickname: $('profile-nickname-input').value.trim() } });

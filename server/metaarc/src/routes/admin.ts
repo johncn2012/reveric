@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { query, pool } from '../db.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
@@ -53,7 +55,7 @@ adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
 // 2. 用户管理列表
 adminRouter.get('/admin/users', async (req: Request, res: Response) => {
   try {
-    const { keyword, plan, status, filter, limit = '50', offset = '0', page, pageSize } = req.query;
+    const { keyword, plan, status, filter, startDate, endDate, limit = '50', offset = '0', page, pageSize } = req.query;
     let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location, expires_at, created_at, updated_at FROM users';
     const params: any[] = [];
     const whereClauses: string[] = [];
@@ -77,6 +79,15 @@ adminRouter.get('/admin/users', async (req: Request, res: Response) => {
       whereClauses.push(`last_login_at >= NOW() - INTERVAL '24 hours'`);
     } else if (filter === 'never_logged_in') {
       whereClauses.push(`last_login_at IS NULL`);
+    }
+
+    if (startDate && typeof startDate === 'string' && startDate.trim()) {
+      params.push(startDate.trim());
+      whereClauses.push(`created_at >= $${params.length}::timestamptz`);
+    }
+    if (endDate && typeof endDate === 'string' && endDate.trim()) {
+      params.push(endDate.trim());
+      whereClauses.push(`created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
     }
 
     if (whereClauses.length > 0) {
@@ -634,7 +645,7 @@ adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response
 // 5. 全站订单列表（带搜索与标准分页）
 adminRouter.get('/admin/orders', async (req: Request, res: Response) => {
   try {
-    const { status, userId, keyword, limit = '50', offset = '0', page, pageSize } = req.query;
+    const { status, userId, keyword, startDate, endDate, limit = '50', offset = '0', page, pageSize } = req.query;
     let sql = `
       SELECT o.id, o.order_no, o.user_id, o.plan_id, o.amount_cents, o.pay_channel, o.pay_trade_no,
              o.status, o.created_at, o.paid_at,
@@ -658,6 +669,14 @@ adminRouter.get('/admin/orders', async (req: Request, res: Response) => {
     if (userId && typeof userId === 'string' && UUID_REGEX.test(userId.trim())) {
       params.push(userId.trim());
       whereClauses.push(`o.user_id = $${params.length}`);
+    }
+    if (startDate && typeof startDate === 'string' && startDate.trim()) {
+      params.push(startDate.trim());
+      whereClauses.push(`o.created_at >= $${params.length}::timestamptz`);
+    }
+    if (endDate && typeof endDate === 'string' && endDate.trim()) {
+      params.push(endDate.trim());
+      whereClauses.push(`o.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
     }
 
     if (whereClauses.length > 0) {
@@ -1577,7 +1596,7 @@ adminRouter.get('/admin/tasks/:id', async (req: Request, res: Response) => {
 // 19. 管理员获取全平台登录与安全审计日志
 adminRouter.get('/admin/login-logs', async (req: Request, res: Response) => {
   try {
-    const { status, keyword, limit = '50', offset = '0' } = req.query;
+    const { status, keyword, startDate, endDate, limit = '50', offset = '0' } = req.query;
     let sql = `
       SELECT l.id, l.user_id, l.account, l.ip, l.ip_location, l.user_agent, l.status, l.fail_reason, l.created_at,
              u.email, u.phone, u.nickname, u.role
@@ -1595,6 +1614,15 @@ adminRouter.get('/admin/login-logs', async (req: Request, res: Response) => {
     if (keyword && typeof keyword === 'string' && keyword.trim()) {
       params.push(`%${keyword.trim()}%`);
       whereClauses.push(`(l.account ILIKE $${params.length} OR l.ip ILIKE $${params.length} OR l.ip_location ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`);
+    }
+
+    if (startDate && typeof startDate === 'string' && startDate.trim()) {
+      params.push(startDate.trim());
+      whereClauses.push(`l.created_at >= $${params.length}::timestamptz`);
+    }
+    if (endDate && typeof endDate === 'string' && endDate.trim()) {
+      params.push(endDate.trim());
+      whereClauses.push(`l.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
     }
 
     if (whereClauses.length > 0) {
@@ -1702,13 +1730,24 @@ adminRouter.get('/admin/audit', async (req: Request, res: Response) => {
 adminRouter.get('/admin/quota-logs', async (req: Request, res: Response) => {
   try {
     const keyword = typeof req.query.keyword === 'string' ? req.query.keyword.trim() : '';
-    const { page, pageSize, limit = '50', offset = '0' } = req.query;
+    const { page, pageSize, limit = '50', offset = '0', startDate, endDate } = req.query;
     const params: unknown[] = [];
-    let where = '';
+    const whereClauses: string[] = [];
+
     if (keyword) {
       params.push(`%${keyword}%`);
-      where = `WHERE u.email ILIKE $1 OR u.phone ILIKE $1 OR u.nickname ILIKE $1 OR q.type ILIKE $1 OR q.remark ILIKE $1`;
+      whereClauses.push(`(u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR u.nickname ILIKE $${params.length} OR q.type ILIKE $${params.length} OR q.remark ILIKE $${params.length})`);
     }
+    if (startDate && typeof startDate === 'string' && startDate.trim()) {
+      params.push(startDate.trim());
+      whereClauses.push(`q.created_at >= $${params.length}::timestamptz`);
+    }
+    if (endDate && typeof endDate === 'string' && endDate.trim()) {
+      params.push(endDate.trim());
+      whereClauses.push(`q.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+    }
+
+    const where = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const countSql = `
       SELECT count(*) FROM quota_transactions q
@@ -1748,5 +1787,382 @@ adminRouter.get('/admin/quota-logs', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[Admin Quota Logs Error]', err);
     return res.status(500).json({ error: 'server_error', message: '无法获取用量流水' });
+  }
+});
+
+// 21. 用户全貌 360° 画像数据 (聚合基础信息、网关实时探测、最近订单、任务、安全登录与额度流水)
+adminRouter.get('/admin/users/:id/detail', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '用户 ID 格式不正确' });
+    }
+
+    const userRes = await query(
+      `SELECT id, email, phone, nickname, plan, quota, total_quota, role, status,
+              new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location,
+              expires_at, created_at, updated_at
+       FROM users WHERE id = $1`,
+      [id],
+    );
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '用户不存在' });
+    }
+    const user = userRes.rows[0];
+
+    // 并行获取最近订单、任务、登录日志、流水、累计消费
+    const [ordersRes, tasksRes, loginsRes, quotaLogsRes, spentRes] = await Promise.all([
+      query(
+        `SELECT o.id, o.order_no, o.amount_cents, o.pay_channel, o.pay_trade_no, o.status, o.created_at, o.paid_at,
+                p.name as plan_name, p.slug as plan_slug
+         FROM orders o
+         LEFT JOIN plans p ON o.plan_id = p.id
+         WHERE o.user_id = $1
+         ORDER BY o.created_at DESC LIMIT 5`,
+        [id],
+      ),
+      query(
+        `SELECT id, type, prompt, status, duration_ms, cost_points, created_at
+         FROM user_tasks
+         WHERE user_id = $1
+         ORDER BY created_at DESC LIMIT 5`,
+        [id],
+      ),
+      query(
+        `SELECT id, ip, ip_location, user_agent, status, fail_reason, created_at
+         FROM login_logs
+         WHERE user_id = $1
+         ORDER BY created_at DESC LIMIT 5`,
+        [id],
+      ),
+      query(
+        `SELECT id, amount, balance_after, type, remark, created_at
+         FROM quota_transactions
+         WHERE user_id = $1
+         ORDER BY created_at DESC LIMIT 5`,
+        [id],
+      ),
+      query(
+        `SELECT COALESCE(SUM(amount_cents), 0) as total_cents, count(*) as total_orders
+         FROM orders
+         WHERE user_id = $1 AND status = 'paid'`,
+        [id],
+      ),
+    ]);
+
+    // 若关联了 New-API，实时探测其网关当前配额
+    let liveNewApi: { quota: number; used_quota: number } | null = null;
+    if (user.new_api_user_id) {
+      try {
+        liveNewApi = await newApi.queryUserQuota(user.new_api_user_id);
+      } catch (err) {
+        console.warn(`[User Detail] Query New-API quota failed for user ${id}:`, err);
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        user,
+        stats: {
+          total_spent_yuan: (parseInt(spentRes.rows[0]?.total_cents || '0', 10) / 100).toFixed(2),
+          paid_orders_count: parseInt(spentRes.rows[0]?.total_orders || '0', 10),
+        },
+        liveNewApi,
+        recentOrders: ordersRes.rows,
+        recentTasks: tasksRes.rows,
+        recentLogins: loginsRes.rows,
+        recentQuotaTransactions: quotaLogsRes.rows,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Admin User Detail Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取用户全貌数据' });
+  }
+});
+
+// 22. 安全风控高危 IP 聚类分析 (过去 48 小时恶意或连续失败尝试)
+adminRouter.get('/admin/security/threat-ips', async (_req: Request, res: Response) => {
+  try {
+    const sql = `
+      SELECT ip, COALESCE(ip_location, '未知') as ip_location,
+             COUNT(*) as fail_count,
+             COUNT(DISTINCT account) as targeted_accounts_count,
+             ARRAY_AGG(DISTINCT account) FILTER (WHERE account IS NOT NULL) as sample_accounts,
+             MAX(created_at) as last_attempt_at
+      FROM login_logs
+      WHERE status = 'failed' AND created_at >= NOW() - INTERVAL '48 hours'
+      GROUP BY ip, ip_location
+      ORDER BY fail_count DESC
+      LIMIT 20
+    `;
+    const result = await query(sql);
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err: any) {
+    console.error('[Admin Security Threat IPs Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取安全威胁分析' });
+  }
+});
+
+// 23. 数据导出功能 (支持导出 users, orders, quota-logs 为带有 UTF-8 BOM 的标准 CSV)
+function csvEscape(val: unknown): string {
+  if (val === null || val === undefined) return '""';
+  const str = String(val).replace(/"/g, '""');
+  return `"${str}"`;
+}
+
+adminRouter.get('/admin/export/:entity', async (req: Request, res: Response) => {
+  try {
+    const { entity } = req.params;
+    const { keyword, status, plan, startDate, endDate } = req.query;
+
+    let headers: string[] = [];
+    let rows: any[] = [];
+    const nowStr = new Date().toISOString().slice(0, 10);
+
+    if (entity === 'users') {
+      const params: any[] = [];
+      const where: string[] = [];
+      if (keyword && typeof keyword === 'string' && keyword.trim()) {
+        params.push(`%${keyword.trim()}%`);
+        where.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length})`);
+      }
+      if (plan && typeof plan === 'string' && plan.trim()) {
+        params.push(plan.trim());
+        where.push(`plan = $${params.length}`);
+      }
+      if (status && typeof status === 'string' && status.trim()) {
+        params.push(status.trim());
+        where.push(`status = $${params.length}`);
+      }
+      if (startDate && typeof startDate === 'string' && startDate.trim()) {
+        params.push(startDate.trim());
+        where.push(`created_at >= $${params.length}::timestamptz`);
+      }
+      if (endDate && typeof endDate === 'string' && endDate.trim()) {
+        params.push(endDate.trim());
+        where.push(`created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+      }
+      const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const sql = `SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, last_login_at, last_login_ip, created_at FROM users ${whereSql} ORDER BY created_at DESC LIMIT 5000`;
+      const result = await query(sql, params);
+
+      headers = ['用户ID', '邮箱', '手机号', '昵称', '套餐', '剩余点数', '累计发放点数', '角色', '状态', '最后登录时间', '最后登录IP', '注册时间'];
+      rows = result.rows.map(r => [
+        r.id,
+        r.email || '',
+        r.phone || '',
+        r.nickname || '',
+        r.plan || '',
+        r.quota || '0',
+        r.total_quota || '0',
+        r.role || '',
+        r.status || '',
+        r.last_login_at ? new Date(r.last_login_at).toISOString() : '',
+        r.last_login_ip || '',
+        r.created_at ? new Date(r.created_at).toISOString() : '',
+      ]);
+    } else if (entity === 'orders') {
+      const params: any[] = [];
+      const where: string[] = [];
+      if (keyword && typeof keyword === 'string' && keyword.trim()) {
+        params.push(`%${keyword.trim()}%`);
+        where.push(`(o.order_no ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR o.pay_trade_no ILIKE $${params.length})`);
+      }
+      if (status && typeof status === 'string' && status.trim()) {
+        params.push(status.trim());
+        where.push(`o.status = $${params.length}`);
+      }
+      if (startDate && typeof startDate === 'string' && startDate.trim()) {
+        params.push(startDate.trim());
+        where.push(`o.created_at >= $${params.length}::timestamptz`);
+      }
+      if (endDate && typeof endDate === 'string' && endDate.trim()) {
+        params.push(endDate.trim());
+        where.push(`o.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+      }
+      const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const sql = `
+        SELECT o.order_no, o.amount_cents, o.pay_channel, o.pay_trade_no, o.status, o.created_at, o.paid_at,
+               u.email, u.phone, u.nickname, p.name as plan_name
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        LEFT JOIN plans p ON o.plan_id = p.id
+        ${whereSql}
+        ORDER BY o.created_at DESC LIMIT 5000
+      `;
+      const result = await query(sql, params);
+
+      headers = ['订单编号', '创作者', '手机号/邮箱', '购买套餐', '金额(元)', '支付通道', '第三方交易号', '支付状态', '下单时间', '支付完成时间'];
+      rows = result.rows.map(r => [
+        r.order_no,
+        r.nickname || r.email || r.phone || '',
+        [r.phone, r.email].filter(Boolean).join(' / '),
+        r.plan_name || '自定义',
+        (r.amount_cents / 100).toFixed(2),
+        r.pay_channel || '',
+        r.pay_trade_no || '',
+        r.status || '',
+        r.created_at ? new Date(r.created_at).toISOString() : '',
+        r.paid_at ? new Date(r.paid_at).toISOString() : '',
+      ]);
+    } else if (entity === 'quota-logs') {
+      const params: any[] = [];
+      const where: string[] = [];
+      if (keyword && typeof keyword === 'string' && keyword.trim()) {
+        params.push(`%${keyword.trim()}%`);
+        where.push(`(u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR q.type ILIKE $${params.length} OR q.remark ILIKE $${params.length})`);
+      }
+      if (startDate && typeof startDate === 'string' && startDate.trim()) {
+        params.push(startDate.trim());
+        where.push(`q.created_at >= $${params.length}::timestamptz`);
+      }
+      if (endDate && typeof endDate === 'string' && endDate.trim()) {
+        params.push(endDate.trim());
+        where.push(`q.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+      }
+      const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const sql = `
+        SELECT q.id, q.amount, q.balance_after, q.type, q.remark, q.created_at,
+               u.email, u.phone, u.nickname
+        FROM quota_transactions q
+        LEFT JOIN users u ON u.id = q.user_id
+        ${whereSql}
+        ORDER BY q.created_at DESC LIMIT 5000
+      `;
+      const result = await query(sql, params);
+
+      headers = ['流水ID', '创作者', '变动点数', '变动后结存', '业务类型', '备注说明', '记录时间'];
+      rows = result.rows.map(r => [
+        r.id,
+        r.nickname || r.email || r.phone || '',
+        r.amount,
+        r.balance_after,
+        r.type,
+        r.remark || '',
+        r.created_at ? new Date(r.created_at).toISOString() : '',
+      ]);
+    } else {
+      return res.status(400).json({ error: 'invalid_entity', message: '不支持的导出数据类型' });
+    }
+
+    const csvContent = '\uFEFF' + [
+      headers.map(csvEscape).join(','),
+      ...rows.map(r => r.map(csvEscape).join(',')),
+    ].join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="metaarc-${entity}-${nowStr}.csv"`);
+    return res.send(csvContent);
+  } catch (err: any) {
+    console.error('[Admin Export Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '导出数据失败' });
+  }
+});
+
+// 24. 读取与更新客户端更新清单
+adminRouter.get('/admin/releases/manifest', async (_req: Request, res: Response) => {
+  try {
+    const manifestPath = path.resolve(process.cwd(), 'updates', 'latest.json');
+    const examplePath = path.resolve(process.cwd(), 'updates', 'latest.example.json');
+
+    let manifest: any = null;
+    if (fs.existsSync(manifestPath)) {
+      try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      } catch (err) {
+        console.error('Failed to parse latest.json', err);
+      }
+    }
+
+    if (!manifest && fs.existsSync(examplePath)) {
+      try {
+        manifest = JSON.parse(fs.readFileSync(examplePath, 'utf8'));
+      } catch {}
+    }
+
+    if (!manifest) {
+      manifest = {
+        channel: 'stable',
+        signed: true,
+        releases: [],
+      };
+    }
+
+    return res.json({
+      success: true,
+      data: manifest,
+    });
+  } catch (err: any) {
+    console.error('[Admin Get Release Manifest Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '读取更新清单失败' });
+  }
+});
+
+adminRouter.post('/admin/releases/manifest', async (req: Request, res: Response) => {
+  try {
+    const { channel = 'stable', signed = true, releases, reason } = req.body;
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 2) {
+      return reasonRequired(res);
+    }
+    if (!Array.isArray(releases)) {
+      return res.status(400).json({ error: 'invalid_releases', message: 'releases 必须是发布列表数组' });
+    }
+
+    // 校验每个 release entry
+    for (const r of releases) {
+      if (!r.platform || !['windows', 'macos', 'android', 'linux'].includes(r.platform)) {
+        return res.status(400).json({ error: 'invalid_platform', message: `无效平台: ${r.platform}` });
+      }
+      if (!r.version || typeof r.version !== 'string') {
+        return res.status(400).json({ error: 'invalid_version', message: `平台 ${r.platform} 缺少版本号` });
+      }
+    }
+
+    const updatesDir = path.resolve(process.cwd(), 'updates');
+    if (!fs.existsSync(updatesDir)) {
+      fs.mkdirSync(updatesDir, { recursive: true });
+    }
+    const manifestPath = path.join(updatesDir, 'latest.json');
+    const tmpPath = path.join(updatesDir, `latest.json.tmp.${Date.now()}`);
+
+    let beforeValue: any = null;
+    if (fs.existsSync(manifestPath)) {
+      try {
+        beforeValue = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      } catch {}
+    }
+
+    const newManifest = {
+      channel,
+      signed: Boolean(signed),
+      updated_at: new Date().toISOString(),
+      releases,
+    };
+
+    fs.writeFileSync(tmpPath, JSON.stringify(newManifest, null, 2), 'utf8');
+    fs.renameSync(tmpPath, manifestPath);
+
+    await insertAudit({
+      actorId: actorId(req),
+      action: 'update_release_manifest',
+      targetType: 'system_updates',
+      targetId: 'latest.json',
+      reason: cleanReason(reason),
+      beforeValue,
+      afterValue: newManifest,
+    });
+
+    return res.json({
+      success: true,
+      message: '更新清单已保存并即时生效',
+      data: newManifest,
+    });
+  } catch (err: any) {
+    console.error('[Admin Save Release Manifest Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '保存更新清单失败' });
   }
 });

@@ -270,9 +270,13 @@
           <button class="btn" id="btn-create-user" type="button">新建账号</button>
         </div>
         <div id="users-batch-bar" class="batch-bar" hidden></div>
-        <form id="user-search" class="row">
+        <form id="user-search" class="search-row">
           <input id="user-keyword" type="search" placeholder="邮箱、手机或昵称" autocomplete="off">
-          <button class="btn btn-line" type="submit">查找</button>
+          <input id="user-start-date" type="date" title="注册起始日期">
+          <span class="date-sep">至</span>
+          <input id="user-end-date" type="date" title="注册截止日期">
+          <button class="btn btn-line" type="submit">筛选</button>
+          <button class="btn btn-line" id="btn-export-users" type="button">导出 CSV</button>
         </form>
         <div class="filters" id="user-filters">
           <button type="button" data-user-filter="" class="is-on">全部</button>
@@ -305,9 +309,13 @@
           <button class="btn" id="btn-create-order" type="button">手工录单</button>
         </div>
         <p class="fine">线上支付未开通时，支持管理员在此录入线下对账转账订单，或审核确认待付款订单并自动发点。</p>
-        <form id="order-search" class="row">
+        <form id="order-search" class="search-row">
           <input id="order-keyword" type="search" placeholder="订单号、账号、交易单号" autocomplete="off">
-          <button class="btn btn-line" type="submit">查找</button>
+          <input id="order-start-date" type="date" title="下单起始日期">
+          <span class="date-sep">至</span>
+          <input id="order-end-date" type="date" title="下单截止日期">
+          <button class="btn btn-line" type="submit">筛选</button>
+          <button class="btn btn-line" id="btn-export-orders" type="button">导出 CSV</button>
         </form>
         <div class="filters" id="order-filters">
           <button type="button" data-order-filter="" class="is-on">全部</button>
@@ -322,10 +330,16 @@
 
     <section data-panel="usage-review" hidden>
       <article class="card">
-        <h2>用量核对</h2>
-        <form id="quota-search" class="row">
+        <div class="row">
+          <h2>用量核对</h2>
+          <button class="btn btn-line" id="btn-export-quota" type="button">导出 CSV</button>
+        </div>
+        <form id="quota-search" class="search-row">
           <input id="quota-keyword" type="search" placeholder="账号、类型或备注" autocomplete="off">
-          <button class="btn btn-line" type="submit">查找</button>
+          <input id="quota-start-date" type="date" title="流水起始日期">
+          <span class="date-sep">至</span>
+          <input id="quota-end-date" type="date" title="流水截止日期">
+          <button class="btn btn-line" type="submit">筛选</button>
         </form>
         <div id="quota-review-slot"><p class="empty">正在读取流水…</p></div>
         <div id="quota-review-pages"></div>
@@ -333,9 +347,17 @@
     </section>
 
     <section data-panel="releases" hidden>
-      <article class="card" id="releases-slot">
-        <h2>发布状态</h2>
-        <p class="fine">只读取更新清单。这个工作台不能上传或改写安装包。</p>
+      <article class="card">
+        <div class="row">
+          <h2>客户端版本与发布更新</h2>
+          <button class="btn" id="btn-save-releases" type="button">保存发布配置</button>
+        </div>
+        <p class="fine">在线维护 Windows、macOS 与 Android 官方客户端版本号、下载地址、安装包大小及更新日志，保存即时同步至客户端升级检测与下载中心。</p>
+        <div id="releases-admin-slot"><p class="empty">正在读取客户端更新配置…</p></div>
+      </article>
+      <article class="card" id="releases-preview-card">
+        <h2>用户下载中心实际呈现</h2>
+        <div id="releases-slot"></div>
       </article>
     </section>
 
@@ -344,6 +366,8 @@
         <h2>安全风控与防护指标</h2>
         <p class="fine">实时监测恶意登录尝试与异常 IP 聚类。</p>
         <div id="security-stats-slot"><p class="empty">正在读取安全态势…</p></div>
+        <h3>近 48 小时异常/高频登录失败 IP 聚类分析</h3>
+        <div id="threat-ips-slot"><p class="empty">正在分析安全日志…</p></div>
       </article>
       <article class="card">
         <h2>诊断与运行健康</h2>
