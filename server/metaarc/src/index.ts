@@ -25,6 +25,16 @@ const devWebsite = path.resolve(__dirname, '../../../designs/website');
 export function createApp() {
   const app = express();
 
+  // 禁用 Express 默认标记，增强基础安全响应头
+  app.disable('x-powered-by');
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
   // 中间件
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.json());
@@ -90,6 +100,17 @@ export function createApp() {
   app.use('/api', mediaRouter);
   app.use('/api', tasksRouter);
   app.use('/api', adminRouter);
+
+  // 全局未捕获异常处理中间件
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error('[Unhandled Server Error]', err);
+    if (!res.headersSent) {
+      res.status(err.status || 500).json({
+        error: err.code || 'server_error',
+        message: process.env.NODE_ENV === 'production' ? '服务处理异常，请稍后再试' : err.message,
+      });
+    }
+  });
 
   return app;
 }
