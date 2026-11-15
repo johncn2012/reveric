@@ -488,13 +488,22 @@
     const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
     if (!rows) return fill(id, empty('点数流水暂时无法读取。'));
     if (!rows.length) return fill(id, empty('还没有点数流水。'));
-    const labels = { purchase: '增加', consumption: '消耗', admin_grant: '调整' };
+    const labels = { purchase: '充值到账', consumption: '创作消耗', admin_grant: '额度调整', refund: '退款冲正' };
     fill(id, table([
       { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
-      { label: '点数', fill: function (td, row) { td.textContent = formatNumber(row.amount); } },
-      { label: '余额', fill: function (td, row) { td.textContent = formatNumber(row.balance_after); } },
-      { label: '类型', fill: function (td, row) { td.textContent = labels[row.type] || row.type || '—'; } },
-      { label: '备注', fill: function (td, row) { td.textContent = row.remark || '—'; } },
+      { label: '变动点数', fill: function (td, row) {
+        const num = parseFloat(row.amount);
+        if (num > 0) {
+          td.innerHTML = '<span style="color:#027a48; font-weight:600;">+' + formatNumber(num) + '</span>';
+        } else if (num < 0) {
+          td.innerHTML = '<span style="color:#b42318; font-weight:600;">' + formatNumber(num) + '</span>';
+        } else {
+          td.textContent = '0';
+        }
+      } },
+      { label: '变动后结存', fill: function (td, row) { td.textContent = formatNumber(row.balance_after); } },
+      { label: '业务类型', fill: function (td, row) { td.textContent = labels[row.type] || row.type || '—'; } },
+      { label: '备注说明', fill: function (td, row) { td.textContent = row.remark || '—'; } },
     ], rows));
   }
   function taskStatusBadge(status) {
@@ -725,6 +734,7 @@
   }
   async function loadSecurity() {
     $('profile-nickname-input').value = currentUser.nickname || '';
+    if ($('profile-phone-input')) $('profile-phone-input').value = currentUser.phone || '';
     const logs = await request('/api/auth/login-logs');
     const rows = logs.ok && logs.data && Array.isArray(logs.data.data) ? logs.data.data : null;
     if (!rows) fill('login-logs-slot', empty('登录记录暂时无法读取。'));
@@ -790,11 +800,24 @@
     renderKey();
     showAlert(result.data.message || '密钥已重置', true);
   }
-  async function loadOrders() {
-    const result = await request('/api/auth/orders');
+  let userOrderFilter = '';
+  let currentUserOrderPage = 1;
+  async function loadOrders(page) {
+    page = page || 1;
+    currentUserOrderPage = page;
+    const params = new URLSearchParams();
+    if (userOrderFilter.indexOf('status:') === 0) params.set('status', userOrderFilter.slice(7));
+    params.set('page', String(page));
+    params.set('pageSize', '20');
+
+    const result = await request('/api/auth/orders?' + params.toString());
     const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
     if (!rows) return fill('orders-slot', empty('订单暂时无法读取。'));
-    if (!rows.length) return fill('orders-slot', empty('暂无订单记录。'));
+    if (!rows.length) {
+      fill('orders-slot', empty('暂无符合条件的订单记录。'));
+      if ($('user-orders-pages')) renderPagination('user-orders-pages', null);
+      return;
+    }
     fill('orders-slot', table([
       { label: '订单号', fill: function (td, row) { td.textContent = row.order_no || row.id.slice(0, 8); } },
       { label: '套餐/项目', fill: function (td, row) { td.textContent = row.plan_name || '算力充值'; } },
@@ -819,7 +842,7 @@
             const res = await request('/api/auth/orders/' + row.id + '/cancel', { method: 'POST' });
             if (!res.ok) return showAlert(errorMessage(res, '取消订单失败'));
             showAlert('订单已取消', true);
-            loadOrders();
+            loadOrders(currentUserOrderPage);
           });
           td.append(btn);
         } else {
@@ -827,6 +850,12 @@
         }
       } }
     ], rows));
+
+    if ($('user-orders-pages')) {
+      renderPagination('user-orders-pages', result.data && result.data.pagination, function (p) {
+        loadOrders(p);
+      });
+    }
   }
 
   async function loadWorkspace() {
@@ -2587,11 +2616,26 @@
   if ($('btn-save-releases')) {
     $('btn-save-releases').addEventListener('click', saveReleaseManifest);
   }
+  if ($('user-order-filters')) {
+    $('user-order-filters').addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-user-order-filter]');
+      if (!btn) return;
+      $('user-order-filters').querySelectorAll('button').forEach(b => b.classList.remove('is-on'));
+      btn.classList.add('is-on');
+      userOrderFilter = btn.dataset.userOrderFilter || '';
+      loadOrders(1);
+    });
+  }
   $('form-update-profile').addEventListener('submit', async function (event) {
     event.preventDefault();
-    const result = await request('/api/auth/update-profile', { method: 'POST', body: { nickname: $('profile-nickname-input').value.trim() } });
-    if (!result.ok) return showAlert(errorMessage(result, '没有保存'));
-    showAlert('昵称已保存', true);
+    const nickname = $('profile-nickname-input').value.trim();
+    const phone = $('profile-phone-input') ? $('profile-phone-input').value.trim() : null;
+    const result = await request('/api/auth/update-profile', {
+      method: 'POST',
+      body: { nickname, phone },
+    });
+    if (!result.ok) return showAlert(errorMessage(result, '保存失败'));
+    showAlert('个人资料已保存', true);
     await loadSession();
   });
   $('form-change-password').addEventListener('submit', async function (event) {

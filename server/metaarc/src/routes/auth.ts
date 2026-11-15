@@ -450,7 +450,17 @@ const updateProfile = async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const { nickname, phone } = req.body;
     const cleanNickname = typeof nickname === 'string' ? nickname.trim() : null;
-    const cleanPhone = typeof phone === 'string' ? phone.trim() : null;
+    let cleanPhone = typeof phone === 'string' ? phone.trim() : null;
+
+    if (cleanPhone) {
+      if (!/^[0-9+ -]{6,20}$/.test(cleanPhone)) {
+        return res.status(400).json({ error: 'invalid_phone', message: '手机号格式不正确' });
+      }
+      const dup = await query('SELECT id FROM users WHERE phone = $1 AND id != $2', [cleanPhone, userId]);
+      if (dup.rows.length > 0) {
+        return res.status(409).json({ error: 'phone_exists', message: '该手机号已被其他账号绑定' });
+      }
+    }
 
     const userRes = await query(
       'UPDATE users SET nickname = COALESCE($1, nickname), phone = COALESCE($2, phone), updated_at = NOW() WHERE id = $3 RETURNING id, email, phone, nickname, role, plan, quota, total_quota, created_at',
@@ -461,6 +471,9 @@ const updateProfile = async (req: Request, res: Response) => {
     }
     return res.json({ success: true, message: '资料更新成功', user: userRes.rows[0] });
   } catch (err: any) {
+    if (err?.code === '23505') {
+      return res.status(409).json({ error: 'phone_exists', message: '该手机号已被其他账号绑定' });
+    }
     console.error('[Update Profile Error]', err);
     return res.status(500).json({ error: 'server_error', message: err.message || '更新资料失败' });
   }

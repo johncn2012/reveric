@@ -203,7 +203,9 @@
         <form id="form-update-profile" class="stack">
           <label for="profile-nickname-input">昵称</label>
           <input id="profile-nickname-input" type="text" autocomplete="nickname" maxlength="64">
-          <button class="btn" type="submit">保存昵称</button>
+          <label for="profile-phone-input">联系手机号</label>
+          <input id="profile-phone-input" type="tel" autocomplete="tel" placeholder="用于安全验证与重要业务通知">
+          <button class="btn" type="submit">保存个人资料</button>
         </form>
       </article>
       <article class="card">
@@ -233,7 +235,15 @@
       <article class="card">
         <h2>订单记录</h2>
         <p>查看订阅与算力充值订单。待支付订单可自主取消。</p>
+        <div class="filters" id="user-order-filters">
+          <button type="button" data-user-order-filter="" class="is-on">全部</button>
+          <button type="button" data-user-order-filter="status:pending">待支付</button>
+          <button type="button" data-user-order-filter="status:paid">已完成</button>
+          <button type="button" data-user-order-filter="status:cancelled">已取消</button>
+          <button type="button" data-user-order-filter="status:refunded">已退款</button>
+        </div>
         <div id="orders-slot"><p class="empty">正在读取订单记录…</p></div>
+        <div id="user-orders-pages"></div>
       </article>
     </section>
 

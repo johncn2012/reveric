@@ -21,16 +21,48 @@ ordersRouter.post('/orders/notify/:channel', paymentUnavailable);
 const listUserOrders = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const sql = `
+    const { status, page, pageSize, limit = '50', offset = '0' } = req.query;
+
+    const params: any[] = [userId];
+    const whereClauses: string[] = ['o.user_id = $1'];
+
+    if (status && typeof status === 'string' && status.trim()) {
+      params.push(status.trim());
+      whereClauses.push(`o.status = $${params.length}`);
+    }
+
+    const countSql = `SELECT count(*) FROM orders o WHERE ${whereClauses.join(' AND ')}`;
+    const countRes = await query(countSql, params);
+    const total = parseInt(countRes.rows[0]?.count || '0', 10);
+
+    let sql = `
       SELECT o.id, o.order_no, o.amount_cents, o.pay_channel, o.pay_trade_no, o.status, o.created_at, o.paid_at,
              p.name as plan_name, p.slug as plan_slug, p.quota_points
       FROM orders o
       LEFT JOIN plans p ON o.plan_id = p.id
-      WHERE o.user_id = $1
+      WHERE ${whereClauses.join(' AND ')}
       ORDER BY o.created_at DESC
     `;
-    const result = await query(sql, [userId]);
-    return res.json({ success: true, data: result.rows });
+
+    const parsedLimit = Math.max(1, Math.min(100, parseInt((pageSize || limit) as string, 10) || 50));
+    const curPage = Math.max(1, parseInt(page as string, 10) || 1);
+    const parsedOffset = page ? (curPage - 1) * parsedLimit : Math.max(0, parseInt(offset as string, 10) || 0);
+
+    params.push(parsedLimit);
+    params.push(parsedOffset);
+    sql += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
+
+    const result = await query(sql, params);
+    return res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        total,
+        page: curPage,
+        pageSize: parsedLimit,
+        totalPages: Math.ceil(total / parsedLimit) || 1,
+      },
+    });
   } catch (err: any) {
     console.error('[User Orders Error]', err);
     return res.status(500).json({ error: 'server_error', message: '无法获取订单列表' });
