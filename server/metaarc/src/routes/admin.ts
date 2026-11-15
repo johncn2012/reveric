@@ -1355,12 +1355,12 @@ adminRouter.get('/admin/system-status', async (_req: Request, res: Response) => 
       }
     }
 
-    const s3Configured = !!(process.env.S3_BUCKET || process.env.AWS_ACCESS_KEY_ID);
+    const s3Configured = !!(process.env.S3_BUCKET || process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID);
     const s3Stats = {
       configured: s3Configured,
       bucket: process.env.S3_BUCKET || 'metaarc-media-prod',
       endpoint: process.env.S3_ENDPOINT ? 'custom' : 'aws-default',
-      region: process.env.AWS_REGION || 'auto',
+      region: process.env.S3_REGION || process.env.AWS_REGION || 'auto',
     };
 
     return res.json({
