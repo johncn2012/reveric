@@ -154,6 +154,18 @@ async function main() {
   console.log('新密码哈希比对结果:', matched ? '✅ 完全匹配' : '❌ 不匹配');
   if (!matched) throw new Error('新密码未能成功写入！');
 
+  console.log('\n--- 7. 验证 /api/auth/profile 挂载与个人资料拉取 ---');
+  const profRes = await fetch('http://127.0.0.1:8080/api/auth/profile', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  console.log('Profile 请求状态码:', profRes.status);
+  const profData = await profRes.json();
+  console.log('Profile 返回用户:', profData.user?.email, '角色:', profData.user?.role, '配额:', profData.user?.quota);
+  if (profRes.status !== 200 || !profData.user || profData.user.email !== adminUser.email) {
+    throw new Error('Profile 路由响应异常: ' + JSON.stringify(profData));
+  }
+  console.log('✅ /api/auth/profile 验证成功，个人资料与配额数据完整拉取');
+
   await pool.end();
 
   console.log('\n🎉 全部 5 项安全风控核心能力后端端到端检验 100% 通过！');
