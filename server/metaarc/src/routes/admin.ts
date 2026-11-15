@@ -8,6 +8,7 @@ import { requireAdmin } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
 import { cleanReason, insertAudit, runMutation } from '../services/admin_audit.js';
 import { blockIp, unblockIp, listBlockedIps, normalizeIp } from '../services/ip_blocker.js';
+import { getSystemSecuritySettings, updateSystemSecuritySettings } from '../services/system_settings_service.js';
 
 export const adminRouter = Router();
 const newApi = new NewApiConnector();
@@ -72,14 +73,19 @@ adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
 // 2. 用户管理列表
 adminRouter.get('/admin/users', async (req: Request, res: Response) => {
   try {
-    const { keyword, plan, status, filter, startDate, endDate, limit = '50', offset = '0', page, pageSize } = req.query;
-    let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location, expires_at, created_at, updated_at FROM users';
+    const { keyword, plan, status, filter, ip, startDate, endDate, limit = '50', offset = '0', page, pageSize } = req.query;
+    let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location, reg_ip, reg_location, expires_at, created_at, updated_at FROM users';
     const params: any[] = [];
     const whereClauses: string[] = [];
 
     if (keyword && typeof keyword === 'string' && keyword.trim()) {
       params.push(`%${keyword.trim()}%`);
-      whereClauses.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length} OR last_login_ip ILIKE $${params.length} OR last_login_location ILIKE $${params.length})`);
+      whereClauses.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length} OR last_login_ip ILIKE $${params.length} OR last_login_location ILIKE $${params.length} OR reg_ip ILIKE $${params.length} OR reg_location ILIKE $${params.length})`);
+    }
+
+    if (ip && typeof ip === 'string' && ip.trim()) {
+      params.push(ip.trim());
+      whereClauses.push(`(reg_ip = $${params.length} OR last_login_ip = $${params.length})`);
     }
 
     if (plan && typeof plan === 'string' && plan.trim()) {
@@ -124,9 +130,39 @@ adminRouter.get('/admin/users', async (req: Request, res: Response) => {
     sql += ` ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
     const result = await query(sql, params);
+
+    // 统计同 IP 注册/登录关联账号数量
+    const ipSet = new Set<string>();
+    for (const u of result.rows) {
+      if (u.reg_ip) ipSet.add(u.reg_ip);
+      if (u.last_login_ip) ipSet.add(u.last_login_ip);
+    }
+    const ipCountMap = new Map<string, number>();
+    if (ipSet.size > 0) {
+      const ipsArray = Array.from(ipSet);
+      const aggRes = await query<{ ip: string; cnt: string }>(
+        `SELECT COALESCE(reg_ip, last_login_ip) as ip, COUNT(*) as cnt 
+         FROM users 
+         WHERE reg_ip = ANY($1) OR last_login_ip = ANY($1)
+         GROUP BY COALESCE(reg_ip, last_login_ip)`,
+        [ipsArray]
+      );
+      for (const r of aggRes.rows) {
+        ipCountMap.set(r.ip, parseInt(r.cnt, 10));
+      }
+    }
+
+    const enrichedRows = result.rows.map((u: any) => {
+      const primaryIp = u.reg_ip || u.last_login_ip || '';
+      return {
+        ...u,
+        same_ip_count: ipCountMap.get(primaryIp) || 1,
+      };
+    });
+
     return res.json({
       success: true,
-      data: result.rows,
+      data: enrichedRows,
       pagination: {
         total,
         page: curPage,
@@ -2870,5 +2906,131 @@ adminRouter.post('/admin/releases/manifest', async (req: Request, res: Response)
   } catch (err: any) {
     console.error('[Admin Save Release Manifest Error]', err);
     return res.status(500).json({ error: 'server_error', message: '保存更新清单失败' });
+  }
+});
+
+// 29. 全局系统安全配置读取
+adminRouter.get('/admin/settings', async (_req: Request, res: Response) => {
+  try {
+    const settings = await getSystemSecuritySettings();
+    return res.json({
+      success: true,
+      data: settings,
+    });
+  } catch (err: any) {
+    console.error('[Admin Get Settings Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取系统安全配置' });
+  }
+});
+
+// 30. 全局系统安全配置更新
+adminRouter.post('/admin/settings', async (req: Request, res: Response) => {
+  try {
+    const reason = cleanReason(req.body?.reason) || '修改系统全局安全策略';
+    const beforeValue = await getSystemSecuritySettings();
+
+    const allowedKeys = [
+      'allow_registration',
+      'require_login_captcha',
+      'require_email_code',
+      'max_reg_per_ip_day',
+      'cf_turnstile_enabled',
+      'cf_turnstile_site_key',
+      'cf_turnstile_secret_key',
+    ];
+
+    const updates: any = {};
+    for (const key of allowedKeys) {
+      if (req.body[key] !== undefined) {
+        if (key.includes('enabled') || key.startsWith('allow_') || key.startsWith('require_')) {
+          updates[key] = Boolean(req.body[key]);
+        } else if (key === 'max_reg_per_ip_day') {
+          updates[key] = Math.max(0, parseInt(req.body[key], 10) || 0);
+        } else {
+          updates[key] = String(req.body[key] || '').trim();
+        }
+      }
+    }
+
+    const updated = await updateSystemSecuritySettings(updates);
+
+    await runMutation(async (client) => {
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'update_system_security_settings',
+        targetType: 'system_settings',
+        targetId: 'security',
+        reason,
+        beforeValue,
+        afterValue: updated,
+      }, client);
+    });
+
+    return res.json({
+      success: true,
+      message: '系统安全策略已更新并即刻生效',
+      data: updated,
+    });
+  } catch (err: any) {
+    console.error('[Admin Update Settings Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '更新系统安全配置失败' });
+  }
+});
+
+// 31. 同 IP 注册情况与风险分析
+adminRouter.get('/admin/security/ip-registration-stats', async (req: Request, res: Response) => {
+  try {
+    const { keyword } = req.query;
+    const minCount = Math.max(1, parseInt(req.query.minCount as string, 10) || 1);
+    const limit = Math.max(1, Math.min(200, parseInt(req.query.limit as string, 10) || 100));
+
+    let whereClause = `WHERE COALESCE(u.reg_ip, u.last_login_ip) IS NOT NULL AND COALESCE(u.reg_ip, u.last_login_ip) != ''`;
+    const params: any[] = [minCount];
+
+    if (keyword && typeof keyword === 'string' && keyword.trim()) {
+      params.push(`%${keyword.trim()}%`);
+      whereClause += ` AND (COALESCE(u.reg_ip, u.last_login_ip) ILIKE $${params.length} OR COALESCE(u.reg_location, u.last_login_location) ILIKE $${params.length})`;
+    }
+
+    params.push(limit);
+
+    const sql = `
+      SELECT 
+        COALESCE(u.reg_ip, u.last_login_ip) as ip,
+        COALESCE(MAX(u.reg_location), MAX(u.last_login_location), '未知') as location,
+        COUNT(*)::int as user_count,
+        COUNT(*) FILTER (WHERE u.created_at >= NOW() - INTERVAL '24 hours')::int as today_reg_count,
+        MIN(u.created_at) as first_reg_at,
+        MAX(u.created_at) as last_reg_at,
+        json_agg(json_build_object(
+          'id', u.id,
+          'email', u.email,
+          'phone', u.phone,
+          'nickname', u.nickname,
+          'role', u.role,
+          'status', u.status,
+          'created_at', u.created_at
+        ) ORDER BY u.created_at DESC) as users,
+        EXISTS(
+          SELECT 1 FROM blocked_ips b 
+          WHERE b.ip = COALESCE(u.reg_ip, u.last_login_ip) 
+            AND (b.expires_at IS NULL OR b.expires_at > NOW())
+        ) as is_blocked
+      FROM users u
+      ${whereClause}
+      GROUP BY COALESCE(u.reg_ip, u.last_login_ip)
+      HAVING COUNT(*) >= $1
+      ORDER BY user_count DESC, last_reg_at DESC
+      LIMIT $${params.length}
+    `;
+
+    const result = await query(sql, params);
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err: any) {
+    console.error('[Admin IP Reg Stats Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取同IP注册分析数据' });
   }
 });

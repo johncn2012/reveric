@@ -85,6 +85,37 @@ export async function initDbSchema(): Promise<void> {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`,
       `CREATE INDEX IF NOT EXISTS idx_blocked_ips_expires ON blocked_ips(expires_at)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_ip VARCHAR(64)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_location VARCHAR(128)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_reg_ip ON users(reg_ip)`,
+      `UPDATE users SET reg_ip = last_login_ip, reg_location = last_login_location WHERE reg_ip IS NULL AND last_login_ip IS NOT NULL`,
+      `CREATE TABLE IF NOT EXISTS system_settings (
+          key VARCHAR(64) PRIMARY KEY,
+          value JSONB NOT NULL,
+          description TEXT,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `INSERT INTO system_settings (key, value, description)
+       VALUES 
+         ('allow_registration', 'true'::jsonb, '是否开放新用户自主注册'),
+         ('require_login_captcha', 'true'::jsonb, '用户登录是否需要输入图形验证码'),
+         ('require_email_code', 'false'::jsonb, '邮箱注册是否必须验证邮箱验证码'),
+         ('max_reg_per_ip_day', '5'::jsonb, '同 IP 24小时内允许注册的最大账号数量'),
+         ('cf_turnstile_enabled', 'false'::jsonb, '是否开启 Cloudflare Turnstile 人机交互校验'),
+         ('cf_turnstile_site_key', '""'::jsonb, 'Cloudflare Turnstile 站点密钥 (Site Key)'),
+         ('cf_turnstile_secret_key', '""'::jsonb, 'Cloudflare Turnstile 服务端密钥 (Secret Key)')
+       ON CONFLICT (key) DO NOTHING`,
+      `CREATE TABLE IF NOT EXISTS email_verifications (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          email VARCHAR(255) NOT NULL,
+          code VARCHAR(16) NOT NULL,
+          ip VARCHAR(64) NOT NULL,
+          verified BOOLEAN NOT NULL DEFAULT FALSE,
+          expires_at TIMESTAMPTZ NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_email_verif_lookup ON email_verifications(email, code, expires_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_email_verif_ip ON email_verifications(ip, created_at DESC)`,
     ];
     const failures: unknown[] = [];
     for (const statement of statements) {

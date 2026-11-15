@@ -50,7 +50,8 @@
 }
 </script>
 
-<link rel="stylesheet" href="/account/account.css?v=20261113">
+<link rel="stylesheet" href="/account/account.css?v=20261115">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body>
 <p class="alert" id="alert" hidden></p>
@@ -74,16 +75,40 @@
       <input id="login-account" name="account" type="text" autocomplete="username" required>
       <label for="login-password">密码</label>
       <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+      <div id="login-captcha-row" class="captcha-row" hidden>
+        <div class="captcha-input-wrap">
+          <label for="login-captcha-code">验证码</label>
+          <input id="login-captcha-code" name="captcha_code" type="text" autocomplete="off" placeholder="4位验证码" maxlength="6">
+          <input id="login-captcha-id" name="captcha_id" type="hidden">
+        </div>
+        <div class="captcha-img-wrap" id="login-captcha-btn" title="看不清？点击刷新验证码">
+          <img id="login-captcha-img" src="" alt="验证码" width="120" height="40">
+        </div>
+      </div>
+      <div id="login-turnstile-container" class="turnstile-container" hidden></div>
       <button class="btn" type="submit">继续</button>
     </form>
     <form id="register-form" hidden>
-      <label for="register-account">邮箱或手机号</label>
-      <input id="register-account" name="account" type="text" autocomplete="username" required>
-      <label for="register-nickname">昵称（可选）</label>
-      <input id="register-nickname" name="nickname" type="text" autocomplete="nickname">
-      <label for="register-password">密码（至少 6 位）</label>
-      <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
-      <button class="btn" type="submit">注册</button>
+      <div id="register-closed-alert" class="alert-box" hidden>
+        <p>系统当前已暂停开放新用户自主注册。如需申请使用，请联系管理员或发送邮件至 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>。</p>
+      </div>
+      <div id="register-fields">
+        <label for="register-account">邮箱或手机号</label>
+        <input id="register-account" name="account" type="text" autocomplete="username" required>
+        <div id="register-email-code-row" class="email-code-row" hidden>
+          <label for="register-email-code">邮箱验证码</label>
+          <div class="code-input-group">
+            <input id="register-email-code" name="email_code" type="text" autocomplete="one-time-code" placeholder="6位数字验证码" maxlength="8">
+            <button class="btn btn-line" id="btn-send-email-code" type="button">获取验证码</button>
+          </div>
+        </div>
+        <label for="register-nickname">昵称（可选）</label>
+        <input id="register-nickname" name="nickname" type="text" autocomplete="nickname">
+        <label for="register-password">密码（至少 6 位）</label>
+        <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+        <div id="register-turnstile-container" class="turnstile-container" hidden></div>
+        <button class="btn" id="btn-register-submit" type="submit">注册</button>
+      </div>
       <button class="text" id="register-back" type="button">返回登录</button>
     </form>
     <form id="forgot-form" hidden>
@@ -122,6 +147,7 @@
       <button type="button" data-view="orders-admin">订单管理</button>
       <button type="button" data-view="usage-review">用量核对</button>
       <p class="side-label">运营与系统</p>
+      <button type="button" data-view="security-settings">安全策略</button>
       <button type="button" data-view="releases">发布更新</button>
       <button type="button" data-view="diagnostics">诊断与健康</button>
       <button type="button" data-view="audit">审计日志</button>
@@ -377,6 +403,103 @@
         </form>
         <div id="quota-review-slot"><p class="empty">正在读取流水…</p></div>
         <div id="quota-review-pages"></div>
+      </article>
+    </section>
+
+    <section data-panel="security-settings" hidden>
+      <article class="card">
+        <div class="row">
+          <h2>系统安全策略与访问限制</h2>
+          <button class="btn" id="btn-save-security-settings" type="button">保存安全策略</button>
+        </div>
+        <p class="fine">配置新用户注册准入机制、登录验证码防护、邮箱真实验证与 Cloudflare Turnstile 人机交互校验。</p>
+
+        <form id="form-security-settings" class="policy-card">
+          <div class="policy-item">
+            <div class="policy-info">
+              <h4>开放新用户自主注册</h4>
+              <p>关闭后，新用户无法在官网自主注册，注册表单将友好提示并暂停服务。</p>
+            </div>
+            <label class="toggle-switch">
+              <input id="setting-allow-registration" type="checkbox" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="policy-item">
+            <div class="policy-info">
+              <h4>登录图形验证码</h4>
+              <p>强制要求在登录时输入图形验证码，阻断针对用户密码的暴力撞库与脚本扫描。</p>
+            </div>
+            <label class="toggle-switch">
+              <input id="setting-require-login-captcha" type="checkbox" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="policy-item">
+            <div class="policy-info">
+              <h4>注册邮箱验证码</h4>
+              <p>开启后，邮箱注册必须接收并验证 6 位邮件验证码，保证用户身份真实有效。</p>
+            </div>
+            <label class="toggle-switch">
+              <input id="setting-require-email-code" type="checkbox">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="policy-item" style="align-items:flex-start;">
+            <div class="policy-info" style="flex:1;">
+              <h4>同一 IP 单日注册上限</h4>
+              <p>同一来源 IP 在 24 小时内最多允许注册的账号数量。设为 0 表示不限制。</p>
+            </div>
+            <div style="width:120px;">
+              <input id="setting-max-reg-per-ip-day" type="number" min="0" max="1000" value="5" style="text-align:center;">
+            </div>
+          </div>
+
+          <div class="policy-item" style="flex-direction:column; align-items:stretch; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="policy-info">
+                <h4>Cloudflare Turnstile 人机交互校验</h4>
+                <p>无感智能人机防护，有效阻断恶意脚本、爬虫与群发自动化工具。</p>
+              </div>
+              <label class="toggle-switch">
+                <input id="setting-cf-turnstile-enabled" type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div id="cf-keys-group" style="display:flex; gap:12px; margin-top:8px;" hidden>
+              <div style="flex:1;">
+                <label for="setting-cf-site-key" style="margin-top:0;">Site Key (站点密钥)</label>
+                <input id="setting-cf-site-key" type="text" placeholder="0x4AAAAAA..." autocomplete="off">
+              </div>
+              <div style="flex:1;">
+                <label for="setting-cf-secret-key" style="margin-top:0;">Secret Key (服务端密钥)</label>
+                <input id="setting-cf-secret-key" type="password" placeholder="0x4AAAAAA..." autocomplete="off">
+              </div>
+            </div>
+          </div>
+        </form>
+      </article>
+
+      <article class="card" style="margin-top:24px;">
+        <div class="row">
+          <h2>同 IP 注册聚类与风险分析</h2>
+          <div style="display:flex; gap:8px;">
+            <select id="ip-reg-min-count">
+              <option value="1">全部注册来源 IP (>= 1)</option>
+              <option value="2" selected>同 IP 多账号注册 (>= 2)</option>
+              <option value="5">高风险聚集 (>= 5)</option>
+            </select>
+          </div>
+        </div>
+        <p class="fine">汇总同一网络来源注册的账号聚合情况，及时识别脚本批量灌水、多开羊毛与风险 IP。</p>
+        <form id="ip-reg-search" class="search-row">
+          <input id="ip-reg-keyword" type="search" placeholder="输入 IP 地址或归属地查询" autocomplete="off">
+          <button class="btn btn-line" type="submit">筛选</button>
+        </form>
+        <div id="ip-reg-stats-slot"><p class="empty">正在读取聚类统计…</p></div>
       </article>
     </section>
 

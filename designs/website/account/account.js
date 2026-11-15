@@ -11,7 +11,7 @@
   const TOKEN_KEY = 'metaarc_account_token';
   const surface = location.pathname.indexOf('/admin') === 0 ? 'admin' : 'account';
   const USER_VIEWS = ['overview', 'plan', 'usage', 'downloads', 'security', 'orders', 'support'];
-  const ADMIN_VIEWS = ['workspace', 'users', 'plans', 'orders-admin', 'usage-review', 'releases', 'diagnostics', 'audit'];
+  const ADMIN_VIEWS = ['workspace', 'users', 'plans', 'orders-admin', 'usage-review', 'security-settings', 'releases', 'diagnostics', 'audit'];
   const TITLES = {
     overview: ['个人空间', '概览'],
     plan: ['个人空间', '订阅与权益'],
@@ -25,6 +25,7 @@
     plans: ['运营与系统', '套餐与定价'],
     'orders-admin': ['运营与系统', '订单管理'],
     'usage-review': ['运营与系统', '用量核对'],
+    'security-settings': ['运营与系统', '系统安全策略与访问限制'],
     releases: ['运营与系统', '发布更新'],
     diagnostics: ['运营与系统', '诊断与健康'],
     audit: ['运营与系统', '审计日志'],
@@ -229,6 +230,169 @@
     return function (td) { td.textContent = value == null || value === '' ? '—' : String(value); };
   }
 
+  let publicAuthConfig = {
+    allow_registration: true,
+    require_login_captcha: true,
+    require_email_code: false,
+    cf_turnstile_enabled: false,
+    cf_turnstile_site_key: '',
+  };
+  let loginTurnstileToken = '';
+  let registerTurnstileToken = '';
+  let emailCodeTimer = null;
+
+  async function loadPublicAuthConfig() {
+    try {
+      const res = await request('/api/auth/config');
+      if (res.ok && res.data && res.data.data) {
+        publicAuthConfig = res.data.data;
+      }
+    } catch (_) {}
+  }
+
+  async function refreshLoginCaptcha() {
+    try {
+      const res = await request('/api/auth/captcha');
+      if (res.ok && res.data && res.data.data) {
+        const d = res.data.data;
+        if ($('login-captcha-id')) $('login-captcha-id').value = d.captchaId;
+        if ($('login-captcha-img')) $('login-captcha-img').src = d.dataUri || ('data:image/svg+xml;utf8,' + encodeURIComponent(d.svg));
+        if ($('login-captcha-code')) $('login-captcha-code').value = '';
+      }
+    } catch (_) {}
+  }
+
+  function renderTurnstileWidget(containerId, isLogin) {
+    if (!publicAuthConfig.cf_turnstile_enabled || !publicAuthConfig.cf_turnstile_site_key) {
+      const el = $(containerId);
+      if (el) el.hidden = true;
+      return;
+    }
+    const el = $(containerId);
+    if (!el) return;
+    el.hidden = false;
+
+    function doRender() {
+      if (!window.turnstile) return;
+      try {
+        window.turnstile.render('#' + containerId, {
+          sitekey: publicAuthConfig.cf_turnstile_site_key,
+          theme: 'light',
+          callback: function (token) {
+            if (isLogin) loginTurnstileToken = token;
+            else registerTurnstileToken = token;
+          },
+          'expired-callback': function () {
+            if (isLogin) loginTurnstileToken = '';
+            else registerTurnstileToken = '';
+          },
+        });
+      } catch (_) {}
+    }
+
+    if (window.turnstile) {
+      doRender();
+    } else {
+      let tries = 0;
+      const t = setInterval(function () {
+        tries++;
+        if (window.turnstile) {
+          clearInterval(t);
+          doRender();
+        } else if (tries > 30) {
+          clearInterval(t);
+        }
+      }, 200);
+    }
+  }
+
+  async function initGateSecurity(mode) {
+    await loadPublicAuthConfig();
+
+    // 1. 注册开关与界面呈现
+    const regClosedAlert = $('register-closed-alert');
+    const regFields = $('register-fields');
+    const showRegBtn = $('show-register');
+    if (publicAuthConfig.allow_registration === false) {
+      if (regClosedAlert) regClosedAlert.hidden = false;
+      if (regFields) regFields.hidden = true;
+      if (showRegBtn) showRegBtn.title = '系统当前已暂停开放新用户自主注册';
+    } else {
+      if (regClosedAlert) regClosedAlert.hidden = true;
+      if (regFields) regFields.hidden = false;
+    }
+
+    // 2. 登录图形验证码
+    const loginCaptchaRow = $('login-captcha-row');
+    if (loginCaptchaRow) {
+      if (publicAuthConfig.require_login_captcha) {
+        loginCaptchaRow.hidden = false;
+        refreshLoginCaptcha();
+      } else {
+        loginCaptchaRow.hidden = true;
+      }
+    }
+
+    // 3. 注册邮箱验证码
+    const regEmailCodeRow = $('register-email-code-row');
+    if (regEmailCodeRow) {
+      regEmailCodeRow.hidden = !publicAuthConfig.require_email_code;
+    }
+
+    // 4. Cloudflare Turnstile 人机验证
+    if (mode === 'login') {
+      renderTurnstileWidget('login-turnstile-container', true);
+    } else if (mode === 'register') {
+      renderTurnstileWidget('register-turnstile-container', false);
+    }
+  }
+
+  async function handleSendEmailCode() {
+    const account = $('register-account').value.trim();
+    if (!account || account.indexOf('@') === -1) {
+      return showAlert('请先在上方输入有效的注册邮箱');
+    }
+
+    const btn = $('btn-send-email-code');
+    if (!btn || btn.disabled) return;
+
+    btn.disabled = true;
+    btn.textContent = '发送中...';
+
+    const body = {
+      email: account,
+      turnstile_token: registerTurnstileToken,
+    };
+
+    const res = await request('/api/auth/send-email-code', {
+      method: 'POST',
+      body: body,
+    });
+
+    if (!res.ok) {
+      btn.disabled = false;
+      btn.textContent = '获取验证码';
+      return showAlert(errorMessage(res, '发送验证码失败'));
+    }
+
+    showAlert('验证码已发送，请查收您的邮箱', true);
+
+    let cooldown = (res.data && res.data.cooldownSeconds) || 60;
+    btn.disabled = true;
+    btn.textContent = cooldown + 's 后重发';
+    clearInterval(emailCodeTimer);
+    emailCodeTimer = setInterval(function () {
+      cooldown--;
+      if (cooldown <= 0) {
+        clearInterval(emailCodeTimer);
+        btn.disabled = false;
+        btn.textContent = '重新获取';
+      } else {
+        btn.textContent = cooldown + 's 后重发';
+      }
+    }, 1000);
+  }
+
   function showGate(mode) {
     gate.hidden = false;
     consoleEl.hidden = true;
@@ -239,6 +403,7 @@
     forgotForm.hidden = mode !== 'forgot';
     loginLinks.hidden = mode !== 'login';
     gateTitle.textContent = mode === 'register' ? '注册账号' : '进入创作台';
+    initGateSecurity(mode);
   }
   function showApp() {
     alertEl.hidden = true;
@@ -286,6 +451,7 @@
       plans: loadAdminPlans,
       'orders-admin': loadAdminOrders,
       'usage-review': loadQuotaReview,
+      'security-settings': loadSecuritySettings,
       releases: surface === 'admin' ? loadReleasesAdmin : loadDownloads,
       diagnostics: loadDiagnostics,
       audit: loadAudit,
@@ -1435,6 +1601,21 @@
       },
       { label: '账号', fill: function (td, row) { td.textContent = person(row); } },
       { label: '邮箱 / 手机', fill: function (td, row) { td.textContent = [row.email, row.phone].filter(Boolean).join(' / ') || '—'; } },
+      { label: '注册 / 登录 IP', fill: function (td, row) {
+        const ip = row.reg_ip || row.last_login_ip || '—';
+        const loc = row.reg_location || row.last_login_location || '';
+        const sameCount = row.same_ip_count || 1;
+        td.innerHTML = '<span class="badge-ip" title="' + loc + '">' + ip + '</span>' +
+          (sameCount > 1 ? ' <span class="badge-same-ip" title="该 IP 关联 ' + sameCount + ' 个账号，点击查看全部" data-filter-ip="' + ip + '">' + sameCount + '同IP</span>' : '');
+        const sameBtn = td.querySelector('[data-filter-ip]');
+        if (sameBtn) {
+          sameBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            $('user-keyword').value = sameBtn.dataset.filterIp;
+            loadUsers(1);
+          });
+        }
+      } },
       { label: '套餐', fill: function (td, row) { td.textContent = planName(row.plan); } },
       { label: '角色', fill: function (td, row) { td.textContent = row.role === 'admin' ? '管理员' : '创作者'; } },
       { label: '状态', fill: function (td, row) {
@@ -2876,6 +3057,142 @@
       });
     }
   }
+
+  async function loadSecuritySettings() {
+    const res = await request('/api/admin/settings');
+    if (res.ok && res.data && res.data.data) {
+      const s = res.data.data;
+      if ($('setting-allow-registration')) $('setting-allow-registration').checked = !!s.allow_registration;
+      if ($('setting-require-login-captcha')) $('setting-require-login-captcha').checked = !!s.require_login_captcha;
+      if ($('setting-require-email-code')) $('setting-require-email-code').checked = !!s.require_email_code;
+      if ($('setting-max-reg-per-ip-day')) $('setting-max-reg-per-ip-day').value = s.max_reg_per_ip_day ?? 5;
+      if ($('setting-cf-turnstile-enabled')) {
+        $('setting-cf-turnstile-enabled').checked = !!s.cf_turnstile_enabled;
+        if ($('cf-keys-group')) $('cf-keys-group').hidden = !s.cf_turnstile_enabled;
+      }
+      if ($('setting-cf-site-key')) $('setting-cf-site-key').value = s.cf_turnstile_site_key || '';
+      if ($('setting-cf-secret-key')) $('setting-cf-secret-key').value = s.cf_turnstile_secret_key || '';
+    }
+    await loadIpRegistrationStats();
+  }
+
+  async function loadIpRegistrationStats() {
+    const slot = 'ip-reg-stats-slot';
+    const minCount = $('ip-reg-min-count') ? $('ip-reg-min-count').value : '2';
+    const keyword = $('ip-reg-keyword') ? $('ip-reg-keyword').value.trim() : '';
+
+    let url = '/api/admin/security/ip-registration-stats?minCount=' + encodeURIComponent(minCount);
+    if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+
+    fill(slot, empty('正在分析同 IP 注册聚合数据…'));
+
+    const res = await request(url);
+    const rows = (res.ok && res.data && Array.isArray(res.data.data)) ? res.data.data : null;
+    if (!rows) return fill(slot, empty('同 IP 注册数据读取失败。'));
+    if (!rows.length) return fill(slot, empty('暂无符合聚类条件的注册 IP 记录。'));
+
+    fill(slot, table([
+      {
+        label: 'IP 地址与归属地',
+        fill: function (td, row) {
+          const wrap = document.createElement('div');
+          wrap.innerHTML = '<span class="badge-ip">' + row.ip + '</span> ' +
+            (row.is_blocked ? '<span class="badge badge-danger">已封禁</span>' : '') +
+            '<div style="font-size:12px; color:var(--muted); margin-top:2px;">' + (row.location || '未知归属地') + '</div>';
+          td.append(wrap);
+        }
+      },
+      {
+        label: '关联账号数',
+        fill: function (td, row) {
+          const today = row.today_reg_count > 0 ? ' <span style="color:#b42318; font-weight:700;">(今日+' + row.today_reg_count + ')</span>' : '';
+          td.innerHTML = '<strong>' + row.user_count + '</strong> 个' + today;
+        }
+      },
+      {
+        label: '首次 / 最近注册',
+        fill: function (td, row) {
+          td.innerHTML = '<div style="font-size:12px;">首次: ' + formatWhen(row.first_reg_at) + '</div>' +
+            '<div style="font-size:12px; color:var(--muted);">最近: ' + formatWhen(row.last_reg_at) + '</div>';
+        }
+      },
+      {
+        label: '关联账号样本',
+        fill: function (td, row) {
+          const wrap = document.createElement('div');
+          wrap.style.display = 'flex';
+          wrap.style.flexWrap = 'wrap';
+          wrap.style.gap = '4px';
+          (row.users || []).slice(0, 4).forEach(function (u) {
+            const tag = document.createElement('span');
+            tag.className = 'badge-ip';
+            tag.style.fontSize = '11px';
+            tag.textContent = u.nickname || u.email || u.phone || (u.id ? u.id.slice(0, 8) : '创作者');
+            if (u.status === 'suspended') tag.style.textDecoration = 'line-through';
+            wrap.append(tag);
+          });
+          if (row.users && row.users.length > 4) {
+            const more = document.createElement('span');
+            more.style.fontSize = '11px';
+            more.style.color = 'var(--muted)';
+            more.textContent = '等共' + row.user_count + '人';
+            wrap.append(more);
+          }
+          td.append(wrap);
+        }
+      },
+      {
+        label: '管理操作',
+        fill: function (td, row) {
+          const wrap = document.createElement('div');
+          wrap.style.display = 'flex';
+          wrap.style.gap = '6px';
+
+          const btnView = document.createElement('button');
+          btnView.type = 'button';
+          btnView.className = 'btn-line';
+          btnView.style.padding = '2px 8px';
+          btnView.style.fontSize = '12px';
+          btnView.textContent = '查看这组用户';
+          btnView.addEventListener('click', function () {
+            $('user-keyword').value = row.ip;
+            showView('users');
+            loadUsers(1);
+          });
+          wrap.append(btnView);
+
+          if (row.is_blocked) {
+            const btnUnblock = document.createElement('button');
+            btnUnblock.type = 'button';
+            btnUnblock.className = 'btn-line';
+            btnUnblock.style.padding = '2px 8px';
+            btnUnblock.style.fontSize = '12px';
+            btnUnblock.textContent = '解除拦截';
+            btnUnblock.addEventListener('click', async function () {
+              await promptUnblockIp(row.ip);
+              loadIpRegistrationStats();
+            });
+            wrap.append(btnUnblock);
+          } else {
+            const btnBlock = document.createElement('button');
+            btnBlock.type = 'button';
+            btnBlock.className = 'btn-line';
+            btnBlock.style.padding = '2px 8px';
+            btnBlock.style.fontSize = '12px';
+            btnBlock.style.color = 'var(--danger, #b42318)';
+            btnBlock.textContent = '拦截此 IP';
+            btnBlock.addEventListener('click', async function () {
+              await promptBlockIp(row.ip, '同 IP 关联多账号群注安全拦截');
+              loadIpRegistrationStats();
+            });
+            wrap.append(btnBlock);
+          }
+
+          td.append(wrap);
+        }
+      }
+    ], rows));
+  }
   function gatewayLabel(gateway) {
     if (!gateway || !gateway.configured) return '待接入';
     if (gateway.status === 'connected') return '已连通';
@@ -2935,18 +3252,20 @@
     });
   }
 
-  async function submitAuth(path, body, button) {
+  async function submitAuth(path, body, button, onFail) {
     button.disabled = true;
     try {
       const result = await request(path, { method: 'POST', body: body });
       if (!result.ok || !result.data || !result.data.token) {
         showAlert(errorMessage(result, '没有完成'));
+        if (onFail) onFail(result);
         return;
       }
       setToken(result.data.token);
       await loadSession();
     } catch (_) {
       showAlert('网络请求失败，请稍后再试');
+      if (onFail) onFail(null);
     } finally {
       button.disabled = false;
     }
@@ -2971,19 +3290,49 @@
     const account = $('login-account').value.trim();
     const password = $('login-password').value;
     if (!account || !password) return showAlert('请输入账号与密码');
-    submitAuth('/api/auth/login', { account: account, password: password }, loginForm.querySelector('button'));
+
+    const body = { account: account, password: password };
+    if (publicAuthConfig.require_login_captcha) {
+      const captchaCode = $('login-captcha-code') ? $('login-captcha-code').value.trim() : '';
+      const captchaId = $('login-captcha-id') ? $('login-captcha-id').value : '';
+      if (!captchaCode) return showAlert('请输入图形验证码');
+      body.captcha_code = captchaCode;
+      body.captcha_id = captchaId;
+    }
+    if (publicAuthConfig.cf_turnstile_enabled && publicAuthConfig.cf_turnstile_site_key) {
+      body.turnstile_token = loginTurnstileToken;
+    }
+
+    submitAuth('/api/auth/login', body, loginForm.querySelector('button'), function () {
+      if (publicAuthConfig.require_login_captcha) refreshLoginCaptcha();
+    });
   });
+
   registerForm.addEventListener('submit', function (event) {
     event.preventDefault();
+    if (!publicAuthConfig.allow_registration) {
+      return showAlert('系统当前已暂停开放新用户自主注册');
+    }
     const account = $('register-account').value.trim();
     const password = $('register-password').value;
     const nickname = $('register-nickname').value.trim();
     if (!account || password.length < 6) return showAlert('请输入账号，且密码至少 6 位');
     const body = { password: password };
     if (nickname) body.nickname = nickname;
-    if (account.indexOf('@') >= 0) body.email = account;
-    else body.phone = account;
-    submitAuth('/api/auth/register', body, registerForm.querySelector('button'));
+    if (account.indexOf('@') >= 0) {
+      body.email = account;
+      if (publicAuthConfig.require_email_code) {
+        const code = $('register-email-code') ? $('register-email-code').value.trim() : '';
+        if (!code) return showAlert('请输入收到的邮箱验证码');
+        body.email_code = code;
+      }
+    } else {
+      body.phone = account;
+    }
+    if (publicAuthConfig.cf_turnstile_enabled && publicAuthConfig.cf_turnstile_site_key) {
+      body.turnstile_token = registerTurnstileToken;
+    }
+    submitAuth('/api/auth/register', body, registerForm.querySelector('button[type="submit"]'));
   });
   forgotForm.addEventListener('submit', async function (event) {
     event.preventDefault();
@@ -3362,6 +3711,70 @@
     if (result.data && result.data.token) setToken(result.data.token);
     showAlert(result.data.message || '已处理', true);
   });
+
+  // 登录图形验证码点击刷新
+  if ($('login-captcha-btn')) {
+    $('login-captcha-btn').addEventListener('click', function () {
+      refreshLoginCaptcha();
+    });
+  }
+
+  // 注册邮箱验证码发送按钮
+  if ($('btn-send-email-code')) {
+    $('btn-send-email-code').addEventListener('click', function () {
+      handleSendEmailCode();
+    });
+  }
+
+  // 安全策略开关联动与保存
+  if ($('setting-cf-turnstile-enabled')) {
+    $('setting-cf-turnstile-enabled').addEventListener('change', function () {
+      if ($('cf-keys-group')) $('cf-keys-group').hidden = !this.checked;
+    });
+  }
+  if ($('btn-save-security-settings')) {
+    $('btn-save-security-settings').addEventListener('click', async function () {
+      const btn = $('btn-save-security-settings');
+      btn.disabled = true;
+      try {
+        const body = {
+          allow_registration: $('setting-allow-registration') ? $('setting-allow-registration').checked : true,
+          require_login_captcha: $('setting-require-login-captcha') ? $('setting-require-login-captcha').checked : true,
+          require_email_code: $('setting-require-email-code') ? $('setting-require-email-code').checked : false,
+          max_reg_per_ip_day: $('setting-max-reg-per-ip-day') ? Math.max(0, parseInt($('setting-max-reg-per-ip-day').value, 10) || 0) : 5,
+          cf_turnstile_enabled: $('setting-cf-turnstile-enabled') ? $('setting-cf-turnstile-enabled').checked : false,
+          cf_turnstile_site_key: $('setting-cf-site-key') ? $('setting-cf-site-key').value.trim() : '',
+          cf_turnstile_secret_key: $('setting-cf-secret-key') ? $('setting-cf-secret-key').value.trim() : '',
+        };
+
+        const res = await request('/api/admin/settings', {
+          method: 'POST',
+          body: body,
+        });
+
+        if (!res.ok) return showAlert(errorMessage(res, '保存系统安全策略失败'));
+        showAlert('系统安全策略已保存并即时生效', true);
+        await loadPublicAuthConfig();
+      } catch (_) {
+        showAlert('保存策略网络异常，请稍后重试');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // 同 IP 注册聚类过滤事件
+  if ($('ip-reg-min-count')) {
+    $('ip-reg-min-count').addEventListener('change', function () {
+      loadIpRegistrationStats();
+    });
+  }
+  if ($('ip-reg-search')) {
+    $('ip-reg-search').addEventListener('submit', function (e) {
+      e.preventDefault();
+      loadIpRegistrationStats();
+    });
+  }
 
   if (token()) loadSession();
   else showGate('login');

@@ -5,6 +5,10 @@ import { query } from '../db.js';
 import { signJwt, requireAuth } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
 import { getClientIp, resolveIpLocation } from '../utils/ip_helper.js';
+import { getSystemSecuritySettings, getPublicAuthConfig } from '../services/system_settings_service.js';
+import { generateCaptcha, verifyCaptcha } from '../services/captcha_service.js';
+import { sendRegisterEmailCode, verifyEmailCode } from '../services/email_service.js';
+import { verifyTurnstileToken } from '../services/turnstile_service.js';
 
 async function recordLoginLog(params: {
   userId?: string;
@@ -110,10 +114,53 @@ function mount(method: 'get' | 'post', paths: string[], handler: (req: Request, 
 // 1. 用户注册。规范路径 POST /api/auth/register，兼容 POST /api/register。
 const registerAccount = async (req: Request, res: Response) => {
   try {
-    const { email, phone, password, nickname } = req.body;
+    const settings = await getSystemSecuritySettings();
+
+    // 1. 注册功能开启 / 关闭检查
+    if (!settings.allow_registration) {
+      return res.status(403).json({
+        error: 'registration_closed',
+        message: '当前系统已暂停开放新用户自主注册，请联系管理员或稍后重试。',
+      });
+    }
+
+    const { email, phone, password, nickname, email_code, turnstile_token } = req.body;
     const cleanEmail = typeof email === 'string' ? email.trim() : '';
     const cleanPhone = typeof phone === 'string' ? phone.trim() : '';
     const cleanNickname = typeof nickname === 'string' ? nickname.trim() : '';
+
+    const clientIp = getClientIp(req);
+    const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
+    const location = resolveIpLocation(clientIp, req.headers);
+
+    // 2. Cloudflare Turnstile 人机验证校验
+    if (settings.cf_turnstile_enabled && settings.cf_turnstile_site_key) {
+      const token = turnstile_token || req.body['cf-turnstile-response'];
+      const passed = await verifyTurnstileToken(token, clientIp);
+      if (!passed) {
+        return res.status(400).json({
+          error: 'invalid_turnstile',
+          message: '人机交互安全校验未通过，请完成验证后再提交。',
+        });
+      }
+    }
+
+    // 3. 同 IP 24小时内注册频率限制
+    const maxPerIpDay = typeof settings.max_reg_per_ip_day === 'number' ? settings.max_reg_per_ip_day : 5;
+    if (maxPerIpDay > 0) {
+      const regCheck = await query(
+        `SELECT count(*) FROM users
+         WHERE (reg_ip = $1 OR last_login_ip = $1) AND created_at >= NOW() - INTERVAL '24 hours'`,
+        [clientIp]
+      );
+      const regCount = parseInt(regCheck.rows[0]?.count || '0', 10);
+      if (regCount >= maxPerIpDay) {
+        return res.status(429).json({
+          error: 'too_many_registrations',
+          message: `当前网络来源今日注册账号已达上限（单日最多允许 ${maxPerIpDay} 个账号），请明天再试。`,
+        });
+      }
+    }
 
     if (!password || typeof password !== 'string' || password.length < 6) {
       return res.status(400).json({ error: 'invalid_password', message: '密码长度至少为 6 位' });
@@ -128,22 +175,15 @@ const registerAccount = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'invalid_phone', message: '手机号格式不正确' });
     }
 
-    const clientIp = getClientIp(req);
-    const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
-    const location = resolveIpLocation(clientIp, req.headers);
-
-    // 防脚本批量灌水注册: 同 IP 1 小时内最多注册 10 个账号
-    const regCheck = await query(
-      `SELECT count(*) FROM users
-       WHERE last_login_ip = $1 AND created_at >= NOW() - INTERVAL '1 hour'`,
-      [clientIp]
-    );
-    const regCount = parseInt(regCheck.rows[0]?.count || '0', 10);
-    if (regCount >= 10) {
-      return res.status(429).json({
-        error: 'too_many_registrations',
-        message: '当前网络来源注册请求过于频繁，请稍后再试。',
-      });
+    // 4. 注册邮箱验证码校验 (若开启且填写了邮箱)
+    if (settings.require_email_code && cleanEmail) {
+      if (!email_code || typeof email_code !== 'string' || !email_code.trim()) {
+        return res.status(400).json({ error: 'missing_email_code', message: '请输入邮箱收到的验证码' });
+      }
+      const verified = await verifyEmailCode(cleanEmail, email_code.trim());
+      if (!verified) {
+        return res.status(400).json({ error: 'invalid_email_code', message: '邮箱验证码错误或已失效，请重新获取' });
+      }
     }
 
     // 检查是否已存在
@@ -157,10 +197,10 @@ const registerAccount = async (req: Request, res: Response) => {
     const passwordHash = await bcrypt.hash(password, salt);
     const initialQuota = 500; // 注册默认赠送 500 点算力
 
-    // 插入本地用户
+    // 插入本地用户，显式记录 reg_ip, reg_location
     const insertSql = `
-      INSERT INTO users (email, phone, password_hash, nickname, plan, quota, total_quota, role, last_login_ip, last_login_location, last_login_at)
-      VALUES ($1, $2, $3, $4, 'free', $5, $5, 'user', $6, $7, NOW())
+      INSERT INTO users (email, phone, password_hash, nickname, plan, quota, total_quota, role, last_login_ip, last_login_location, last_login_at, reg_ip, reg_location)
+      VALUES ($1, $2, $3, $4, 'free', $5, $5, 'user', $6, $7, NOW(), $6, $7)
       RETURNING id, email, phone, nickname, plan, quota, total_quota, role, created_at
     `;
     const userRes = await query(insertSql, [
@@ -252,7 +292,8 @@ const registerAccount = async (req: Request, res: Response) => {
 // 2. 用户登录。规范路径 POST /api/auth/login，兼容 POST /api/login。
 const loginAccount = async (req: Request, res: Response) => {
   try {
-    const { account, password } = req.body;
+    const settings = await getSystemSecuritySettings();
+    const { account, password, captcha_id, captcha_code, turnstile_token } = req.body;
     const cleanAccount = typeof account === 'string' ? account.trim() : '';
     if (!cleanAccount || typeof password !== 'string' || !password) {
       return res.status(400).json({ error: 'missing_fields', message: '请输入账号与密码' });
@@ -261,6 +302,37 @@ const loginAccount = async (req: Request, res: Response) => {
     const clientIp = getClientIp(req);
     const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
     const location = resolveIpLocation(clientIp, req.headers);
+
+    // 1. Cloudflare Turnstile 人机验证校验 (若开启)
+    if (settings.cf_turnstile_enabled && settings.cf_turnstile_site_key) {
+      const token = turnstile_token || req.body['cf-turnstile-response'];
+      const passed = await verifyTurnstileToken(token, clientIp);
+      if (!passed) {
+        return res.status(400).json({
+          error: 'invalid_turnstile',
+          message: '人机交互安全校验未通过，请完成验证后再登录。',
+        });
+      }
+    }
+
+    // 2. 登录图形验证码校验 (若开启)
+    if (settings.require_login_captcha) {
+      const valid = verifyCaptcha(captcha_id, captcha_code);
+      if (!valid) {
+        await recordLoginLog({
+          account: cleanAccount,
+          ip: clientIp,
+          location,
+          userAgent,
+          status: 'failed',
+          failReason: 'invalid_captcha: 图形验证码错误或已过期',
+        });
+        return res.status(400).json({
+          error: 'invalid_captcha',
+          message: '图形验证码错误或已过期，请点击验证码刷新后重新输入',
+        });
+      }
+    }
 
     // 防暴力撞库与恶意扫描: 5 分钟内同 IP 连续失败 >= 10 次则临时封锁
     const bruteForceCheck = await query(
@@ -615,6 +687,81 @@ const resetApiKey = async (req: Request, res: Response) => {
   }
 };
 
+// 3. 获取前台公开认证与安全策略配置
+const getAuthConfig = async (_req: Request, res: Response) => {
+  try {
+    const config = await getPublicAuthConfig();
+    return res.json({ success: true, data: config });
+  } catch (err: any) {
+    console.error('[Get Auth Config Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取安全配置' });
+  }
+};
+
+// 4. 生成登录图形验证码
+const getAuthCaptcha = async (_req: Request, res: Response) => {
+  try {
+    const captcha = generateCaptcha(4);
+    return res.json({
+      success: true,
+      data: {
+        captchaId: captcha.captchaId,
+        svg: captcha.svg,
+        dataUri: captcha.dataUri,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Generate Captcha Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '验证码生成失败' });
+  }
+};
+
+// 5. 发送注册邮箱验证码
+const sendEmailCode = async (req: Request, res: Response) => {
+  try {
+    const { email, turnstile_token } = req.body;
+    const cleanEmail = typeof email === 'string' ? email.trim() : '';
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'invalid_email', message: '请输入有效的邮箱地址' });
+    }
+
+    const settings = await getSystemSecuritySettings();
+    if (!settings.allow_registration) {
+      return res.status(403).json({ error: 'registration_closed', message: '当前系统已暂停开放新用户注册' });
+    }
+
+    const clientIp = getClientIp(req);
+
+    // 如果开启了 Turnstile，发送邮箱验证码前也必须校验 Turnstile，防止机器人自动化刷邮件轰炸
+    if (settings.cf_turnstile_enabled && settings.cf_turnstile_site_key) {
+      const token = turnstile_token || req.body['cf-turnstile-response'];
+      const passed = await verifyTurnstileToken(token, clientIp);
+      if (!passed) {
+        return res.status(400).json({ error: 'invalid_turnstile', message: '人机交互安全校验未通过，请完成验证后再发送' });
+      }
+    }
+
+    // 检查邮箱是否已被注册
+    const existing = await query('SELECT id FROM users WHERE email = $1 LIMIT 1', [cleanEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'user_exists', message: '该邮箱已被注册，请直接登录' });
+    }
+
+    const sendRes = await sendRegisterEmailCode(cleanEmail, clientIp);
+    if (!sendRes.success) {
+      return res.status(429).json({ error: 'send_failed', message: sendRes.message, cooldownSeconds: sendRes.cooldownSeconds });
+    }
+
+    return res.json({ success: true, message: sendRes.message });
+  } catch (err: any) {
+    console.error('[Send Email Code Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '发送验证码失败，请稍后重试' });
+  }
+};
+
+mount('get', ['/auth/config', '/config'], getAuthConfig);
+mount('get', ['/auth/captcha', '/captcha'], getAuthCaptcha);
+mount('post', ['/auth/send-email-code', '/send-email-code'], sendEmailCode);
 mount('post', ['/auth/register', '/register'], registerAccount);
 mount('post', ['/auth/login', '/login'], loginAccount);
 for (const path of ['/auth/profile', '/auth/user/profile', '/user/profile']) {
