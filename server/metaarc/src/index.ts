@@ -126,7 +126,7 @@ function isDirectRun() {
 if (isDirectRun()) {
   const PORT = process.env.PORT || 8080;
   void initDbSchema().finally(() => {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`=================================================`);
       console.log(`🚀 MetaArc (元弧) BaaS 业务中台与运营网关已启动`);
       console.log(`📡 服务端口: ${PORT}`);
@@ -135,5 +135,26 @@ if (isDirectRun()) {
       console.log(`📦 对象存储桶: ${process.env.S3_BUCKET || 'metaarc-media-prod'}`);
       console.log(`=================================================`);
     });
+
+    const shutdown = (signal: string) => {
+      console.log(`[MetaArc] 接收到 ${signal} 信号，开始平滑停止服务...`);
+      server.close(async () => {
+        console.log('[MetaArc] HTTP 监听已停止，正在关闭数据库连接池...');
+        try {
+          await pool.end();
+          console.log('[MetaArc] 数据库连接池已安全关闭，退出进程。');
+        } catch (poolErr) {
+          console.error('[MetaArc] 关闭连接池异常:', poolErr);
+        }
+        process.exit(0);
+      });
+      setTimeout(() => {
+        console.error('[MetaArc] 平滑停止超时 (8s)，强制终止进程。');
+        process.exit(1);
+      }, 8000).unref();
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   });
 }

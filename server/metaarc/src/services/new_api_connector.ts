@@ -45,7 +45,25 @@ export class NewApiConnector {
       ...(options.headers || {}),
     };
 
-    const res = await fetch(url, { ...options, headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        ...options,
+        headers,
+        signal: options.signal || controller.signal,
+      });
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') {
+        throw new Error(`[NewApiConnector Error] ${path}: 请求外部网关超时 (8s)`);
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(timeout);
+    }
+
     const text = await res.text();
     let json: { success?: boolean; message?: string; data?: T };
     try {

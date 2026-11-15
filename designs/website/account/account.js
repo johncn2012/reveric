@@ -604,7 +604,7 @@
       errBox.textContent = row.error_message;
       box.append(errTitle, errBox);
     }
-    await ask({ title: '任务详情', reason: false, extra: box, confirm: '关闭' });
+    await ask({ title: '任务详情', reason: false, extra: box, modalClass: 'modal-lg', confirm: '关闭' });
   }
   async function cancelTask(row, onReload) {
     const answer = await ask({ title: '终止任务', copy: '强制将进行中的任务标记为终止失败。', confirm: '确认终止', reason: false });
@@ -1800,6 +1800,7 @@
       title: '订单详情 · ' + (o.order_no || o.id.slice(0, 8)),
       reason: false,
       extra: wrap,
+      modalClass: 'modal-lg',
       confirm: '关闭',
     });
   }
