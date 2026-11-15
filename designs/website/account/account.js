@@ -66,6 +66,16 @@
     alertEl.classList.toggle('is-ok', !!ok);
     clearTimeout(alertTimer);
     alertTimer = setTimeout(function () { alertEl.hidden = true; }, 4200);
+
+    const gateError = $('gate-error');
+    if (gateError) {
+      if (ok || !message) {
+        gateError.hidden = true;
+      } else {
+        gateError.hidden = false;
+        gateError.textContent = message;
+      }
+    }
   }
   async function request(path, options) {
     const headers = { Accept: 'application/json' };
@@ -222,6 +232,8 @@
   function showGate(mode) {
     gate.hidden = false;
     consoleEl.hidden = true;
+    const gateError = $('gate-error');
+    if (gateError) gateError.hidden = true;
     loginForm.hidden = mode !== 'login';
     registerForm.hidden = mode !== 'register';
     forgotForm.hidden = mode !== 'forgot';
@@ -1330,7 +1342,6 @@
     }
     showAlert('转账单号已成功登记，财务核验后将立即为您生效', true);
     loadOrders(currentUserOrderPage);
-  }
   }
 
   async function loadWorkspace() {
@@ -2947,7 +2958,7 @@
       setToken('');
       currentUser = null;
       showGate('login');
-      if (result.status !== 401) showAlert(errorMessage(result, '登录态已失效'));
+      showAlert(errorMessage(result, '登录态已失效，请重新登录'));
       return;
     }
     currentUser = result.data.user;

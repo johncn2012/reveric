@@ -284,8 +284,12 @@ const loginAccount = async (req: Request, res: Response) => {
       });
     }
 
-    // 支持手机号或邮箱登录
-    const sql = 'SELECT * FROM users WHERE email = $1 OR phone = $1 LIMIT 1';
+    // 支持手机号、邮箱或管理员快捷别名登录
+    const sql = `
+      SELECT * FROM users 
+      WHERE email = $1 OR phone = $1 OR (role = 'admin' AND ($1 = 'admin' OR $1 = 'root'))
+      LIMIT 1
+    `;
     const userRes = await query(sql, [cleanAccount]);
     if (userRes.rows.length === 0) {
       await recordLoginLog({
