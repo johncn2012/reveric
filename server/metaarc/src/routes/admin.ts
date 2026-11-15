@@ -31,13 +31,23 @@ adminRouter.use(requireAdmin);
 // 1. 全局运营大盘概览
 adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
   try {
-    const userCountRes = await query('SELECT count(*) FROM users');
-    const todayUserRes = await query("SELECT count(*) FROM users WHERE created_at >= CURRENT_DATE");
-    const todayRevenueRes = await query("SELECT COALESCE(SUM(amount_cents), 0) as total FROM orders WHERE status = 'paid' AND paid_at >= CURRENT_DATE");
-    const totalRevenueRes = await query("SELECT COALESCE(SUM(amount_cents), 0) as total FROM orders WHERE status = 'paid'");
-    const activeTasksRes = await query("SELECT count(*) FROM user_tasks WHERE status IN ('pending', 'running')");
-    const totalOrdersRes = await query("SELECT count(*) as total, count(*) FILTER (WHERE status = 'paid') as paid_count FROM orders");
-    const mediaStatsRes = await query("SELECT count(*) as total_count, COALESCE(SUM(byte_size), 0) as total_bytes FROM media_assets");
+    const [
+      userCountRes,
+      todayUserRes,
+      todayRevenueRes,
+      totalRevenueRes,
+      activeTasksRes,
+      totalOrdersRes,
+      mediaStatsRes,
+    ] = await Promise.all([
+      query('SELECT count(*) FROM users'),
+      query("SELECT count(*) FROM users WHERE created_at >= CURRENT_DATE"),
+      query("SELECT COALESCE(SUM(amount_cents), 0) as total FROM orders WHERE status = 'paid' AND paid_at >= CURRENT_DATE"),
+      query("SELECT COALESCE(SUM(amount_cents), 0) as total FROM orders WHERE status = 'paid'"),
+      query("SELECT count(*) FROM user_tasks WHERE status IN ('pending', 'running')"),
+      query("SELECT count(*) as total, count(*) FILTER (WHERE status = 'paid') as paid_count FROM orders"),
+      query("SELECT count(*) as total_count, COALESCE(SUM(byte_size), 0) as total_bytes FROM media_assets"),
+    ]);
 
     return res.json({
       success: true,
