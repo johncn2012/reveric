@@ -419,6 +419,22 @@ const readProfile = async (req: Request, res: Response) => {
       } catch (_) {}
     }
 
+    const [mediaUsageRes, planRes] = await Promise.all([
+      query(
+        'SELECT count(*) as count, COALESCE(SUM(byte_size), 0) as total_bytes FROM media_assets WHERE user_id = $1',
+        [userId]
+      ),
+      query(
+        'SELECT storage_limit_mb, max_concurrency FROM plans WHERE slug = $1',
+        [user.plan]
+      ),
+    ]);
+
+    const storageUsedBytes = parseInt(mediaUsageRes.rows[0]?.total_bytes || '0', 10);
+    const mediaCount = parseInt(mediaUsageRes.rows[0]?.count || '0', 10);
+    const storageLimitMb = planRes.rows[0]?.storage_limit_mb || 500;
+    const maxConcurrency = planRes.rows[0]?.max_concurrency || 1;
+
     return res.json({
       success: true,
       user: {
@@ -432,6 +448,10 @@ const readProfile = async (req: Request, res: Response) => {
         total_quota: parseFloat(user.total_quota),
         new_api_key: user.new_api_key || '',
         new_api_base_url: publicNewApiBaseUrl(),
+        storage_used_bytes: storageUsedBytes,
+        storage_limit_mb: storageLimitMb,
+        media_count: mediaCount,
+        max_concurrency: maxConcurrency,
         last_login_at: user.last_login_at,
         last_login_ip: user.last_login_ip,
         last_login_location: user.last_login_location,

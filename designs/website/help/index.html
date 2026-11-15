@@ -107,6 +107,17 @@
     </ul>
   </section>
 
+  <section id="api-integration">
+    <h2>开放 API 与第三方客户端接入</h2>
+    <p>MetaArc 提供符合 OpenAI / Anthropic 业界标准的统一多模态网关。创作者中心签发的专属密钥可直接对接兼容生态：</p>
+    <ul>
+      <li><b>接口兼容标准：</b>完全兼容 OpenAI <code>/v1/chat/completions</code>、<code>/v1/embeddings</code> 及多模态图片生成协议。</li>
+      <li><b>服务请求地址 (Base URL)：</b><code>https://metaarc.com.cn/v1</code> 或由控制台「个人空间」提供的专属网关节点地址。</li>
+      <li><b>客户端配置：</b>支持在 Cherry Studio、NextChat、Chatbox 等主流工具中填入您的 <code>sk-metaarc-...</code> 密钥即可直接调用。</li>
+      <li><b>配额与用量同步：</b>第三方客户端调用所消耗的 Token 将实时折算为 MetaArc 算力点数并同步计入消费明细。</li>
+    </ul>
+  </section>
+
   <section id="support">
     <h2>技术支持与问题诊断</h2>
     <p>如果在客户端使用、任务排队或大模型输出阶段遇到任何疑问，我们提供全方位技术保障服务：</p>

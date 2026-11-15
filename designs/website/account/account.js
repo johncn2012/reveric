@@ -274,21 +274,41 @@
   function quotaBlock(user) {
     const wrap = document.createElement('div');
     const title = document.createElement('h2');
-    title.textContent = '账户点数';
+    title.textContent = '账户点数与云端存储';
     const remain = num(user.quota);
     const total = num(user.total_quota);
     const line = document.createElement('p');
-    line.textContent = '剩余 ' + formatNumber(remain) + ' / 累计发放 ' + formatNumber(total);
+    line.textContent = '算力点数：剩余 ' + formatNumber(remain) + ' / 累计发放 ' + formatNumber(total);
     const meter = document.createElement('div');
     meter.className = 'meter';
     const bar = document.createElement('span');
     const ratio = total > 0 && remain !== null ? Math.max(0, Math.min(100, (remain / total) * 100)) : 0;
     bar.style.width = ratio + '%';
     meter.append(bar);
+
+    const usedBytes = num(user.storage_used_bytes) || 0;
+    const limitMb = num(user.storage_limit_mb) || 500;
+    const maxBytes = limitMb * 1024 * 1024;
+    const usedMbStr = (usedBytes / (1024 * 1024)).toFixed(1);
+    const storageRatio = maxBytes > 0 ? Math.max(0, Math.min(100, (usedBytes / maxBytes) * 100)) : 0;
+
+    const storageTitle = document.createElement('p');
+    storageTitle.style.marginTop = '14px';
+    storageTitle.textContent = '云端存储：已用 ' + usedMbStr + ' MB / 上限 ' + limitMb + ' MB (' + (user.media_count || 0) + ' 个媒体文件)';
+
+    const storageMeter = document.createElement('div');
+    storageMeter.className = 'meter';
+    const storageBar = document.createElement('span');
+    storageBar.style.width = storageRatio + '%';
+    if (storageRatio >= 90) {
+      storageBar.style.background = '#b42318';
+    }
+    storageMeter.append(storageBar);
+
     const note = document.createElement('p');
     note.className = 'fine';
-    note.textContent = '文本、图像、视频尚未分开记账。这里也没有单独的周期重置记录。';
-    wrap.append(title, line, meter, note);
+    note.textContent = '点数用于文本润色、小说分镜与音视频渲染；云端对象存储用于保存交付物文件。';
+    wrap.append(title, line, meter, storageTitle, storageMeter, note);
     return wrap;
   }
 
@@ -2046,6 +2066,101 @@
     });
   }
 
+  async function promptBlockIp(defaultIp, defaultReason) {
+    const box = document.createElement('div');
+    box.className = 'stack';
+
+    const ipInput = document.createElement('input');
+    ipInput.placeholder = '目标 IP 地址 (例如: 192.0.2.1)';
+    ipInput.value = defaultIp || '';
+    if (defaultIp) ipInput.readOnly = true;
+
+    const durSelect = document.createElement('select');
+    durSelect.innerHTML = `
+      <option value="24">拦截 24 小时 (临时封控)</option>
+      <option value="1">拦截 1 小时 (短时冷却)</option>
+      <option value="72">拦截 3 天 (中度限制)</option>
+      <option value="168">拦截 7 天 (长效封禁)</option>
+      <option value="0">永久拦截 (直至人工解封)</option>
+    `;
+
+    box.append(ipInput, durSelect);
+
+    const answer = await ask({
+      title: '配置 IP 访问控制黑名单拦截',
+      copy: '被拦截的 IP 发起任何 MetaArc 请求均将直接返回 HTTP 403 阻断访问。请填写拦截原因。',
+      extra: box,
+      confirm: '确认拦截',
+      reason: true,
+      collect: function () {
+        return {
+          ip: ipInput.value.trim(),
+          durationHours: parseFloat(durSelect.value) || 0,
+        };
+      },
+    });
+
+    if (!answer || !answer.value || !answer.value.ip) return;
+    const res = await request('/api/admin/security/block-ip', {
+      method: 'POST',
+      body: {
+        ip: answer.value.ip,
+        durationHours: answer.value.durationHours,
+        reason: answer.reason,
+      },
+    });
+
+    if (res.ok) {
+      showAlert(`IP [${answer.value.ip}] 已成功加入安全黑名单拦截`, true);
+      loadDiagnostics();
+    } else {
+      showAlert(errorMessage(res, '拦截 IP 失败'));
+    }
+  }
+
+  async function promptUnblockIp(ip) {
+    const answer = await ask({
+      title: '解除 IP 安全拦截',
+      copy: `确定要解除对 IP [${ip}] 的安全拦截吗？解除后该 IP 将恢复正常访问权限。`,
+      confirm: '确认解封',
+      reason: true,
+      collect: function () { return { ip }; },
+    });
+    if (!answer) return;
+    const res = await request('/api/admin/security/unblock-ip', {
+      method: 'POST',
+      body: { ip, reason: answer.reason },
+    });
+    if (res.ok) {
+      showAlert(`IP [${ip}] 已解除拦截`, true);
+      loadDiagnostics();
+    } else {
+      showAlert(errorMessage(res, '解除拦截失败'));
+    }
+  }
+
+  async function cleanupStalledTasks() {
+    const answer = await ask({
+      title: '清理超时卡滞任务',
+      copy: '系统将扫描超过 30 分钟未更新进度心跳的运行中 (running) 任务，自动置为失败并记录审计日志，以解除调度队列阻塞。',
+      confirm: '确认清理',
+      reason: true,
+      collect: function () { return {}; },
+    });
+    if (!answer) return;
+    const res = await request('/api/admin/tasks/cleanup-stalled', {
+      method: 'POST',
+      body: { timeoutMinutes: 30, reason: answer.reason },
+    });
+    if (res.ok) {
+      const count = res.data && res.data.cleanedCount !== undefined ? res.data.cleanedCount : 0;
+      showAlert(`已成功清理 ${count} 个超时卡滞任务`, true);
+      loadDiagnostics();
+    } else {
+      showAlert(errorMessage(res, '清理超时任务失败'));
+    }
+  }
+
   async function loadDiagnostics() {
     const health = await request('/api/health');
     const status = await request('/api/admin/system-status');
@@ -2093,7 +2208,55 @@
           td.innerHTML = accounts.slice(0, 3).map(function (a) { return '<span class="threat-tag">' + a + '</span>'; }).join('') + (accounts.length > 3 ? ' 等' : '');
         } },
         { label: '最后尝试时间', fill: function (td, r) { td.textContent = formatWhen(r.last_attempt_at); } },
+        { label: '操作', fill: function (td, r) {
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-small';
+          btn.style.color = '#b42318';
+          btn.style.borderColor = '#fda29b';
+          btn.textContent = '拦截 IP';
+          btn.addEventListener('click', function () {
+            promptBlockIp(r.ip, '近 48 小时异常高频失败尝试');
+          });
+          td.append(btn);
+        } },
       ], threats));
+    }
+
+    // 已封禁黑名单列表
+    const blockedRes = await request('/api/admin/security/blocked-ips');
+    const blockedList = blockedRes.ok && blockedRes.data && Array.isArray(blockedRes.data.data) ? blockedRes.data.data : [];
+    if (!blockedList.length) {
+      fill('blocked-ips-slot', empty('当前没有被拦截的 IP 规则。'));
+    } else {
+      fill('blocked-ips-slot', table([
+        { label: '拦截 IP 地址', fill: function (td, r) { td.innerHTML = '<code>' + r.ip + '</code>'; } },
+        { label: '拦截原因', fill: function (td, r) { td.textContent = r.reason || '—'; } },
+        { label: '时效状态', fill: function (td, r) {
+          if (!r.expires_at) {
+            td.innerHTML = '<span class="badge badge-danger">永久封禁</span>';
+          } else {
+            const exp = new Date(r.expires_at).getTime();
+            const now = Date.now();
+            if (exp <= now) {
+              td.innerHTML = '<span class="badge badge-neutral">已过期</span>';
+            } else {
+              const hoursLeft = Math.ceil((exp - now) / 3600000);
+              td.innerHTML = '<span class="badge badge-warning">剩余 ' + hoursLeft + ' 小时</span>';
+            }
+          }
+        } },
+        { label: '操作管理员', fill: function (td, r) { td.textContent = r.blocked_by_nickname || r.blocked_by_email || '系统策略'; } },
+        { label: '拦截时间', fill: function (td, r) { td.textContent = formatWhen(r.created_at); } },
+        { label: '操作', fill: function (td, r) {
+          const unblockBtn = document.createElement('button');
+          unblockBtn.className = 'btn btn-small';
+          unblockBtn.textContent = '解除拦截';
+          unblockBtn.addEventListener('click', function () {
+            promptUnblockIp(r.ip);
+          });
+          td.append(unblockBtn);
+        } },
+      ], blockedList));
     }
 
     const lines = [];
@@ -2592,6 +2755,14 @@
       if (kw) params.set('keyword', kw);
       if (st) params.set('status', st);
       downloadCsv('/api/admin/export/tasks?' + params.toString(), 'metaarc-tasks.csv');
+    });
+  }
+  if ($('btn-cleanup-tasks')) {
+    $('btn-cleanup-tasks').addEventListener('click', cleanupStalledTasks);
+  }
+  if ($('btn-add-blocked-ip')) {
+    $('btn-add-blocked-ip').addEventListener('click', function () {
+      promptBlockIp('', '');
     });
   }
   if ($('btn-export-media')) {

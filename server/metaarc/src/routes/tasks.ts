@@ -33,6 +33,22 @@ tasksRouter.post('/tasks/create', requireAuth, async (req: Request, res: Respons
       });
     }
 
+    // 检查当前运行中任务数是否超出套餐最大并发限制
+    const [runningTasksRes, planRes] = await Promise.all([
+      query("SELECT count(*) FROM user_tasks WHERE user_id = $1 AND status IN ('pending', 'running')", [userId]),
+      query('SELECT u.plan, p.max_concurrency FROM users u LEFT JOIN plans p ON u.plan = p.slug WHERE u.id = $1', [userId]),
+    ]);
+    const activeTasksCount = parseInt(runningTasksRes.rows[0]?.count || '0', 10);
+    const maxConcurrency = planRes.rows[0]?.max_concurrency || 1;
+    // 允许排队队列有一定缓冲（最大并发数 * 4，最少 5 个），防止恶意滥发刷爆调度队列
+    const maxQueueLimit = Math.max(5, maxConcurrency * 4);
+    if (activeTasksCount >= maxQueueLimit) {
+      return res.status(429).json({
+        error: 'concurrency_limit_exceeded',
+        message: `当前待处理与执行中任务数已达排队上限（${activeTasksCount}/${maxQueueLimit}），请等待排队任务完成后再发起新任务，或升级更高并发套餐档位。`,
+      });
+    }
+
     const insertSql = `
       INSERT INTO user_tasks (user_id, task_type, status, progress, input_payload, prompt, client_ip)
       VALUES ($1, $2, 'pending', 0, $3, $4, $5)

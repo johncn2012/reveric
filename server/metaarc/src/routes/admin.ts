@@ -7,6 +7,7 @@ import { query, pool } from '../db.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
 import { cleanReason, insertAudit, runMutation } from '../services/admin_audit.js';
+import { blockIp, unblockIp, listBlockedIps, normalizeIp } from '../services/ip_blocker.js';
 
 export const adminRouter = Router();
 const newApi = new NewApiConnector();
@@ -1462,6 +1463,60 @@ adminRouter.post('/admin/tasks/:id/retry', async (req: Request, res: Response) =
   }
 });
 
+// 11.2 管理员清理超时卡滞的任务（状态为 running 且超过 timeoutMinutes 未更新）
+adminRouter.post('/admin/tasks/cleanup-stalled', async (req: Request, res: Response) => {
+  try {
+    const { timeoutMinutes = 30 } = req.body;
+    const minutes = Math.max(5, Math.min(1440, parseInt(timeoutMinutes, 10) || 30));
+    const reason = cleanReason(req.body?.reason) || `清理超过 ${minutes} 分钟无心跳的卡滞运行中任务`;
+
+    const stalledTasksRes = await query(
+      `SELECT id, user_id, task_type, created_at, updated_at
+       FROM user_tasks
+       WHERE status = 'running' AND updated_at < NOW() - ($1 || ' minutes')::interval`,
+      [minutes]
+    );
+
+    const count = stalledTasksRes.rows.length;
+    if (count === 0) {
+      return res.json({ success: true, message: '当前没有超时的运行中任务', cleanedCount: 0 });
+    }
+
+    const updated = await runMutation(async (client) => {
+      const upRes = await client.query(
+        `UPDATE user_tasks
+         SET status = 'failed',
+             error_message = '执行超时：超过 ' || $1 || ' 分钟未收到执行进度心跳，系统自动置为失败',
+             duration_ms = EXTRACT(EPOCH FROM (NOW() - created_at)) * 1000,
+             updated_at = NOW()
+         WHERE status = 'running' AND updated_at < NOW() - ($1 || ' minutes')::interval
+         RETURNING id, user_id, task_type`,
+        [minutes]
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'cleanup_stalled_tasks',
+        targetType: 'task',
+        targetId: 'batch',
+        reason,
+        beforeValue: { stalled_count: count },
+        afterValue: { cleaned_tasks: upRes.rows.map(r => r.id) },
+      }, client);
+      return upRes.rows;
+    });
+
+    return res.json({
+      success: true,
+      message: `成功清理 ${updated.length} 个超时的运行中任务`,
+      cleanedCount: updated.length,
+      tasks: updated,
+    });
+  } catch (err: any) {
+    console.error('[Admin Cleanup Stalled Tasks Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '清理超时任务失败' });
+  }
+});
+
 // 12. 管理员查看云端媒体资源与存储统计 (带标准分页)
 adminRouter.get('/admin/media', async (req: Request, res: Response) => {
   try {
@@ -2185,6 +2240,85 @@ adminRouter.get('/admin/security/threat-ips', async (_req: Request, res: Respons
   } catch (err: any) {
     console.error('[Admin Security Threat IPs Error]', err);
     return res.status(500).json({ error: 'server_error', message: '无法获取安全威胁分析' });
+  }
+});
+
+// 22.1 查看已封禁的 IP 访问控制黑名单
+adminRouter.get('/admin/security/blocked-ips', async (_req: Request, res: Response) => {
+  try {
+    const list = await listBlockedIps();
+    return res.json({ success: true, data: list });
+  } catch (err: any) {
+    console.error('[Admin List Blocked IPs Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '获取封禁 IP 列表失败' });
+  }
+});
+
+// 22.2 管理员封禁恶意 IP
+adminRouter.post('/admin/security/block-ip', async (req: Request, res: Response) => {
+  try {
+    const { ip, durationHours } = req.body;
+    const cleanIp = typeof ip === 'string' ? normalizeIp(ip) : '';
+    if (!cleanIp || cleanIp === '127.0.0.1' || cleanIp.toLowerCase() === 'localhost') {
+      return res.status(400).json({ error: 'invalid_ip', message: 'IP 地址无效或不可封禁本地回环地址' });
+    }
+
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
+
+    const hours = durationHours !== undefined && durationHours !== null ? Math.max(0, parseFloat(durationHours) || 0) : null;
+    const record = await blockIp({
+      ip: cleanIp,
+      reason,
+      blockedBy: actorId(req),
+      durationHours: hours && hours > 0 ? hours : null,
+    });
+
+    await insertAudit({
+      actorId: actorId(req),
+      action: 'block_ip',
+      targetType: 'security',
+      targetId: cleanIp,
+      reason,
+      beforeValue: null,
+      afterValue: { ip: cleanIp, durationHours: hours, expires_at: record.expires_at },
+    });
+
+    return res.status(201).json({ success: true, message: `IP [${cleanIp}] 已成功拦截`, data: record });
+  } catch (err: any) {
+    console.error('[Admin Block IP Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '封禁 IP 失败' });
+  }
+});
+
+// 22.3 管理员解封 IP
+adminRouter.post('/admin/security/unblock-ip', async (req: Request, res: Response) => {
+  try {
+    const { ip } = req.body;
+    const cleanIp = typeof ip === 'string' ? normalizeIp(ip) : '';
+    if (!cleanIp) {
+      return res.status(400).json({ error: 'invalid_ip', message: '请指定要解封的 IP 地址' });
+    }
+
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
+
+    await unblockIp(cleanIp);
+
+    await insertAudit({
+      actorId: actorId(req),
+      action: 'unblock_ip',
+      targetType: 'security',
+      targetId: cleanIp,
+      reason,
+      beforeValue: { ip: cleanIp },
+      afterValue: null,
+    });
+
+    return res.json({ success: true, message: `IP [${cleanIp}] 已成功解除拦截` });
+  } catch (err: any) {
+    console.error('[Admin Unblock IP Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '解封 IP 失败' });
   }
 });
 

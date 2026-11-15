@@ -384,6 +384,13 @@
         <div id="security-stats-slot"><p class="empty">正在读取安全态势…</p></div>
         <h3>近 48 小时异常/高频登录失败 IP 聚类分析</h3>
         <div id="threat-ips-slot"><p class="empty">正在分析安全日志…</p></div>
+
+        <div class="row" style="margin-top:28px;">
+          <h3>🛡️ IP 安全访问控制黑名单 (Denylist)</h3>
+          <button class="btn btn-line" id="btn-add-blocked-ip" type="button">+ 手动拦截 IP</button>
+        </div>
+        <p class="fine">已被系统安全拦截的恶意爬虫、撞库攻击或高危请求来源。匹配 IP 发起的任何请求均直接返回 403 拒绝访问。</p>
+        <div id="blocked-ips-slot"><p class="empty">正在读取拦截规则…</p></div>
       </article>
       <article class="card">
         <h2>诊断与运行健康</h2>
@@ -392,7 +399,10 @@
         
         <div class="row" style="margin-top:20px;">
           <h3>创作任务队列</h3>
-          <button class="btn btn-line" id="btn-export-tasks" type="button">导出任务 CSV</button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-line" id="btn-cleanup-tasks" type="button" style="color:var(--danger, #b42318);">清理超时卡滞任务</button>
+            <button class="btn btn-line" id="btn-export-tasks" type="button">导出任务 CSV</button>
+          </div>
         </div>
         <form id="task-filter-form" class="search-row">
           <input id="task-keyword" type="search" placeholder="提示词、任务ID、账号" autocomplete="off">

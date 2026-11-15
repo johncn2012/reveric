@@ -10,10 +10,26 @@ const s3Service = new S3StorageService();
 mediaRouter.post('/media/upload-url', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const { projectId, assetType, fileName, mimeType } = req.body;
+    const { projectId, assetType, fileName, mimeType, byteSize } = req.body;
 
     if (!fileName || !assetType) {
       return res.status(400).json({ error: 'missing_params', message: '必须指定 fileName 和 assetType' });
+    }
+
+    // 校验云端对象存储配额
+    const [usageRes, planRes] = await Promise.all([
+      query('SELECT COALESCE(SUM(byte_size), 0) as total_bytes FROM media_assets WHERE user_id = $1', [userId]),
+      query('SELECT u.plan, p.storage_limit_mb FROM users u LEFT JOIN plans p ON u.plan = p.slug WHERE u.id = $1', [userId]),
+    ]);
+    const currentBytes = parseInt(usageRes.rows[0]?.total_bytes || '0', 10);
+    const limitMb = planRes.rows[0]?.storage_limit_mb || 500;
+    const maxBytes = limitMb * 1024 * 1024;
+    const incomingBytes = byteSize ? Math.max(0, parseInt(byteSize, 10)) : 0;
+    if (currentBytes + incomingBytes > maxBytes) {
+      return res.status(403).json({
+        error: 'storage_quota_exceeded',
+        message: `云端媒体存储空间已满（已用 ${(currentBytes / (1024 * 1024)).toFixed(1)} MB / 上限 ${limitMb} MB），请清理历史媒体或升级更高套餐档位。`,
+      });
     }
 
     const presigned = await s3Service.createPresignedPutUrl({

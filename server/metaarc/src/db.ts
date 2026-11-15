@@ -69,6 +69,14 @@ export async function initDbSchema(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC)`,
       `CREATE INDEX IF NOT EXISTS idx_user_tasks_created_at ON user_tasks(created_at DESC)`,
       `CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at DESC)`,
+      `CREATE TABLE IF NOT EXISTS blocked_ips (
+          ip VARCHAR(64) PRIMARY KEY,
+          reason TEXT NOT NULL,
+          blocked_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          expires_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_blocked_ips_expires ON blocked_ips(expires_at)`,
     ];
     const failures: unknown[] = [];
     for (const statement of statements) {

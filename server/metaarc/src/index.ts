@@ -13,6 +13,8 @@ import { mediaRouter } from './routes/media.js';
 import { tasksRouter } from './routes/tasks.js';
 import { adminRouter } from './routes/admin.js';
 import { createUpdatesRouter, mountDownloads, updateServiceOptionsFromEnv } from './routes/updates.js';
+import { initIpBlocker, isIpBlocked } from './services/ip_blocker.js';
+import { getClientIp } from './utils/ip_helper.js';
 
 dotenv.config();
 
@@ -32,6 +34,19 @@ export function createApp() {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
+  // 全局 IP 访问控制黑名单拦截中间件
+  app.use((req, res, next) => {
+    const clientIp = getClientIp(req);
+    if (isIpBlocked(clientIp)) {
+      return res.status(403).json({
+        error: 'ip_blocked',
+        message: '当前 IP 地址已被系统安全防护策略拦截。如属误封请联系 contact@metaarc.com.cn',
+        client_ip: clientIp,
+      });
+    }
     next();
   });
 
@@ -126,6 +141,7 @@ function isDirectRun() {
 if (isDirectRun()) {
   const PORT = process.env.PORT || 8080;
   void initDbSchema().finally(() => {
+    initIpBlocker();
     const server = app.listen(PORT, () => {
       console.log(`=================================================`);
       console.log(`🚀 MetaArc (元弧) BaaS 业务中台与运营网关已启动`);
