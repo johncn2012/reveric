@@ -60,6 +60,7 @@ export class S3StorageService {
     expiresInSeconds?: number;
   }): Promise<{
     uploadUrl: string;
+    putUrl: string;
     key: string;
     cdnUrl: string;
     headers: Record<string, string>;
@@ -73,6 +74,7 @@ export class S3StorageService {
 
     return {
       uploadUrl,
+      putUrl: uploadUrl, // 兼容客户端对 putUrl 属性的期望
       key,
       cdnUrl,
       headers: {

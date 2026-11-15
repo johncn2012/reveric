@@ -66,6 +66,7 @@ class MetaArcSyncService {
           'assetType': assetType,
           'fileName': fileName,
           'mimeType': mimeType,
+          'byteSize': byteSize,
         }),
       );
 
@@ -76,7 +77,7 @@ class MetaArcSyncService {
 
       final presignJson = jsonDecode(presignRes.body) as Map<String, dynamic>;
       final uploadData = presignJson['data'] as Map<String, dynamic>;
-      final putUrl = uploadData['putUrl']?.toString() ?? '';
+      final putUrl = uploadData['putUrl']?.toString() ?? uploadData['uploadUrl']?.toString() ?? '';
       final storageKey = uploadData['key']?.toString() ?? '';
       final cdnUrl = uploadData['cdnUrl']?.toString() ?? '';
       final requiredHeaders = (uploadData['headers'] as Map<String, dynamic>?) ?? {};
