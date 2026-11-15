@@ -209,7 +209,7 @@ const registerAccount = async (req: Request, res: Response) => {
       );
     } catch (newApiErr) {
       console.warn('[Register] New-API 自动接入异常（将使用本地离线模式）:', newApiErr);
-      newApiKey = `sk-mock-${newUser.id.substring(0, 8)}`;
+      newApiKey = `sk-metaarc-${crypto.randomBytes(16).toString('hex')}`;
       await query(
         'UPDATE users SET new_api_key = $1, updated_at = NOW() WHERE id = $2',
         [newApiKey, newUser.id]
