@@ -3393,6 +3393,9 @@
         return;
       }
       setToken(result.data.token);
+      if (result.data.user) {
+        currentUser = result.data.user;
+      }
       await loadSession();
     } catch (_) {
       showAlert('网络请求失败，请稍后再试');
@@ -3405,10 +3408,22 @@
   async function loadSession() {
     const result = await request('/api/auth/profile');
     if (!result.ok || !result.data || !result.data.user) {
+      if (result.status === 401) {
+        setToken('');
+        currentUser = null;
+        showGate('login');
+        showAlert(errorMessage(result, '登录态已失效，请重新登录'));
+        return;
+      }
+      if (currentUser) {
+        await loadPlans();
+        showApp();
+        return;
+      }
       setToken('');
       currentUser = null;
       showGate('login');
-      showAlert(errorMessage(result, '登录态已失效，请重新登录'));
+      showAlert(errorMessage(result, '登录异常，请重新登录'));
       return;
     }
     currentUser = result.data.user;

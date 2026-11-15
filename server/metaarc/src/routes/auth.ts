@@ -886,6 +886,24 @@ mount('post', ['/auth/forgot-password/reset', '/forgot-password/reset'], resetPa
 mount('post', ['/auth/forgot-password', '/forgot-password'], sendForgotPasswordCode);
 mount('post', ['/auth/register', '/register'], registerAccount);
 mount('post', ['/auth/login', '/login'], loginAccount);
+
+for (const path of ['/auth/profile', '/auth/user/profile', '/user/profile', '/profile']) {
+  authRouter.get(path, requireAuth, (req, res) => {
+    void readProfile(req, res);
+  });
+}
+
+for (const path of ['/auth/update-profile', '/update-profile']) {
+  authRouter.post(path, requireAuth, (req, res) => {
+    void updateProfile(req, res);
+  });
+}
+
+for (const path of ['/auth/change-password', '/change-password']) {
+  authRouter.post(path, requireAuth, (req, res) => {
+    void changePassword(req, res);
+  });
+}
 authRouter.post('/auth/logout-others', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.userId;
