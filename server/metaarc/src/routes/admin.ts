@@ -2799,6 +2799,21 @@ adminRouter.post('/admin/releases/manifest', async (req: Request, res: Response)
       if (!r.version || typeof r.version !== 'string') {
         return res.status(400).json({ error: 'invalid_version', message: `平台 ${r.platform} 缺少版本号` });
       }
+      if (r.download_url && typeof r.download_url === 'string' && r.download_url.trim()) {
+        const urlStr = r.download_url.trim();
+        try {
+          const parsed = new URL(urlStr, 'https://metaarc.com.cn');
+          if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+            return res.status(400).json({ error: 'invalid_url', message: `平台 ${r.platform} 的下载地址必须使用 HTTP/HTTPS 协议` });
+          }
+          const host = parsed.hostname.toLowerCase();
+          if (!host.endsWith('metaarc.com.cn') && host !== 'localhost') {
+            return res.status(400).json({ error: 'invalid_url_host', message: `下载地址域名必须属于 MetaArc 官方域名 (metaarc.com.cn)` });
+          }
+        } catch {
+          return res.status(400).json({ error: 'invalid_url_format', message: `平台 ${r.platform} 的下载地址格式不正确` });
+        }
+      }
     }
 
     const updatesDir = path.resolve(process.cwd(), 'updates');

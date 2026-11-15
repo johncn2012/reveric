@@ -826,6 +826,27 @@
     showAlert('媒体记录已移除', true);
     if (onReload) onReload();
   }
+  function isAllowedPackageUrl(raw, platform) {
+    if (!raw || typeof raw !== 'string') return false;
+    let url;
+    try { url = new URL(raw, window.location.origin); } catch (_) { return false; }
+    if (url.username || url.password || url.hash) return false;
+    let pathname = url.pathname;
+    try { pathname = decodeURIComponent(url.pathname); } catch (_) { return false; }
+    const path = pathname.toLowerCase();
+    if (path.includes('..')) return false;
+    if (platform === 'windows' && !(path.endsWith('.exe') && path.includes('setup'))) return false;
+    if (platform === 'android' && !path.endsWith('.apk')) return false;
+    if ((platform === 'macos' || platform === 'linux') && !path.endsWith('.zip')) return false;
+    const host = url.hostname.toLowerCase();
+    if (host === 'github.com' || host.endsWith('.github.com') || host.endsWith('.githubusercontent.com') || host.includes('looplj')) {
+      return false;
+    }
+    const metaArcHost = host === 'metaarc.com.cn' || host.endsWith('.metaarc.com.cn');
+    if (url.protocol === 'https:' && metaArcHost) return true;
+    return url.origin === window.location.origin && (url.protocol === 'https:' || url.protocol === 'http:');
+  }
+
   async function loadDownloads() {
     const catalog = await request('/api/updates/catalog');
     const windows = await request('/api/updates/latest?platform=windows&arch=x64');
@@ -856,11 +877,12 @@
       const detail = document.createElement('p');
       const data = item[1].ok ? item[1].data : null;
       if (!data) detail.textContent = '暂时无法读取';
-      else if (data.has_update && data.download_url) {
+      else if (data.has_update && data.download_url && isAllowedPackageUrl(data.download_url, item[0].toLowerCase())) {
         detail.textContent = [data.version, data.signed === true ? '已签名' : '未签名', channelLabel(data.channel)].filter(Boolean).join(' · ');
         const link = document.createElement('a');
         link.href = data.download_url;
-        link.rel = 'noopener';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
         link.textContent = '下载';
         block.append(name, detail, link);
         wrap.append(block);
