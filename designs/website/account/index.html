@@ -179,9 +179,23 @@
     <section data-panel="usage" hidden>
       <article class="card" id="usage-summary"><p class="empty">正在读取用量…</p></article>
       <article class="card">
-        <h2>点数流水</h2>
-        <p class="fine">流水是点数变动，不是付款。</p>
+        <div class="row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <h2>点数流水</h2>
+            <p class="fine">流水是点数变动，不是付款。</p>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select id="user-ledger-type" style="padding:4px 8px; font-size:13px; border-radius:6px; border:1px solid var(--line, #cbd5e1); background:#fff;">
+              <option value="">全部业务类型</option>
+              <option value="purchase">充值到账</option>
+              <option value="consumption">创作消耗</option>
+              <option value="admin_grant">额度调整</option>
+              <option value="refund">退款冲正</option>
+            </select>
+          </div>
+        </div>
         <div id="ledger-slot"><p class="empty">正在读取流水…</p></div>
+        <div id="ledger-pages"></div>
       </article>
       <article class="card">
         <h2>创作任务</h2>

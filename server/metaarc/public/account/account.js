@@ -610,10 +610,25 @@
     wrap.append(diagCard);
     fill('support-slot', wrap);
   }
+  let currentUserLedgerPage = 1;
+  async function loadUserLedger(page) {
+    page = page || 1;
+    currentUserLedgerPage = page;
+    const params = new URLSearchParams();
+    const typeSelect = $('user-ledger-type');
+    const typeVal = typeSelect ? typeSelect.value.trim() : '';
+    if (typeVal) params.set('type', typeVal);
+    params.set('page', String(page));
+    params.set('pageSize', '15');
+    const ledger = await request('/api/auth/quota/logs?' + params.toString());
+    renderLedger('ledger-slot', ledger);
+    renderPagination('ledger-pages', ledger.data && ledger.data.pagination, function (p) {
+      loadUserLedger(p);
+    });
+  }
   async function loadUsage() {
     fill('usage-summary', quotaBlock(currentUser));
-    const ledger = await request('/api/auth/quota/logs');
-    renderLedger('ledger-slot', ledger);
+    await loadUserLedger(1);
     const tasks = await request('/api/tasks/list');
     renderTasks('user-tasks-slot', tasks, false, function () { loadAccount(); });
     const media = await request('/api/media/list');
@@ -622,7 +637,7 @@
   function renderLedger(id, result) {
     const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
     if (!rows) return fill(id, empty('点数流水暂时无法读取。'));
-    if (!rows.length) return fill(id, empty('还没有点数流水。'));
+    if (!rows.length) return fill(id, empty('当前筛选条件下没有点数流水。'));
     const labels = { purchase: '充值到账', consumption: '创作消耗', admin_grant: '额度调整', refund: '退款冲正' };
     fill(id, table([
       { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
@@ -2812,9 +2827,24 @@
         { label: '结果', fill: function (td, row) {
           td.innerHTML = row.status === 'success'
             ? '<span class="badge badge-success">成功</span>'
-            : '<span class="badge badge-danger">失败</span>';
+            : '<span class="badge badge-danger">失败</span>' + (row.fail_reason ? '<div class="fine" style="color:#b42318;margin-top:2px;">' + row.fail_reason + '</div>' : '');
         } },
+        { label: '客户端设备', fill: function (td, row) { td.textContent = simplifyUserAgent(row.user_agent); } },
         { label: 'IP / 归属地', fill: function (td, row) { td.textContent = [row.ip, row.ip_location].filter(Boolean).join(' ') || '—'; } },
+        { label: '操作', fill: function (td, row) {
+          if (row.status !== 'success' && row.ip) {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-small';
+            btn.style.color = 'var(--danger, #b42318)';
+            btn.textContent = '拦截 IP';
+            btn.addEventListener('click', function () {
+              promptBlockIp(row.ip, '登录失败安全审计拦截: ' + (row.fail_reason || '异常尝试'));
+            });
+            td.append(btn);
+          } else {
+            td.textContent = '—';
+          }
+        } },
       ], loginRows));
       renderPagination('admin-login-pages', logs.data && logs.data.pagination, function (p) {
         currentLoginLogsPage = p;
@@ -3262,6 +3292,11 @@
   }
   if ($('btn-save-releases')) {
     $('btn-save-releases').addEventListener('click', saveReleaseManifest);
+  }
+  if ($('user-ledger-type')) {
+    $('user-ledger-type').addEventListener('change', function () {
+      loadUserLedger(1);
+    });
   }
   if ($('user-order-filters')) {
     $('user-order-filters').addEventListener('click', function (e) {
