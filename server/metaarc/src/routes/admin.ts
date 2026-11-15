@@ -2995,32 +2995,37 @@ adminRouter.get('/admin/security/ip-registration-stats', async (req: Request, re
     params.push(limit);
 
     const sql = `
+      WITH ip_clusters AS (
+        SELECT 
+          COALESCE(u.reg_ip, u.last_login_ip) as ip,
+          COALESCE(MAX(u.reg_location), MAX(u.last_login_location), '未知') as location,
+          COUNT(*)::int as user_count,
+          COUNT(*) FILTER (WHERE u.created_at >= NOW() - INTERVAL '24 hours')::int as today_reg_count,
+          MIN(u.created_at) as first_reg_at,
+          MAX(u.created_at) as last_reg_at,
+          json_agg(json_build_object(
+            'id', u.id,
+            'email', u.email,
+            'phone', u.phone,
+            'nickname', u.nickname,
+            'role', u.role,
+            'status', u.status,
+            'created_at', u.created_at
+          ) ORDER BY u.created_at DESC) as users
+        FROM users u
+        ${whereClause}
+        GROUP BY COALESCE(u.reg_ip, u.last_login_ip)
+        HAVING COUNT(*) >= $1
+      )
       SELECT 
-        COALESCE(u.reg_ip, u.last_login_ip) as ip,
-        COALESCE(MAX(u.reg_location), MAX(u.last_login_location), '未知') as location,
-        COUNT(*)::int as user_count,
-        COUNT(*) FILTER (WHERE u.created_at >= NOW() - INTERVAL '24 hours')::int as today_reg_count,
-        MIN(u.created_at) as first_reg_at,
-        MAX(u.created_at) as last_reg_at,
-        json_agg(json_build_object(
-          'id', u.id,
-          'email', u.email,
-          'phone', u.phone,
-          'nickname', u.nickname,
-          'role', u.role,
-          'status', u.status,
-          'created_at', u.created_at
-        ) ORDER BY u.created_at DESC) as users,
+        c.*,
         EXISTS(
           SELECT 1 FROM blocked_ips b 
-          WHERE b.ip = COALESCE(u.reg_ip, u.last_login_ip) 
+          WHERE b.ip = c.ip 
             AND (b.expires_at IS NULL OR b.expires_at > NOW())
         ) as is_blocked
-      FROM users u
-      ${whereClause}
-      GROUP BY COALESCE(u.reg_ip, u.last_login_ip)
-      HAVING COUNT(*) >= $1
-      ORDER BY user_count DESC, last_reg_at DESC
+      FROM ip_clusters c
+      ORDER BY c.user_count DESC, c.last_reg_at DESC
       LIMIT $${params.length}
     `;
 

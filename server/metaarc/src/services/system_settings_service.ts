@@ -42,7 +42,14 @@ export async function getSystemSecuritySettings(): Promise<SystemSecuritySetting
     );
     const newSettings: any = { ...DEFAULT_SETTINGS };
     for (const row of res.rows) {
-      const val = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+      let val = row.value;
+      if (typeof val === 'string' && val.trim() !== '') {
+        try {
+          val = JSON.parse(val);
+        } catch (_) {
+          // 如果解析失败则保持原有字符串
+        }
+      }
       newSettings[row.key] = val;
     }
     // 环境变量优先覆盖（若在 .env 中显式指定）
