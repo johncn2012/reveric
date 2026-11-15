@@ -659,7 +659,7 @@
       const detailBtn = document.createElement('button');
       detailBtn.type = 'button';
       detailBtn.textContent = '详情';
-      detailBtn.addEventListener('click', function () { return showTaskDetail(row); });
+      detailBtn.addEventListener('click', function () { return showTaskDetail(row, admin); });
       box.append(detailBtn);
 
       if (['pending', 'running', 'processing'].includes(row.status)) {
@@ -688,7 +688,7 @@
     } });
     fill(id, table(columns, rows));
   }
-  async function showTaskDetail(row) {
+  async function showTaskDetail(row, admin) {
     const box = document.createElement('div');
     box.className = 'stack';
     function item(label, val) {
@@ -699,7 +699,7 @@
       return p;
     }
     box.append(item('任务编号', row.id));
-    box.append(item('创作者', person(row)));
+    if (admin) box.append(item('创作者', person(row)));
     box.append(item('类型', row.task_type));
     box.append(item('状态', row.status));
     box.append(item('客户端IP', row.client_ip));
@@ -715,6 +715,34 @@
       promptBox.style.fontSize = '13px';
       promptBox.textContent = row.prompt;
       box.append(promptTitle, promptBox);
+    }
+    if (row.input_payload && typeof row.input_payload === 'object' && Object.keys(row.input_payload).length > 0) {
+      const inTitle = document.createElement('p');
+      inTitle.innerHTML = '<b>输入参数 (Input Payload)：</b>';
+      const inBox = document.createElement('pre');
+      inBox.style.background = '#f8fafc';
+      inBox.style.border = '1px solid #e2e8f0';
+      inBox.style.padding = '8px';
+      inBox.style.borderRadius = '6px';
+      inBox.style.whiteSpace = 'pre-wrap';
+      inBox.style.wordBreak = 'break-all';
+      inBox.style.fontSize = '13px';
+      inBox.textContent = JSON.stringify(row.input_payload, null, 2);
+      box.append(inTitle, inBox);
+    }
+    if (row.output_payload && typeof row.output_payload === 'object' && Object.keys(row.output_payload).length > 0) {
+      const outTitle = document.createElement('p');
+      outTitle.innerHTML = '<b>产出结果 (Output Payload)：</b>';
+      const outBox = document.createElement('pre');
+      outBox.style.background = '#f0fdf4';
+      outBox.style.border = '1px solid #bbf7d0';
+      outBox.style.padding = '8px';
+      outBox.style.borderRadius = '6px';
+      outBox.style.whiteSpace = 'pre-wrap';
+      outBox.style.wordBreak = 'break-all';
+      outBox.style.fontSize = '13px';
+      outBox.textContent = JSON.stringify(row.output_payload, null, 2);
+      box.append(outTitle, outBox);
     }
     if (row.error_message) {
       const errTitle = document.createElement('p');
