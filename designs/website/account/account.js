@@ -535,6 +535,14 @@
           box.append(cancelBtn);
         }
 
+        if (row.status === 'failed') {
+          const retryBtn = document.createElement('button');
+          retryBtn.type = 'button';
+          retryBtn.textContent = '重试';
+          retryBtn.addEventListener('click', function () { return retryTask(row, onReload); });
+          box.append(retryBtn);
+        }
+
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
         delBtn.textContent = '删除';
@@ -595,6 +603,14 @@
     const result = await request('/api/admin/tasks/' + row.id + '/cancel', { method: 'POST' });
     if (!result.ok) return showAlert(errorMessage(result, '终止失败'));
     showAlert('任务已终止', true);
+    if (onReload) onReload();
+  }
+  async function retryTask(row, onReload) {
+    const answer = await ask({ title: '重试任务', copy: '将该失败任务重新放入待调度队列，重置进度并清除报错。', confirm: '确认重试', reason: false });
+    if (!answer) return;
+    const result = await request('/api/admin/tasks/' + row.id + '/retry', { method: 'POST' });
+    if (!result.ok) return showAlert(errorMessage(result, '重试任务失败'));
+    showAlert('任务已重新排队等待调度执行', true);
     if (onReload) onReload();
   }
   async function deleteTask(row, onReload) {
@@ -787,6 +803,7 @@
       { label: '状态', fill: function (td, row) {
         td.innerHTML = row.status === 'paid' ? '<span class="badge badge-success">已支付</span>' :
                        row.status === 'cancelled' ? '<span class="badge badge-neutral">已取消</span>' :
+                       row.status === 'refunded' ? '<span class="badge badge-danger">已退款</span>' :
                        '<span class="badge badge-warning">待支付 / 待核对</span>';
       } },
       { label: '创建时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
@@ -833,7 +850,10 @@
     const oData = (overview.ok && overview.data && overview.data.data) || {};
     wrap.append(stat('平台创作者', formatNumber(oData.total_users || 0), '今日新增 +' + (oData.today_new_users || 0)));
     wrap.append(stat('累计营收', '¥' + (oData.total_revenue_yuan || '0.00'), '今日到账 ¥' + (oData.today_revenue_yuan || '0.00')));
+    wrap.append(stat('商业订单', formatNumber(oData.total_orders || 0) + ' 笔', '已完成 ' + (oData.paid_orders || 0) + ' 笔'));
     wrap.append(stat('任务调度队列', formatNumber(oData.active_tasks || 0) + ' 个', '排队中与运行中'));
+    const mediaBytes = oData.total_media_bytes ? formatBytes(oData.total_media_bytes) : '0 MB';
+    wrap.append(stat('云端存储资产', formatNumber(oData.total_media_count || 0) + ' 个', '占用 ' + mediaBytes));
     const dbOk = health.ok && health.data && health.data.db === 'connected';
     const gateway = status.ok && status.data && status.data.data ? status.data.data.ai_gateway : null;
     wrap.append(stat('系统运行状态', dbOk ? '数据库正常' : '数据库异常', '网关：' + gatewayLabel(gateway)));
@@ -1604,6 +1624,7 @@
     if (status === 'paid') return '<span class="badge badge-success">已完成</span>';
     if (status === 'pending') return '<span class="badge badge-warning">待支付</span>';
     if (status === 'cancelled') return '<span class="badge badge-neutral">已取消</span>';
+    if (status === 'refunded') return '<span class="badge badge-danger">已退款</span>';
     return '<span class="badge badge-neutral">' + (status || '—') + '</span>';
   }
 
@@ -1643,6 +1664,13 @@
       { label: '操作', fill: function (td, row) {
         const box = document.createElement('div');
         box.className = 'actions';
+
+        const detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.textContent = '详情';
+        detailBtn.addEventListener('click', function () { return showOrderDetail(row); });
+        box.append(detailBtn);
+
         if (row.status === 'pending') {
           const payBtn = document.createElement('button');
           payBtn.type = 'button';
@@ -1656,6 +1684,15 @@
           cancelBtn.addEventListener('click', function () { return cancelOrder(row); });
           box.append(cancelBtn);
         }
+
+        if (row.status === 'paid') {
+          const refundBtn = document.createElement('button');
+          refundBtn.type = 'button';
+          refundBtn.textContent = '退款冲正';
+          refundBtn.addEventListener('click', function () { return refundOrder(row); });
+          box.append(refundBtn);
+        }
+
         td.append(box);
       } },
     ], rows));
@@ -1663,6 +1700,122 @@
     renderPagination('admin-orders-pages', result.data && result.data.pagination, function (p) {
       loadAdminOrders(p);
     });
+  }
+
+  async function showOrderDetail(row) {
+    const res = await request('/api/admin/orders/' + row.id);
+    if (!res.ok || !res.data || !res.data.data) {
+      return showAlert(errorMessage(res, '无法加载订单详情'));
+    }
+    const d = res.data.data;
+    const o = d.order || row;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'stack';
+
+    function addRow(label, val, isHtml) {
+      const p = document.createElement('p');
+      const b = document.createElement('b');
+      b.textContent = label + '：';
+      p.append(b);
+      if (isHtml) {
+        const span = document.createElement('span');
+        span.innerHTML = val;
+        p.append(span);
+      } else {
+        p.append(document.createTextNode(val ?? '—'));
+      }
+      wrap.append(p);
+    }
+
+    addRow('订单编号', o.order_no || o.id);
+    addRow('创作者账号', person(o));
+    addRow('下单金额', '¥' + (o.amount_cents / 100).toFixed(2));
+    addRow('购买套餐/项目', o.plan_name ? o.plan_name + ' (包含 ' + formatNumber(o.quota_points) + ' 点算力)' : '算力充值');
+    addRow('支付渠道', payChannelLabel(o.pay_channel));
+    addRow('外部流水号', o.pay_trade_no || '—');
+    addRow('当前状态', orderStatusBadge(o.status), true);
+    addRow('下单时间', formatWhen(o.created_at));
+    addRow('支付时间', formatWhen(o.paid_at));
+
+    if (Array.isArray(d.quota_transactions) && d.quota_transactions.length > 0) {
+      const qTitle = document.createElement('h3');
+      qTitle.style.margin = '16px 0 8px 0';
+      qTitle.textContent = '关联算力流水台账';
+      wrap.append(qTitle);
+      const qTable = table([
+        { label: '流水类型', fill: function (td, q) { td.textContent = q.type; } },
+        { label: '变动点数', fill: function (td, q) { td.textContent = (q.amount > 0 ? '+' : '') + formatNumber(q.amount); } },
+        { label: '变动后结存', fill: function (td, q) { td.textContent = formatNumber(q.balance_after); } },
+        { label: '备注说明', fill: function (td, q) { td.textContent = q.remark || '—'; } },
+        { label: '记录时间', fill: function (td, q) { td.textContent = formatWhen(q.created_at); } },
+      ], d.quota_transactions);
+      wrap.append(qTable);
+    }
+
+    if (Array.isArray(d.audit_logs) && d.audit_logs.length > 0) {
+      const aTitle = document.createElement('h3');
+      aTitle.style.margin = '16px 0 8px 0';
+      aTitle.textContent = '订单管理审计记录';
+      wrap.append(aTitle);
+      const aTable = table([
+        { label: '操作人', fill: function (td, a) { td.textContent = a.actor_nickname || a.actor_email || '管理员'; } },
+        { label: '动作', fill: function (td, a) { td.textContent = a.action; } },
+        { label: '原因', fill: function (td, a) { td.textContent = a.reason || '—'; } },
+        { label: '操作时间', fill: function (td, a) { td.textContent = formatWhen(a.created_at); } },
+      ], d.audit_logs);
+      wrap.append(aTable);
+    }
+
+    await ask({
+      title: '订单详情 · ' + (o.order_no || o.id.slice(0, 8)),
+      reason: false,
+      extra: wrap,
+      confirm: '关闭',
+    });
+  }
+
+  async function refundOrder(row) {
+    const extraWrap = document.createElement('div');
+    extraWrap.style.margin = '10px 0';
+
+    const chkLabel = document.createElement('label');
+    chkLabel.style.display = 'flex';
+    chkLabel.style.alignItems = 'center';
+    chkLabel.style.gap = '8px';
+    chkLabel.style.cursor = 'pointer';
+
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.checked = true;
+
+    const span = document.createElement('span');
+    span.textContent = '同步扣减该订单发放的 ' + formatNumber(row.quota_points || 0) + ' 点算力及 AI 网关配额';
+
+    chkLabel.append(chk, span);
+    extraWrap.append(chkLabel);
+
+    const answer = await ask({
+      title: '订单退款冲正处理',
+      copy: '确认对订单 ' + (row.order_no || row.id.slice(0, 8)) + ' (¥' + (row.amount_cents / 100).toFixed(2) + ') 办理退款。订单状态将变更为「已退款」。',
+      extra: extraWrap,
+      confirm: '确认退款冲正',
+      collect: function () {
+        return { refundPoints: chk.checked };
+      },
+    });
+    if (!answer) return;
+
+    const result = await request('/api/admin/orders/' + row.id + '/refund', {
+      method: 'POST',
+      body: {
+        reason: answer.reason,
+        refundPoints: answer.refundPoints,
+      },
+    });
+    if (!result.ok) return showAlert(errorMessage(result, '订单退款冲正失败'));
+    showAlert('订单已成功办理退款冲正', true);
+    loadAdminOrders(currentOrderPage);
   }
 
   async function markOrderPaid(row) {
@@ -1834,6 +1987,8 @@
     const params = new URLSearchParams();
     const keyword = $('quota-keyword') ? $('quota-keyword').value.trim() : '';
     if (keyword) params.set('keyword', keyword);
+    const quotaType = $('quota-type') ? $('quota-type').value.trim() : '';
+    if (quotaType) params.set('type', quotaType);
     const startDate = $('quota-start-date') ? $('quota-start-date').value.trim() : '';
     const endDate = $('quota-end-date') ? $('quota-end-date').value.trim() : '';
     if (startDate) params.set('startDate', startDate);
@@ -2422,6 +2577,11 @@
   if ($('btn-export-logins')) {
     $('btn-export-logins').addEventListener('click', function () {
       downloadCsv('/api/admin/export/login-logs', 'metaarc-logins.csv');
+    });
+  }
+  if ($('btn-export-audit')) {
+    $('btn-export-audit').addEventListener('click', function () {
+      downloadCsv('/api/admin/export/audit', 'metaarc-audit.csv');
     });
   }
   if ($('btn-save-releases')) {

@@ -320,6 +320,7 @@
           <button type="button" data-order-filter="status:pending">待支付 / 待核对</button>
           <button type="button" data-order-filter="status:paid">已完成</button>
           <button type="button" data-order-filter="status:cancelled">已取消</button>
+          <button type="button" data-order-filter="status:refunded">已退款</button>
         </div>
         <div id="admin-orders-slot"><p class="empty">尚未读取订单。</p></div>
         <div id="admin-orders-pages"></div>
@@ -334,6 +335,13 @@
         </div>
         <form id="quota-search" class="search-row">
           <input id="quota-keyword" type="search" placeholder="账号、类型或备注" autocomplete="off">
+          <select id="quota-type" title="流水业务类型" style="padding: 0 10px; border: 1px solid var(--line, #cbd5e1); border-radius: 6px; font-size: 13px; background: #fff;">
+            <option value="">全部业务类型</option>
+            <option value="purchase">充值到账 (purchase)</option>
+            <option value="consumption">模型消耗 (consumption)</option>
+            <option value="admin_grant">管理员调账 (admin_grant)</option>
+            <option value="refund">退款冲正 (refund)</option>
+          </select>
           <input id="quota-start-date" type="date" title="流水起始日期">
           <span class="date-sep">至</span>
           <input id="quota-end-date" type="date" title="流水截止日期">
@@ -413,7 +421,10 @@
 
     <section data-panel="audit" hidden>
       <article class="card">
-        <h2>变更审计</h2>
+        <div class="row">
+          <h2>变更审计</h2>
+          <button class="btn btn-line" id="btn-export-audit" type="button">导出审计日志 CSV</button>
+        </div>
         <p class="fine">记录操作者、对象、原因和变更前后。登录记录单独列出。</p>
         <div id="audit-slot"><p class="empty">正在读取审计…</p></div>
         <div id="audit-pages"></div>

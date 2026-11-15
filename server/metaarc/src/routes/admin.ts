@@ -35,6 +35,8 @@ adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
     const todayRevenueRes = await query("SELECT COALESCE(SUM(amount_cents), 0) as total FROM orders WHERE status = 'paid' AND paid_at >= CURRENT_DATE");
     const totalRevenueRes = await query("SELECT COALESCE(SUM(amount_cents), 0) as total FROM orders WHERE status = 'paid'");
     const activeTasksRes = await query("SELECT count(*) FROM user_tasks WHERE status IN ('pending', 'running')");
+    const totalOrdersRes = await query("SELECT count(*) as total, count(*) FILTER (WHERE status = 'paid') as paid_count FROM orders");
+    const mediaStatsRes = await query("SELECT count(*) as total_count, COALESCE(SUM(byte_size), 0) as total_bytes FROM media_assets");
 
     return res.json({
       success: true,
@@ -44,6 +46,10 @@ adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
         today_revenue_yuan: (parseInt(todayRevenueRes.rows[0].total, 10) / 100).toFixed(2),
         total_revenue_yuan: (parseInt(totalRevenueRes.rows[0].total, 10) / 100).toFixed(2),
         active_tasks: parseInt(activeTasksRes.rows[0].count, 10),
+        total_orders: parseInt(totalOrdersRes.rows[0].total, 10) || 0,
+        paid_orders: parseInt(totalOrdersRes.rows[0].paid_count, 10) || 0,
+        total_media_count: parseInt(mediaStatsRes.rows[0].total_count, 10) || 0,
+        total_media_bytes: parseInt(mediaStatsRes.rows[0].total_bytes, 10) || 0,
       },
     });
   } catch (err: any) {
@@ -917,7 +923,7 @@ adminRouter.post('/admin/orders/:id/cancel', async (req: Request, res: Response)
     }
     const order = orderRes.rows[0];
     if (order.status === 'paid') {
-      return res.status(400).json({ error: 'cannot_cancel', message: '已支付的订单不能直接取消，请通过调账处理退款' });
+      return res.status(400).json({ error: 'cannot_cancel', message: '已支付的订单不能直接作废，请通过订单退款冲正处理' });
     }
 
     const updated = await runMutation(async (client) => {
@@ -941,6 +947,144 @@ adminRouter.post('/admin/orders/:id/cancel', async (req: Request, res: Response)
   } catch (err: any) {
     console.error('[Admin Cancel Order Error]', err);
     return res.status(500).json({ error: 'server_error', message: '取消订单失败' });
+  }
+});
+
+// 5.4 订单详情与关联流水、审计日志查询
+adminRouter.get('/admin/orders/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '订单 ID 格式不正确' });
+    }
+
+    const orderRes = await query(
+      `SELECT o.*, u.email, u.phone, u.nickname, u.role, u.status as user_status, u.plan as user_plan,
+              p.name as plan_name, p.slug as plan_slug, p.quota_points, p.price_cents, p.duration_days
+       FROM orders o
+       LEFT JOIN users u ON o.user_id = u.id
+       LEFT JOIN plans p ON o.plan_id = p.id
+       WHERE o.id = $1`,
+      [id]
+    );
+    if (orderRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '订单不存在' });
+    }
+
+    const order = orderRes.rows[0];
+
+    // 关联的算力流水记录
+    const quotaRes = await query(
+      `SELECT id, amount, balance_after, type, remark, created_at
+       FROM quota_transactions
+       WHERE order_id = $1
+       ORDER BY created_at DESC`,
+      [id]
+    );
+
+    // 关联的审计日志
+    const auditRes = await query(
+      `SELECT a.id, a.actor_id, a.action, a.reason, a.before_value, a.after_value, a.created_at,
+              u.email as actor_email, u.nickname as actor_nickname
+       FROM admin_audit_logs a
+       LEFT JOIN users u ON a.actor_id = u.id
+       WHERE a.target_type = 'order' AND a.target_id = $1
+       ORDER BY a.created_at DESC`,
+      [id]
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        order,
+        quota_transactions: quotaRes.rows,
+        audit_logs: auditRes.rows,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Admin Order Detail Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '获取订单详情失败' });
+  }
+});
+
+// 5.5 已支付订单官方退款冲正处理
+adminRouter.post('/admin/orders/:id/refund', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'invalid_id', message: '订单 ID 格式不正确' });
+    }
+    const reason = cleanReason(req.body?.reason);
+    if (!reason) return reasonRequired(res);
+
+    const refundPoints = req.body?.refundPoints !== false;
+
+    const orderRes = await query(
+      `SELECT o.*, u.new_api_user_id, u.quota, p.slug as plan_slug, p.name as plan_name, p.quota_points
+       FROM orders o
+       JOIN users u ON o.user_id = u.id
+       LEFT JOIN plans p ON o.plan_id = p.id
+       WHERE o.id = $1`,
+      [id]
+    );
+    if (orderRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '订单不存在' });
+    }
+    const order = orderRes.rows[0];
+    if (order.status !== 'paid') {
+      return res.status(400).json({ error: 'invalid_status', message: '只有已支付状态的订单才能办理退款冲正' });
+    }
+
+    const pointsToDeduct = refundPoints ? parseFloat(order.quota_points || '0') : 0;
+
+    const updatedOrder = await runMutation(async (client) => {
+      const upRes = await client.query(
+        `UPDATE orders SET status = 'refunded', updated_at = NOW() WHERE id = $1 RETURNING *`,
+        [id]
+      );
+
+      if (pointsToDeduct > 0) {
+        const quotaRes = await client.query(
+          `UPDATE users SET quota = GREATEST(0, quota - $1), updated_at = NOW() WHERE id = $2 RETURNING quota`,
+          [pointsToDeduct, order.user_id]
+        );
+        const balanceAfter = quotaRes.rows[0]?.quota || 0;
+        await client.query(
+          `INSERT INTO quota_transactions (user_id, order_id, amount, balance_after, type, remark)
+           VALUES ($1, $2, $3, $4, 'refund', $5)`,
+          [order.user_id, id, -pointsToDeduct, balanceAfter, `订单退款扣减点数：${order.plan_name || '订阅套餐'} (${reason})`]
+        );
+      }
+
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'refund_order',
+        targetType: 'order',
+        targetId: id,
+        reason,
+        beforeValue: { status: order.status, quota: order.quota },
+        afterValue: { status: 'refunded', pointsDeducted: pointsToDeduct },
+      }, client);
+
+      return upRes.rows[0];
+    });
+
+    if (order.new_api_user_id && pointsToDeduct > 0) {
+      try {
+        await newApi.topUpUserQuota({
+          newApiUserId: order.new_api_user_id,
+          metaarcPoints: -pointsToDeduct,
+          remark: `订单退款扣除配额: ${order.order_no || order.id}`,
+        });
+      } catch (apiErr: any) {
+        console.error('[Admin Order Refund New-API Sync Error]', apiErr.message);
+      }
+    }
+
+    return res.json({ success: true, message: '订单已成功办理退款冲正', order: updatedOrder });
+  } catch (err: any) {
+    console.error('[Admin Refund Order Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '订单退款处理失败' });
   }
 });
 
@@ -1230,23 +1374,91 @@ adminRouter.post('/admin/tasks/:id/cancel', async (req: Request, res: Response) 
       return res.status(400).json({ error: 'invalid_task_id', message: '任务ID格式无效' });
     }
 
-    const sql = `
-      UPDATE user_tasks
-      SET status = 'failed',
-          error_message = COALESCE(error_message, '管理员手动终止任务'),
-          updated_at = NOW()
-      WHERE id = $1 AND status IN ('pending', 'running', 'processing')
-      RETURNING *
-    `;
-    const result = await query(sql, [taskId]);
-    if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'cannot_cancel', message: '任务不存在或已处于终态，无法终止' });
+    const taskRes = await query('SELECT * FROM user_tasks WHERE id = $1', [taskId]);
+    if (taskRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '任务记录不存在' });
+    }
+    const task = taskRes.rows[0];
+    if (!['pending', 'running', 'processing'].includes(task.status)) {
+      return res.status(400).json({ error: 'cannot_cancel', message: '任务已处于终态，无法终止' });
     }
 
-    return res.json({ success: true, message: '任务已成功终止', task: result.rows[0] });
+    const reason = cleanReason(req.body?.reason) || '管理员手动终止任务';
+
+    const updated = await runMutation(async (client) => {
+      const up = await client.query(
+        `UPDATE user_tasks
+         SET status = 'failed',
+             error_message = COALESCE(error_message, $1),
+             updated_at = NOW()
+         WHERE id = $2
+         RETURNING *`,
+        [reason, taskId]
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'cancel_task',
+        targetType: 'task',
+        targetId: taskId,
+        reason,
+        beforeValue: { status: task.status, progress: task.progress },
+        afterValue: { status: 'failed', error_message: reason },
+      }, client);
+      return up.rows[0];
+    });
+
+    return res.json({ success: true, message: '任务已成功终止', task: updated });
   } catch (err: any) {
     console.error('[Admin Cancel Task Error]', err);
     return res.status(500).json({ error: 'server_error', message: err.message || '终止任务失败' });
+  }
+});
+
+// 11.1 管理员重新调度/重试失败任务
+adminRouter.post('/admin/tasks/:id/retry', async (req: Request, res: Response) => {
+  try {
+    const taskId = req.params.id;
+    if (!UUID_REGEX.test(taskId)) {
+      return res.status(400).json({ error: 'invalid_task_id', message: '任务 ID 格式无效' });
+    }
+
+    const taskRes = await query('SELECT * FROM user_tasks WHERE id = $1', [taskId]);
+    if (taskRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '任务记录不存在' });
+    }
+    const task = taskRes.rows[0];
+    if (task.status !== 'failed') {
+      return res.status(400).json({ error: 'invalid_status', message: '只有失败状态的任务才支持重试' });
+    }
+
+    const updated = await runMutation(async (client) => {
+      const up = await client.query(
+        `UPDATE user_tasks
+         SET status = 'pending',
+             progress = 0,
+             error_message = NULL,
+             duration_ms = NULL,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [taskId]
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'retry_task',
+        targetType: 'task',
+        targetId: taskId,
+        reason: '管理员重新调度失败任务',
+        beforeValue: { status: task.status, progress: task.progress, error: task.error_message },
+        afterValue: { status: 'pending', progress: 0 },
+      }, client);
+      return up.rows[0];
+    });
+
+    return res.json({ success: true, message: '任务已重新排队等待调度执行', task: updated });
+  } catch (err: any) {
+    console.error('[Admin Retry Task Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '重试任务调度失败' });
   }
 });
 
@@ -1341,20 +1553,34 @@ adminRouter.get('/admin/media', async (req: Request, res: Response) => {
 adminRouter.delete('/admin/media/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!id || !uuidRegex.test(id)) {
+    if (!id || !UUID_REGEX.test(id)) {
       return res.status(400).json({ error: 'invalid_id', message: '媒体资源 ID 格式不正确' });
     }
 
-    const delRes = await query('DELETE FROM media_assets WHERE id = $1 RETURNING id, storage_key', [id]);
-    if (delRes.rows.length === 0) {
+    const before = await query('SELECT * FROM media_assets WHERE id = $1', [id]);
+    if (before.rows.length === 0) {
       return res.status(404).json({ error: 'not_found', message: '媒体资源不存在或已被删除' });
     }
+
+    const reason = cleanReason(req.body?.reason) || '管理员移除媒体资源索引';
+
+    await runMutation(async (client) => {
+      await client.query('DELETE FROM media_assets WHERE id = $1', [id]);
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'delete_media',
+        targetType: 'media',
+        targetId: id,
+        reason,
+        beforeValue: before.rows[0],
+        afterValue: null,
+      }, client);
+    });
 
     return res.json({
       success: true,
       message: '媒体资源已从云端登记簿中移除',
-      id: delRes.rows[0].id,
+      id,
     });
   } catch (err: any) {
     console.error('[Admin Delete Media Error]', err);
@@ -1366,20 +1592,34 @@ adminRouter.delete('/admin/media/:id', async (req: Request, res: Response) => {
 adminRouter.delete('/admin/tasks/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!id || !uuidRegex.test(id)) {
+    if (!id || !UUID_REGEX.test(id)) {
       return res.status(400).json({ error: 'invalid_id', message: '任务 ID 格式不正确' });
     }
 
-    const delRes = await query('DELETE FROM user_tasks WHERE id = $1 RETURNING id', [id]);
-    if (delRes.rows.length === 0) {
+    const before = await query('SELECT * FROM user_tasks WHERE id = $1', [id]);
+    if (before.rows.length === 0) {
       return res.status(404).json({ error: 'not_found', message: '任务记录不存在或已被删除' });
     }
+
+    const reason = cleanReason(req.body?.reason) || '管理员清理任务调度历史';
+
+    await runMutation(async (client) => {
+      await client.query('DELETE FROM user_tasks WHERE id = $1', [id]);
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'delete_task',
+        targetType: 'task',
+        targetId: id,
+        reason,
+        beforeValue: before.rows[0],
+        afterValue: null,
+      }, client);
+    });
 
     return res.json({
       success: true,
       message: '任务记录已从调度队列中删除',
-      id: delRes.rows[0].id,
+      id,
     });
   } catch (err: any) {
     console.error('[Admin Delete Task Error]', err);
@@ -1763,13 +2003,21 @@ adminRouter.get('/admin/audit', async (req: Request, res: Response) => {
 adminRouter.get('/admin/quota-logs', async (req: Request, res: Response) => {
   try {
     const keyword = typeof req.query.keyword === 'string' ? req.query.keyword.trim() : '';
-    const { page, pageSize, limit = '50', offset = '0', startDate, endDate } = req.query;
+    const { page, pageSize, limit = '50', offset = '0', startDate, endDate, type, userId } = req.query;
     const params: unknown[] = [];
     const whereClauses: string[] = [];
 
     if (keyword) {
       params.push(`%${keyword}%`);
       whereClauses.push(`(u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR u.nickname ILIKE $${params.length} OR q.type ILIKE $${params.length} OR q.remark ILIKE $${params.length})`);
+    }
+    if (type && typeof type === 'string' && type.trim()) {
+      params.push(type.trim());
+      whereClauses.push(`q.type = $${params.length}`);
+    }
+    if (userId && typeof userId === 'string' && UUID_REGEX.test(userId.trim())) {
+      params.push(userId.trim());
+      whereClauses.push(`q.user_id = $${params.length}`);
     }
     if (startDate && typeof startDate === 'string' && startDate.trim()) {
       params.push(startDate.trim());
@@ -2195,6 +2443,44 @@ adminRouter.get('/admin/export/:entity', async (req: Request, res: Response) => 
         r.status,
         r.fail_reason || '',
         r.user_agent || '',
+        r.created_at ? new Date(r.created_at).toISOString() : '',
+      ]);
+    } else if (entity === 'audit') {
+      const params: any[] = [];
+      const where: string[] = [];
+      if (keyword && typeof keyword === 'string' && keyword.trim()) {
+        params.push(`%${keyword.trim()}%`);
+        where.push(`(a.action ILIKE $${params.length} OR a.target_type ILIKE $${params.length} OR a.target_id ILIKE $${params.length} OR a.reason ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`);
+      }
+      if (startDate && typeof startDate === 'string' && startDate.trim()) {
+        params.push(startDate.trim());
+        where.push(`a.created_at >= $${params.length}::timestamptz`);
+      }
+      if (endDate && typeof endDate === 'string' && endDate.trim()) {
+        params.push(endDate.trim());
+        where.push(`a.created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
+      }
+      const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const sql = `
+        SELECT a.id, a.actor_id, a.action, a.target_type, a.target_id, a.reason,
+               a.before_value, a.after_value, a.created_at,
+               u.email as actor_email, u.nickname as actor_nickname
+        FROM admin_audit_logs a
+        LEFT JOIN users u ON a.actor_id = u.id
+        ${whereSql}
+        ORDER BY a.created_at DESC LIMIT 5000
+      `;
+      const result = await query(sql, params);
+      headers = ['审计ID', '操作者', '动作类型', '目标类型', '目标编号', '操作原因', '变更前状态', '变更后状态', '记录时间'];
+      rows = result.rows.map(r => [
+        r.id,
+        r.actor_nickname || r.actor_email || r.actor_id || '系统',
+        r.action,
+        r.target_type,
+        r.target_id || '',
+        r.reason || '',
+        JSON.stringify(r.before_value || {}),
+        JSON.stringify(r.after_value || {}),
         r.created_at ? new Date(r.created_at).toISOString() : '',
       ]);
     } else {
