@@ -601,7 +601,7 @@ adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response
       return res.status(400).json({ error: 'invalid_user_id', message: '用户ID格式无效' });
     }
 
-    const { plan } = req.body;
+    const { plan, durationDays, expiresAt } = req.body;
     const ALLOWED_PLANS = ['free', 'creator', 'pro', 'studio'];
     if (!plan || !ALLOWED_PLANS.includes(plan)) {
       return res.status(400).json({
@@ -612,16 +612,27 @@ adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response
     const reason = cleanReason(req.body?.reason);
     if (!reason) return reasonRequired(res);
 
+    let targetExpiresAt: Date | null = null;
+    if (plan !== 'free') {
+      if (expiresAt) {
+        targetExpiresAt = new Date(expiresAt);
+      } else {
+        const planDetail = await query('SELECT duration_days FROM plans WHERE slug = $1', [plan]);
+        const days = durationDays ? parseInt(durationDays, 10) : (planDetail.rows[0]?.duration_days || 30);
+        targetExpiresAt = new Date(Date.now() + Math.max(1, days) * 86400 * 1000);
+      }
+    }
+
     const user = await runMutation(async (client) => {
-      const before = await client.query('SELECT id, plan FROM users WHERE id = $1 FOR UPDATE', [targetUserId]);
+      const before = await client.query('SELECT id, plan, expires_at FROM users WHERE id = $1 FOR UPDATE', [targetUserId]);
       if (before.rows.length === 0) {
         const missing = new Error('not_found');
         (missing as { status?: number }).status = 404;
         throw missing;
       }
       const userRes = await client.query(
-        'UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, phone, nickname, plan, quota, total_quota, role',
-        [plan, targetUserId],
+        'UPDATE users SET plan = $1, expires_at = $2, updated_at = NOW() WHERE id = $3 RETURNING id, email, phone, nickname, plan, expires_at, quota, total_quota, role',
+        [plan, targetExpiresAt, targetUserId],
       );
       await insertAudit({
         actorId: actorId(req),
@@ -629,8 +640,8 @@ adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response
         targetType: 'user',
         targetId: targetUserId,
         reason,
-        beforeValue: { plan: before.rows[0].plan },
-        afterValue: { plan },
+        beforeValue: { plan: before.rows[0].plan, expires_at: before.rows[0].expires_at },
+        afterValue: { plan, expires_at: targetExpiresAt },
       }, client);
       return userRes.rows[0];
     });
@@ -646,6 +657,47 @@ adminRouter.post('/admin/users/:id/set-plan', async (req: Request, res: Response
     }
     console.error('[Admin Set Plan Error]', err);
     return res.status(500).json({ error: 'server_error', message: '套餐设置失败' });
+  }
+});
+
+// 2.5 管理员触发全量订阅过期扫描与自动降级
+adminRouter.post('/admin/subscriptions/expire-check', async (req: Request, res: Response) => {
+  try {
+    const reason = cleanReason(req.body?.reason) || '周期性订阅到期扫描与自动回退基础体验版';
+    const expiredRes = await query(
+      "SELECT id, email, plan, expires_at FROM users WHERE expires_at IS NOT NULL AND expires_at < NOW() AND plan != 'free'"
+    );
+
+    const count = expiredRes.rows.length;
+    if (count === 0) {
+      return res.json({ success: true, message: '当前没有到期的订阅会员账号', downgradedCount: 0 });
+    }
+
+    const updated = await runMutation(async (client) => {
+      const up = await client.query(
+        "UPDATE users SET plan = 'free', updated_at = NOW() WHERE expires_at IS NOT NULL AND expires_at < NOW() AND plan != 'free' RETURNING id, email, plan"
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'expire_subscriptions',
+        targetType: 'user',
+        targetId: 'batch',
+        reason,
+        beforeValue: { expired_users: expiredRes.rows },
+        afterValue: { downgraded_count: up.rowCount },
+      }, client);
+      return up.rows;
+    });
+
+    return res.json({
+      success: true,
+      message: `成功扫描并降级 ${updated.length} 个已到期会员订阅`,
+      downgradedCount: updated.length,
+      users: updated,
+    });
+  } catch (err: any) {
+    console.error('[Admin Expire Check Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '订阅过期扫描失败' });
   }
 });
 
@@ -1086,6 +1138,57 @@ adminRouter.post('/admin/orders/:id/refund', async (req: Request, res: Response)
   } catch (err: any) {
     console.error('[Admin Refund Order Error]', err);
     return res.status(500).json({ error: 'server_error', message: '订单退款处理失败' });
+  }
+});
+
+// 5.5 管理员清理超时未支付的废弃订单 (超过指定小时数仍处于 pending，默认 24 小时)
+adminRouter.post('/admin/orders/cleanup-expired', async (req: Request, res: Response) => {
+  try {
+    const { timeoutHours = 24 } = req.body;
+    const hours = Math.max(1, Math.min(720, parseInt(timeoutHours, 10) || 24));
+    const reason = cleanReason(req.body?.reason) || `清理超过 ${hours} 小时未支付的超时订单`;
+
+    const expiredOrdersRes = await query(
+      `SELECT id, order_no, user_id, amount_cents, created_at
+       FROM orders
+       WHERE status = 'pending' AND created_at < NOW() - ($1 || ' hours')::interval`,
+      [hours]
+    );
+
+    const count = expiredOrdersRes.rows.length;
+    if (count === 0) {
+      return res.json({ success: true, message: '当前没有超时未支付的待处理订单', cancelledCount: 0 });
+    }
+
+    const updated = await runMutation(async (client) => {
+      const up = await client.query(
+        `UPDATE orders
+         SET status = 'cancelled', updated_at = NOW()
+         WHERE status = 'pending' AND created_at < NOW() - ($1 || ' hours')::interval
+         RETURNING id, order_no`,
+        [hours]
+      );
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'cleanup_expired_orders',
+        targetType: 'order',
+        targetId: 'batch',
+        reason,
+        beforeValue: { expired_count: count },
+        afterValue: { cancelled_orders: up.rows.map(r => r.order_no) },
+      }, client);
+      return up.rows;
+    });
+
+    return res.json({
+      success: true,
+      message: `成功关闭 ${updated.length} 笔超时未支付订单`,
+      cancelledCount: updated.length,
+      orders: updated,
+    });
+  } catch (err: any) {
+    console.error('[Admin Cleanup Expired Orders Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '清理超时订单失败' });
   }
 });
 

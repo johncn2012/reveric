@@ -150,3 +150,43 @@ mediaRouter.delete('/media/:id', requireAuth, async (req: Request, res: Response
     return res.status(500).json({ error: 'server_error', message: err.message || '删除媒体资产失败' });
   }
 });
+
+// 5. 批量删除云端媒体资源
+mediaRouter.post('/media/batch-delete', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === 'admin';
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'invalid_ids', message: '请提供要删除的媒体资产 ID 列表' });
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validIds = ids.filter(id => typeof id === 'string' && uuidRegex.test(id));
+    if (validIds.length === 0) {
+      return res.status(400).json({ error: 'invalid_ids', message: '未包含有效的媒体资产 ID' });
+    }
+
+    let delSql = '';
+    let delParams: any[] = [];
+    if (isAdmin) {
+      delSql = 'DELETE FROM media_assets WHERE id = ANY($1::uuid[]) RETURNING id, storage_key';
+      delParams = [validIds];
+    } else {
+      delSql = 'DELETE FROM media_assets WHERE id = ANY($1::uuid[]) AND user_id = $2 RETURNING id, storage_key';
+      delParams = [validIds, userId];
+    }
+
+    const delRes = await query(delSql, delParams);
+    return res.json({
+      success: true,
+      message: `成功批量删除 ${delRes.rowCount} 个媒体资产`,
+      deletedCount: delRes.rowCount,
+      deletedIds: delRes.rows.map(r => r.id),
+    });
+  } catch (err: any) {
+    console.error('[Media Batch Delete Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '批量删除媒体资产失败' });
+  }
+});

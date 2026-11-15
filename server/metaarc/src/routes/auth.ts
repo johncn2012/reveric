@@ -338,6 +338,12 @@ const loginAccount = async (req: Request, res: Response) => {
       [clientIp, location, user.id]
     );
 
+    // 检查订阅是否已过期，到期自动降级为基础体验版
+    if (user.expires_at && new Date(user.expires_at) < new Date() && user.plan !== 'free') {
+      await query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [user.id]);
+      user.plan = 'free';
+    }
+
     // 若用户未绑定 New-API 账号，尝试延迟补建
     if (!user.new_api_user_id) {
       try {
@@ -394,6 +400,11 @@ const readProfile = async (req: Request, res: Response) => {
     }
 
     const user = userRes.rows[0];
+    // 检查订阅是否已过期，到期自动降级为基础体验版
+    if (user.expires_at && new Date(user.expires_at) < new Date() && user.plan !== 'free') {
+      await query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [user.id]);
+      user.plan = 'free';
+    }
     let quota = parseFloat(user.quota);
 
     // 如果未绑定 New-API 用户，尝试延迟补建

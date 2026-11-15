@@ -2031,6 +2031,28 @@
     loadAdminOrders(1);
   }
 
+  async function cleanupExpiredOrders() {
+    const answer = await ask({
+      title: '清理超时未支付订单',
+      copy: '系统将扫描超过 24 小时未支付的待处理 (pending) 订单，自动将其置为已取消状态，避免占用库存或混淆对账。',
+      confirm: '确认清理',
+      reason: true,
+      collect: function () { return {}; },
+    });
+    if (!answer) return;
+    const res = await request('/api/admin/orders/cleanup-expired', {
+      method: 'POST',
+      body: { timeoutHours: 24, reason: answer.reason },
+    });
+    if (res.ok) {
+      const count = res.data && res.data.cancelledCount !== undefined ? res.data.cancelledCount : 0;
+      showAlert(`已成功关闭 ${count} 笔超时未支付订单`, true);
+      loadAdminOrders(1);
+    } else {
+      showAlert(errorMessage(res, '清理超时订单失败'));
+    }
+  }
+
   async function loadQuotaReview(page) {
     page = page || 1;
     currentQuotaReviewPage = page;
@@ -2158,6 +2180,28 @@
       loadDiagnostics();
     } else {
       showAlert(errorMessage(res, '清理超时任务失败'));
+    }
+  }
+
+  async function checkExpiredSubscriptions() {
+    const answer = await ask({
+      title: '检查并降级到期会员订阅',
+      copy: '系统将扫描所有已超过到期日期的付费会员账号（创作者版/专业版/工作室版），自动回退为基础体验版并记录变更审计。',
+      confirm: '执行扫描与降级',
+      reason: true,
+      collect: function () { return {}; },
+    });
+    if (!answer) return;
+    const res = await request('/api/admin/subscriptions/expire-check', {
+      method: 'POST',
+      body: { reason: answer.reason },
+    });
+    if (res.ok) {
+      const count = res.data && res.data.downgradedCount !== undefined ? res.data.downgradedCount : 0;
+      showAlert(`已成功扫描并回退 ${count} 个到期会员账号`, true);
+      loadDiagnostics();
+    } else {
+      showAlert(errorMessage(res, '订阅过期扫描失败'));
     }
   }
 
@@ -2694,6 +2738,7 @@
   if ($('btn-create-user')) $('btn-create-user').addEventListener('click', createUser);
   if ($('btn-create-plan')) $('btn-create-plan').addEventListener('click', createPlanModal);
   if ($('btn-create-order')) $('btn-create-order').addEventListener('click', createManualOrder);
+  if ($('btn-cleanup-expired-orders')) $('btn-cleanup-expired-orders').addEventListener('click', cleanupExpiredOrders);
   if ($('btn-export-users')) {
     $('btn-export-users').addEventListener('click', function () {
       const params = new URLSearchParams();
@@ -2759,6 +2804,9 @@
   }
   if ($('btn-cleanup-tasks')) {
     $('btn-cleanup-tasks').addEventListener('click', cleanupStalledTasks);
+  }
+  if ($('btn-expire-check')) {
+    $('btn-expire-check').addEventListener('click', checkExpiredSubscriptions);
   }
   if ($('btn-add-blocked-ip')) {
     $('btn-add-blocked-ip').addEventListener('click', function () {

@@ -314,7 +314,10 @@
       <article class="card">
         <div class="row">
           <h2>订单管理</h2>
-          <button class="btn" id="btn-create-order" type="button">手工录单</button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-line" id="btn-cleanup-expired-orders" type="button" style="color:var(--danger, #b42318);">清理超时未支付订单</button>
+            <button class="btn" id="btn-create-order" type="button">手工录单</button>
+          </div>
         </div>
         <p class="fine">线上支付未开通时，支持管理员在此录入线下对账转账订单，或审核确认待付款订单并自动发点。</p>
         <form id="order-search" class="search-row">
@@ -393,7 +396,10 @@
         <div id="blocked-ips-slot"><p class="empty">正在读取拦截规则…</p></div>
       </article>
       <article class="card">
-        <h2>诊断与运行健康</h2>
+        <div class="row">
+          <h2>诊断与运行健康</h2>
+          <button class="btn btn-line" id="btn-expire-check" type="button">检查到期订阅</button>
+        </div>
         <p class="fine">实时服务运行状态探针，监控数据库、内存、外部大模型网关与对象存储。</p>
         <div id="health-slot"><p class="empty">正在读取健康状态…</p></div>
         
