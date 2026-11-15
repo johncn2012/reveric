@@ -44,10 +44,10 @@ export async function reloadBlockedIpsCache(): Promise<void> {
 export function isIpBlocked(ip: string): boolean {
   if (!ip) return false;
   const norm = normalizeIp(ip);
-  if (!blockedIpsCache.has(norm)) {
+  const expiresAt = blockedIpsCache.get(norm);
+  if (expiresAt === undefined) {
     return false;
   }
-  const expiresAt = blockedIpsCache.get(norm);
   if (expiresAt === null) {
     return true; // 永久封禁
   }

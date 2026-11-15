@@ -2274,14 +2274,16 @@ adminRouter.post('/admin/security/block-ip', async (req: Request, res: Response)
       durationHours: hours && hours > 0 ? hours : null,
     });
 
-    await insertAudit({
-      actorId: actorId(req),
-      action: 'block_ip',
-      targetType: 'security',
-      targetId: cleanIp,
-      reason,
-      beforeValue: null,
-      afterValue: { ip: cleanIp, durationHours: hours, expires_at: record.expires_at },
+    await runMutation(async (client) => {
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'block_ip',
+        targetType: 'security',
+        targetId: cleanIp,
+        reason,
+        beforeValue: null,
+        afterValue: { ip: cleanIp, durationHours: hours, expires_at: record.expires_at },
+      }, client);
     });
 
     return res.status(201).json({ success: true, message: `IP [${cleanIp}] 已成功拦截`, data: record });
@@ -2305,14 +2307,16 @@ adminRouter.post('/admin/security/unblock-ip', async (req: Request, res: Respons
 
     await unblockIp(cleanIp);
 
-    await insertAudit({
-      actorId: actorId(req),
-      action: 'unblock_ip',
-      targetType: 'security',
-      targetId: cleanIp,
-      reason,
-      beforeValue: { ip: cleanIp },
-      afterValue: null,
+    await runMutation(async (client) => {
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'unblock_ip',
+        targetType: 'security',
+        targetId: cleanIp,
+        reason,
+        beforeValue: { ip: cleanIp },
+        afterValue: null,
+      }, client);
     });
 
     return res.json({ success: true, message: `IP [${cleanIp}] 已成功解除拦截` });
