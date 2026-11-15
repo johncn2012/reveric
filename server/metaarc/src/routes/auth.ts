@@ -175,8 +175,14 @@ const registerAccount = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'invalid_phone', message: '手机号格式不正确' });
     }
 
-    // 4. 注册邮箱验证码校验 (若开启且填写了邮箱)
-    if (settings.require_email_code && cleanEmail) {
+    // 4. 注册邮箱验证码校验 (若系统开启，强制要求邮箱注册并核验验证码，防止虚假手机号绕过)
+    if (settings.require_email_code) {
+      if (!cleanEmail) {
+        return res.status(400).json({
+          error: 'email_required',
+          message: '系统当前已开启邮箱安全校验，请使用邮箱地址进行注册。',
+        });
+      }
       if (!email_code || typeof email_code !== 'string' || !email_code.trim()) {
         return res.status(400).json({ error: 'missing_email_code', message: '请输入邮箱收到的验证码' });
       }

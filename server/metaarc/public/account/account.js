@@ -237,9 +237,25 @@
     cf_turnstile_enabled: false,
     cf_turnstile_site_key: '',
   };
+  let loginTurnstileWidgetId = null;
+  let registerTurnstileWidgetId = null;
   let loginTurnstileToken = '';
   let registerTurnstileToken = '';
   let emailCodeTimer = null;
+
+  function resetTurnstile(isLogin) {
+    if (isLogin) {
+      loginTurnstileToken = '';
+      if (window.turnstile && loginTurnstileWidgetId !== null) {
+        try { window.turnstile.reset(loginTurnstileWidgetId); } catch (_) {}
+      }
+    } else {
+      registerTurnstileToken = '';
+      if (window.turnstile && registerTurnstileWidgetId !== null) {
+        try { window.turnstile.reset(registerTurnstileWidgetId); } catch (_) {}
+      }
+    }
+  }
 
   async function loadPublicAuthConfig() {
     try {
@@ -275,7 +291,7 @@
     function doRender() {
       if (!window.turnstile) return;
       try {
-        window.turnstile.render('#' + containerId, {
+        const wId = window.turnstile.render('#' + containerId, {
           sitekey: publicAuthConfig.cf_turnstile_site_key,
           theme: 'light',
           callback: function (token) {
@@ -287,6 +303,8 @@
             else registerTurnstileToken = '';
           },
         });
+        if (isLogin) loginTurnstileWidgetId = wId;
+        else registerTurnstileWidgetId = wId;
       } catch (_) {}
     }
 
@@ -372,6 +390,7 @@
     if (!res.ok) {
       btn.disabled = false;
       btn.textContent = '获取验证码';
+      resetTurnstile(false);
       return showAlert(errorMessage(res, '发送验证码失败'));
     }
 
@@ -3305,6 +3324,7 @@
 
     submitAuth('/api/auth/login', body, loginForm.querySelector('button'), function () {
       if (publicAuthConfig.require_login_captcha) refreshLoginCaptcha();
+      resetTurnstile(true);
     });
   });
 
@@ -3317,6 +3337,11 @@
     const password = $('register-password').value;
     const nickname = $('register-nickname').value.trim();
     if (!account || password.length < 6) return showAlert('请输入账号，且密码至少 6 位');
+
+    if (publicAuthConfig.require_email_code && account.indexOf('@') < 0) {
+      return showAlert('系统当前已开启邮箱安全校验，请使用邮箱地址进行注册');
+    }
+
     const body = { password: password };
     if (nickname) body.nickname = nickname;
     if (account.indexOf('@') >= 0) {
@@ -3332,7 +3357,9 @@
     if (publicAuthConfig.cf_turnstile_enabled && publicAuthConfig.cf_turnstile_site_key) {
       body.turnstile_token = registerTurnstileToken;
     }
-    submitAuth('/api/auth/register', body, registerForm.querySelector('button[type="submit"]'));
+    submitAuth('/api/auth/register', body, registerForm.querySelector('button[type="submit"]'), function () {
+      resetTurnstile(false);
+    });
   });
   forgotForm.addEventListener('submit', async function (event) {
     event.preventDefault();

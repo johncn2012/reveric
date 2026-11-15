@@ -12,6 +12,7 @@ interface CaptchaItem {
 
 const captchaStore = new Map<string, CaptchaItem>();
 const CAPTCHA_TTL_MS = 5 * 60 * 1000; // 5 分钟有效
+const MAX_CAPTCHA_STORE_SIZE = 5000; // 最大缓存条目，防内存爆破 DoS 攻击
 
 // 定期清理过期验证码
 setInterval(() => {
@@ -96,6 +97,12 @@ export function generateCaptcha(length = 4): { captchaId: string; svg: string; d
     ${lines.join('')}
     ${charsSvg.join('')}
   </svg>`.trim();
+
+  // 达到最大容量时淘汰最旧条目，防止内存耗尽
+  if (captchaStore.size >= MAX_CAPTCHA_STORE_SIZE) {
+    const oldestKey = captchaStore.keys().next().value;
+    if (oldestKey) captchaStore.delete(oldestKey);
+  }
 
   // 存入内存缓存
   captchaStore.set(captchaId, {

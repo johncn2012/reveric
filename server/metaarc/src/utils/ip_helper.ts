@@ -1,15 +1,27 @@
 import type { Request } from 'express';
 
 export function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    const ips = forwarded.split(',').map((s) => s.trim());
-    if (ips[0]) return ips[0];
+  // 1. Cloudflare 边缘真实用户 IP (防伪造)
+  const cfIp = req.headers['cf-connecting-ip'];
+  if (typeof cfIp === 'string' && cfIp.trim()) {
+    return cfIp.trim();
   }
+
+  // 2. Nginx 反向代理强行覆写的 X-Real-IP ($remote_addr，不可被客户端伪造)
   const realIp = req.headers['x-real-ip'];
   if (typeof realIp === 'string' && realIp.trim()) {
     return realIp.trim();
   }
+
+  // 3. 多级代理 X-Forwarded-For: 取最靠近反向代理的最末端真实 IP ($proxy_add_x_forwarded_for)
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    const ips = forwarded.split(',').map((s) => s.trim()).filter(Boolean);
+    if (ips.length > 0) {
+      return ips[ips.length - 1];
+    }
+  }
+
   const remote = req.socket?.remoteAddress || '';
   if (remote === '::1' || remote === '::ffff:127.0.0.1') return '127.0.0.1';
   return remote.replace(/^::ffff:/, '');
