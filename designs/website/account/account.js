@@ -125,6 +125,16 @@
     const i = Math.floor(Math.log(b) / Math.log(k));
     return (b / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
   }
+  function simplifyUserAgent(ua) {
+    if (!ua || typeof ua !== 'string') return '—';
+    if (ua.indexOf('MetaArc') !== -1 || ua.indexOf('Reveric') !== -1) return 'MetaArc 官方客户端';
+    if (ua.indexOf('Windows') !== -1) return 'Windows 设备';
+    if (ua.indexOf('Macintosh') !== -1 || ua.indexOf('Mac OS') !== -1) return 'macOS 设备';
+    if (ua.indexOf('Android') !== -1) return 'Android 移动端';
+    if (ua.indexOf('iPhone') !== -1 || ua.indexOf('iPad') !== -1) return 'iOS 移动端';
+    if (ua.indexOf('Linux') !== -1) return 'Linux 设备';
+    return ua.slice(0, 30);
+  }
   function renderPagination(containerId, pagination, onPageChange) {
     const container = $(containerId);
     if (!container) return;
@@ -1036,9 +1046,21 @@
     else if (!rows.length) fill('login-logs-slot', empty('还没有登录记录。'));
     else fill('login-logs-slot', table([
       { label: '时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
-      { label: '结果', fill: function (td, row) { td.textContent = row.status === 'success' ? '成功' : '失败'; } },
-      { label: 'IP', fill: function (td, row) { td.textContent = row.ip || '—'; } },
-      { label: '位置', fill: function (td, row) { td.textContent = row.ip_location || '—'; } },
+      { label: '状态', fill: function (td, row) {
+        td.innerHTML = row.status === 'success'
+          ? '<span class="badge badge-success">登录成功</span>'
+          : '<span class="badge badge-danger">验证失败</span>';
+      } },
+      { label: 'IP 归属地', fill: function (td, row) { td.textContent = [row.ip, row.ip_location].filter(Boolean).join(' · ') || '—'; } },
+      { label: '设备/说明', fill: function (td, row) {
+        if (row.status !== 'success' && row.fail_reason) {
+          td.textContent = row.fail_reason;
+        } else if (row.user_agent) {
+          td.textContent = simplifyUserAgent(row.user_agent);
+        } else {
+          td.textContent = '—';
+        }
+      } },
     ], rows));
     renderKey();
   }
