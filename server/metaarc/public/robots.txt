@@ -2,6 +2,7 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /v1/
 Disallow: /account/api/
 
 # Major Search Engine Spiders explicitly allowed

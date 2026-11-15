@@ -72,7 +72,7 @@ async function authenticateApiKey(authHeader?: string): Promise<{ ok: boolean; u
   }
 
   const user = res.rows[0];
-  if (user.status === 'banned') {
+  if (user.status === 'suspended' || user.status === 'banned') {
     return { ok: false, error: '该 MetaArc 账号已被封禁，禁止调用 AI 算力接口', code: 'account_banned', status: 403 };
   }
 
