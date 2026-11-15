@@ -828,6 +828,19 @@
           img.loading = 'lazy';
           img.style.cursor = 'pointer';
           img.title = '点击查看大图与详情';
+          img.onerror = function () {
+            img.style.display = 'none';
+            if (!td.querySelector('.thumb-fallback')) {
+              const fallback = document.createElement('span');
+              fallback.className = 'thumb-fallback';
+              fallback.textContent = '🖼️';
+              fallback.style.fontSize = '20px';
+              fallback.style.cursor = 'pointer';
+              fallback.title = '点击查看详情';
+              fallback.addEventListener('click', function () { showMediaDetail(row, admin, onReload); });
+              td.append(fallback);
+            }
+          };
           img.addEventListener('click', function () { showMediaDetail(row, admin, onReload); });
           td.append(img);
         } else {
