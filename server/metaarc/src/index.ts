@@ -12,6 +12,7 @@ import { ordersRouter } from './routes/orders.js';
 import { mediaRouter } from './routes/media.js';
 import { tasksRouter } from './routes/tasks.js';
 import { adminRouter } from './routes/admin.js';
+import { gatewayRouter } from './routes/gateway.js';
 import { createUpdatesRouter, mountDownloads, updateServiceOptionsFromEnv } from './routes/updates.js';
 import { initIpBlocker, isIpBlocked } from './services/ip_blocker.js';
 import { getClientIp } from './utils/ip_helper.js';
@@ -115,6 +116,7 @@ export function createApp() {
   app.use('/api', mediaRouter);
   app.use('/api', tasksRouter);
   app.use('/api', adminRouter);
+  app.use('/v1', gatewayRouter);
 
   // 全局未捕获异常处理中间件
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
