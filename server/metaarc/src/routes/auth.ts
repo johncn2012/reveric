@@ -4,10 +4,10 @@ import crypto from 'crypto';
 import { query } from '../db.js';
 import { signJwt, requireAuth } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
-import { getClientIp, resolveIpLocation } from '../utils/ip_helper.js';
+import { getClientIp, resolveIpLocation, getIpSubnetPrefix } from '../utils/ip_helper.js';
 import { getSystemSecuritySettings, getPublicAuthConfig } from '../services/system_settings_service.js';
 import { generateCaptcha, verifyCaptcha } from '../services/captcha_service.js';
-import { sendRegisterEmailCode, verifyEmailCode } from '../services/email_service.js';
+import { sendRegisterEmailCode, sendResetPasswordEmailCode, verifyEmailCode } from '../services/email_service.js';
 import { verifyTurnstileToken } from '../services/turnstile_service.js';
 
 async function recordLoginLog(params: {
@@ -186,9 +186,9 @@ const registerAccount = async (req: Request, res: Response) => {
       if (!email_code || typeof email_code !== 'string' || !email_code.trim()) {
         return res.status(400).json({ error: 'missing_email_code', message: '请输入邮箱收到的验证码' });
       }
-      const verified = await verifyEmailCode(cleanEmail, email_code.trim());
-      if (!verified) {
-        return res.status(400).json({ error: 'invalid_email_code', message: '邮箱验证码错误或已失效，请重新获取' });
+      const verifyRes = await verifyEmailCode(cleanEmail, email_code.trim(), 'register');
+      if (!verifyRes.success) {
+        return res.status(400).json({ error: 'invalid_email_code', message: verifyRes.message || '邮箱验证码错误或已失效，请重新获取' });
       }
     }
 
@@ -203,10 +203,11 @@ const registerAccount = async (req: Request, res: Response) => {
     const passwordHash = await bcrypt.hash(password, salt);
     const initialQuota = 500; // 注册默认赠送 500 点算力
 
-    // 插入本地用户，显式记录 reg_ip, reg_location
+    // 插入本地用户，显式记录 reg_ip, reg_location, reg_ip_prefix
+    const ipPrefix = getIpSubnetPrefix(clientIp);
     const insertSql = `
-      INSERT INTO users (email, phone, password_hash, nickname, plan, quota, total_quota, role, last_login_ip, last_login_location, last_login_at, reg_ip, reg_location)
-      VALUES ($1, $2, $3, $4, 'free', $5, $5, 'user', $6, $7, NOW(), $6, $7)
+      INSERT INTO users (email, phone, password_hash, nickname, plan, quota, total_quota, role, last_login_ip, last_login_location, last_login_at, reg_ip, reg_location, reg_ip_prefix)
+      VALUES ($1, $2, $3, $4, 'free', $5, $5, 'user', $6, $7, NOW(), $6, $7, $8)
       RETURNING id, email, phone, nickname, plan, quota, total_quota, role, created_at
     `;
     const userRes = await query(insertSql, [
@@ -217,6 +218,7 @@ const registerAccount = async (req: Request, res: Response) => {
       initialQuota,
       clientIp,
       location,
+      ipPrefix,
     ]);
     const newUser = userRes.rows[0];
 
@@ -418,9 +420,18 @@ const loginAccount = async (req: Request, res: Response) => {
       status: 'success',
     });
 
+    const ipPrefix = getIpSubnetPrefix(clientIp);
     await query(
-      'UPDATE users SET last_login_at = NOW(), last_login_ip = $1, last_login_location = $2, updated_at = NOW() WHERE id = $3',
-      [clientIp, location, user.id]
+      `UPDATE users 
+       SET last_login_at = NOW(), 
+           last_login_ip = $1, 
+           last_login_location = $2, 
+           reg_ip = COALESCE(reg_ip, $1), 
+           reg_location = COALESCE(reg_location, $2), 
+           reg_ip_prefix = COALESCE(reg_ip_prefix, $3), 
+           updated_at = NOW() 
+       WHERE id = $4`,
+      [clientIp, location, ipPrefix, user.id]
     );
 
     // 检查订阅是否已过期，到期自动降级为基础体验版
@@ -765,28 +776,116 @@ const sendEmailCode = async (req: Request, res: Response) => {
   }
 };
 
+// 6. 发送找回密码邮件验证码
+const sendForgotPasswordCode = async (req: Request, res: Response) => {
+  try {
+    const { email, turnstile_token } = req.body;
+    const cleanEmail = typeof email === 'string' ? email.trim() : '';
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'invalid_email', message: '请输入有效的注册邮箱地址' });
+    }
+
+    const settings = await getSystemSecuritySettings();
+    const clientIp = getClientIp(req);
+
+    if (settings.cf_turnstile_enabled && settings.cf_turnstile_site_key) {
+      const token = turnstile_token || req.body['cf-turnstile-response'];
+      const passed = await verifyTurnstileToken(token, clientIp);
+      if (!passed) {
+        return res.status(400).json({ error: 'invalid_turnstile', message: '人机交互安全校验未通过，请完成验证后再发送' });
+      }
+    }
+
+    const userCheck = await query('SELECT id, status FROM users WHERE email = $1 LIMIT 1', [cleanEmail]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '未找到该邮箱对应的账号，请核对后重试' });
+    }
+    if (userCheck.rows[0].status === 'suspended') {
+      return res.status(403).json({ error: 'account_suspended', message: '该账号已被系统封禁，无法自助找回密码，请联系管理员' });
+    }
+
+    const sendRes = await sendResetPasswordEmailCode(cleanEmail, clientIp);
+    if (!sendRes.success) {
+      return res.status(429).json({ error: 'send_failed', message: sendRes.message, cooldownSeconds: sendRes.cooldownSeconds });
+    }
+
+    return res.json({ success: true, message: '重置验证码已发送至您的邮箱，请注意查收' });
+  } catch (err: any) {
+    console.error('[Send Forgot Password Code Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '发送重置验证码失败，请稍后重试' });
+  }
+};
+
+// 7. 凭邮箱验证码自助重置密码
+const resetPasswordWithCode = async (req: Request, res: Response) => {
+  try {
+    const { email, code, email_code, new_password, turnstile_token } = req.body;
+    const cleanEmail = typeof email === 'string' ? email.trim() : '';
+    const cleanCode = typeof (code || email_code) === 'string' ? String(code || email_code).trim() : '';
+    const cleanPassword = typeof new_password === 'string' ? new_password : '';
+
+    if (!cleanEmail || !cleanCode || !cleanPassword) {
+      return res.status(400).json({ error: 'missing_fields', message: '请完整填写邮箱、验证码与新密码' });
+    }
+    if (cleanPassword.length < 8) {
+      return res.status(400).json({ error: 'invalid_password', message: '新密码长度至少为 8 位' });
+    }
+
+    const settings = await getSystemSecuritySettings();
+    const clientIp = getClientIp(req);
+
+    if (settings.cf_turnstile_enabled && settings.cf_turnstile_site_key) {
+      const token = turnstile_token || req.body['cf-turnstile-response'];
+      const passed = await verifyTurnstileToken(token, clientIp);
+      if (!passed) {
+        return res.status(400).json({ error: 'invalid_turnstile', message: '人机交互安全校验未通过，请完成验证后再提交' });
+      }
+    }
+
+    const verifyRes = await verifyEmailCode(cleanEmail, cleanCode, 'reset_password');
+    if (!verifyRes.success) {
+      return res.status(400).json({ error: 'invalid_code', message: verifyRes.message || '重置验证码错误或已失效' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(cleanPassword, salt);
+    const updateRes = await query(
+      `UPDATE users 
+       SET password_hash = $1, session_version = session_version + 1, updated_at = NOW()
+       WHERE email = $2
+       RETURNING id`,
+      [passwordHash, cleanEmail]
+    );
+
+    if (updateRes.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found', message: '用户不存在' });
+    }
+
+    await recordLoginLog({
+      userId: updateRes.rows[0].id,
+      account: cleanEmail,
+      ip: clientIp,
+      location: resolveIpLocation(clientIp, req.headers),
+      userAgent: (req.headers['user-agent'] || '').slice(0, 255),
+      status: 'success',
+      failReason: 'password_reset_with_email_code',
+    });
+
+    return res.json({ success: true, message: '密码已成功重置，请使用新密码重新登录' });
+  } catch (err: any) {
+    console.error('[Reset Password Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '重置密码失败，请稍后重试' });
+  }
+};
+
 mount('get', ['/auth/config', '/config'], getAuthConfig);
 mount('get', ['/auth/captcha', '/captcha'], getAuthCaptcha);
 mount('post', ['/auth/send-email-code', '/send-email-code'], sendEmailCode);
+mount('post', ['/auth/forgot-password/send-code', '/forgot-password/send-code'], sendForgotPasswordCode);
+mount('post', ['/auth/forgot-password/reset', '/forgot-password/reset'], resetPasswordWithCode);
+mount('post', ['/auth/forgot-password', '/forgot-password'], sendForgotPasswordCode);
 mount('post', ['/auth/register', '/register'], registerAccount);
 mount('post', ['/auth/login', '/login'], loginAccount);
-for (const path of ['/auth/profile', '/auth/user/profile', '/user/profile']) {
-  authRouter.get(path, requireAuth, (req, res) => {
-    void readProfile(req, res);
-  });
-}
-authRouter.post('/auth/update-profile', requireAuth, (req, res) => {
-  void updateProfile(req, res);
-});
-authRouter.post('/auth/change-password', requireAuth, (req, res) => {
-  void changePassword(req, res);
-});
-authRouter.post('/auth/forgot-password', (_req, res) => {
-  res.status(501).json({
-    error: 'reset_unavailable',
-    message: '找回密码尚未开通。请写信到 contact@metaarc.com.cn。本次没有发送重置邮件。',
-  });
-});
 authRouter.post('/auth/logout-others', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.userId;

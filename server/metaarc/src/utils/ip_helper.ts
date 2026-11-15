@@ -39,3 +39,33 @@ export function resolveIpLocation(ip: string, headers: Record<string, any> = {})
   }
   return '中国大陆电信/移动节点';
 }
+
+/**
+ * 获取 IP 聚合前缀 (IPv4 保持原样，IPv6 聚合为 /64 子网前缀，防轮换后缀绕过多开)
+ */
+export function getIpSubnetPrefix(ip: string): string {
+  if (!ip) return '';
+  let clean = ip.trim().toLowerCase();
+  if (clean === '::1' || clean === '::ffff:127.0.0.1' || clean === '127.0.0.1') {
+    return '127.0.0.1';
+  }
+  if (clean.startsWith('::ffff:')) {
+    clean = clean.slice(7);
+  }
+  // IPv4 直接返回
+  if (clean.includes('.') && !clean.includes(':')) {
+    return clean;
+  }
+  // IPv6: 展开并提取前 4 组 16-bit hextets (/64 网段)
+  if (clean.includes(':')) {
+    const parts = clean.split('::');
+    const left = parts[0] ? parts[0].split(':').filter(Boolean) : [];
+    const right = parts[1] ? parts[1].split(':').filter(Boolean) : [];
+    const missing = 8 - (left.length + right.length);
+    const full = [...left, ...Array(Math.max(0, missing)).fill('0'), ...right];
+    while (full.length < 8) full.push('0');
+    const prefix = full.slice(0, 4).map((h) => h.replace(/^0+/, '') || '0').join(':');
+    return `${prefix}::/64`;
+  }
+  return clean;
+}

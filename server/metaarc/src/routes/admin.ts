@@ -8,6 +8,7 @@ import { requireAdmin } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
 import { cleanReason, insertAudit, runMutation } from '../services/admin_audit.js';
 import { blockIp, unblockIp, listBlockedIps, normalizeIp } from '../services/ip_blocker.js';
+import { getIpSubnetPrefix } from '../utils/ip_helper.js';
 import { getSystemSecuritySettings, updateSystemSecuritySettings } from '../services/system_settings_service.js';
 
 export const adminRouter = Router();
@@ -2977,19 +2978,19 @@ adminRouter.post('/admin/settings', async (req: Request, res: Response) => {
   }
 });
 
-// 31. 同 IP 注册情况与风险分析
+// 31. 同 IP 注册情况与风险分析 (支持 IPv6 /64 子网聚合识别)
 adminRouter.get('/admin/security/ip-registration-stats', async (req: Request, res: Response) => {
   try {
     const { keyword } = req.query;
     const minCount = Math.max(1, parseInt(req.query.minCount as string, 10) || 1);
     const limit = Math.max(1, Math.min(200, parseInt(req.query.limit as string, 10) || 100));
 
-    let whereClause = `WHERE COALESCE(u.reg_ip, u.last_login_ip) IS NOT NULL AND COALESCE(u.reg_ip, u.last_login_ip) != ''`;
+    let whereClause = `WHERE COALESCE(u.reg_ip_prefix, u.reg_ip, u.last_login_ip) IS NOT NULL AND COALESCE(u.reg_ip_prefix, u.reg_ip, u.last_login_ip) != ''`;
     const params: any[] = [minCount];
 
     if (keyword && typeof keyword === 'string' && keyword.trim()) {
       params.push(`%${keyword.trim()}%`);
-      whereClause += ` AND (COALESCE(u.reg_ip, u.last_login_ip) ILIKE $${params.length} OR COALESCE(u.reg_location, u.last_login_location) ILIKE $${params.length})`;
+      whereClause += ` AND (COALESCE(u.reg_ip_prefix, u.reg_ip, u.last_login_ip) ILIKE $${params.length} OR COALESCE(u.reg_location, u.last_login_location) ILIKE $${params.length})`;
     }
 
     params.push(limit);
@@ -2997,7 +2998,7 @@ adminRouter.get('/admin/security/ip-registration-stats', async (req: Request, re
     const sql = `
       WITH ip_clusters AS (
         SELECT 
-          COALESCE(u.reg_ip, u.last_login_ip) as ip,
+          COALESCE(u.reg_ip_prefix, u.reg_ip, u.last_login_ip) as ip,
           COALESCE(MAX(u.reg_location), MAX(u.last_login_location), '未知') as location,
           COUNT(*)::int as user_count,
           COUNT(*) FILTER (WHERE u.created_at >= NOW() - INTERVAL '24 hours')::int as today_reg_count,
@@ -3014,7 +3015,7 @@ adminRouter.get('/admin/security/ip-registration-stats', async (req: Request, re
           ) ORDER BY u.created_at DESC) as users
         FROM users u
         ${whereClause}
-        GROUP BY COALESCE(u.reg_ip, u.last_login_ip)
+        GROUP BY COALESCE(u.reg_ip_prefix, u.reg_ip, u.last_login_ip)
         HAVING COUNT(*) >= $1
       )
       SELECT 
@@ -3037,5 +3038,90 @@ adminRouter.get('/admin/security/ip-registration-stats', async (req: Request, re
   } catch (err: any) {
     console.error('[Admin IP Reg Stats Error]', err);
     return res.status(500).json({ error: 'server_error', message: '无法获取同IP注册分析数据' });
+  }
+});
+
+// 32. 级联封禁 IP 并强制冻结名下全部关联账号
+adminRouter.post('/admin/security/block-ip-and-cascade', async (req: Request, res: Response) => {
+  try {
+    const { ip, durationHours, reason } = req.body;
+    const cleanIp = typeof ip === 'string' ? normalizeIp(ip) : '';
+    if (!cleanIp || cleanIp === '127.0.0.1' || cleanIp.toLowerCase() === 'localhost') {
+      return res.status(400).json({ error: 'invalid_ip', message: 'IP 地址无效或不可封禁本地回环地址' });
+    }
+
+    const cleanRes = cleanReason(reason);
+    if (!cleanRes) return reasonRequired(res);
+
+    const hours = durationHours !== undefined && durationHours !== null ? Math.max(0, parseFloat(durationHours) || 0) : null;
+    const subnetPrefix = getIpSubnetPrefix(cleanIp);
+
+    // 1. 拦截 IP 规则（若为 IPv6 则同步写入 /64 子网拦截规则）
+    const record = await blockIp({
+      ip: cleanIp,
+      reason: cleanRes,
+      blockedBy: actorId(req),
+      durationHours: hours && hours > 0 ? hours : null,
+    });
+
+    if (subnetPrefix && subnetPrefix !== cleanIp) {
+      await blockIp({
+        ip: subnetPrefix,
+        reason: `${cleanRes} (IPv6 /64 子网聚合)`,
+        blockedBy: actorId(req),
+        durationHours: hours && hours > 0 ? hours : null,
+      });
+    }
+
+    // 2. 级联冻结名下非管理员账号并使会话失效
+    const targets = [cleanIp];
+    if (subnetPrefix && subnetPrefix !== cleanIp) {
+      targets.push(subnetPrefix);
+    }
+
+    const suspendedUsers = await runMutation(async (client) => {
+      const updateRes = await client.query(
+        `UPDATE users 
+         SET status = 'suspended', session_version = session_version + 1, updated_at = NOW()
+         WHERE (reg_ip = ANY($1) OR last_login_ip = ANY($1) OR reg_ip_prefix = ANY($1))
+           AND role != 'admin'
+           AND status != 'suspended'
+         RETURNING id, email, nickname, role, status`,
+        [targets]
+      );
+
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'block_ip_and_cascade_suspend',
+        targetType: 'security',
+        targetId: cleanIp,
+        reason: cleanRes,
+        beforeValue: null,
+        afterValue: {
+          ip: cleanIp,
+          subnet: subnetPrefix,
+          durationHours: hours,
+          expires_at: record.expires_at,
+          suspendedUsers: updateRes.rows,
+          suspendedCount: updateRes.rows.length,
+        },
+      }, client);
+
+      return updateRes.rows;
+    });
+
+    return res.json({
+      success: true,
+      message: `已成功拦截 IP [${cleanIp}]，并级联冻结名下 ${suspendedUsers.length} 个违规创作者账号`,
+      data: {
+        ip: cleanIp,
+        subnet: subnetPrefix,
+        suspendedCount: suspendedUsers.length,
+        suspendedUsers,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Admin Block IP and Cascade Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '级联处置失败，请稍后重试' });
   }
 });

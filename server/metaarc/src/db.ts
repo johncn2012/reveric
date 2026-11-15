@@ -1,5 +1,6 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { getIpSubnetPrefix } from './utils/ip_helper.js';
 
 dotenv.config();
 
@@ -116,6 +117,11 @@ export async function initDbSchema(): Promise<void> {
       )`,
       `CREATE INDEX IF NOT EXISTS idx_email_verif_lookup ON email_verifications(email, code, expires_at)`,
       `CREATE INDEX IF NOT EXISTS idx_email_verif_ip ON email_verifications(ip, created_at DESC)`,
+      `ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS fail_attempts INT NOT NULL DEFAULT 0`,
+      `ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS type VARCHAR(32) NOT NULL DEFAULT 'register'`,
+      `CREATE INDEX IF NOT EXISTS idx_email_verif_email_type ON email_verifications(email, type, expires_at)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_ip_prefix VARCHAR(64)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_reg_ip_prefix ON users(reg_ip_prefix)`,
     ];
     const failures: unknown[] = [];
     for (const statement of statements) {
@@ -125,6 +131,22 @@ export async function initDbSchema(): Promise<void> {
         failures.push(err);
         console.warn('[DB Schema Init]', err);
       }
+    }
+
+    // 自动补齐已有用户的 reg_ip_prefix (支持 IPv6 /64 子网聚合)
+    try {
+      const unbackfilled = await client.query<{ id: string; reg_ip: string | null; last_login_ip: string | null }>(
+        `SELECT id, reg_ip, last_login_ip FROM users WHERE reg_ip_prefix IS NULL AND (reg_ip IS NOT NULL OR last_login_ip IS NOT NULL)`
+      );
+      for (const u of unbackfilled.rows) {
+        const ip = u.reg_ip || u.last_login_ip || '';
+        const prefix = getIpSubnetPrefix(ip);
+        if (prefix) {
+          await client.query(`UPDATE users SET reg_ip_prefix = $1 WHERE id = $2`, [prefix, u.id]);
+        }
+      }
+    } catch (e) {
+      console.warn('[DB Schema Init] reg_ip_prefix backfill error:', e);
     }
     if (process.env.NODE_ENV === 'test' && failures.length > 0) {
       throw failures[0];

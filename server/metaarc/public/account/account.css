@@ -556,6 +556,58 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
   transform: translateX(20px);
 }
 
+/* IP 筛选活动状态胶囊栏 */
+.active-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 14px;
+  padding: 6px 12px;
+  background: var(--bg-hover, rgba(14, 165, 233, 0.08));
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.active-filter-bar .filter-label {
+  color: var(--muted, #64748b);
+  font-size: 12px;
+}
+.pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0284c7;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.pill-clear {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: bold;
+  opacity: 0.85;
+}
+.pill-clear:hover {
+  opacity: 1;
+}
+
+/* 级联处置按钮 */
+.btn-cascade {
+  color: #b42318 !important;
+  border-color: rgba(220, 38, 38, 0.3) !important;
+  background: rgba(220, 38, 38, 0.04) !important;
+}
+.btn-cascade:hover {
+  background: rgba(220, 38, 38, 0.12) !important;
+}
+
 @media (max-width: 860px) {
   .gate-bar, .gate-layout { width: min(1240px, calc(100% - 32px)); }
   .gate-layout { grid-template-columns: 1fr; gap: 20px; padding-top: 8px; }

@@ -112,7 +112,21 @@
       <button class="text" id="register-back" type="button">返回登录</button>
     </form>
     <form id="forgot-form" hidden>
-      <p class="forgot-copy">如需重置密码，请发送账号信息至官方支持邮箱 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>，我们将在核验身份后为您协助处理。</p>
+      <div id="forgot-fields">
+        <label for="forgot-email">注册邮箱</label>
+        <input id="forgot-email" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+        <div class="email-code-row">
+          <label for="forgot-email-code">邮箱验证码</label>
+          <div class="code-input-group">
+            <input id="forgot-email-code" name="email_code" type="text" autocomplete="one-time-code" placeholder="6位数字验证码" maxlength="6" required>
+            <button class="btn btn-line" id="btn-forgot-send-code" type="button">获取验证码</button>
+          </div>
+        </div>
+        <label for="forgot-password">新密码（至少 8 位）</label>
+        <input id="forgot-password" name="new_password" type="password" autocomplete="new-password" minlength="8" placeholder="包含字母与数字" required>
+        <div id="forgot-turnstile-container" class="turnstile-container" hidden></div>
+        <button class="btn" id="btn-forgot-submit" type="submit">重置密码并直接登录</button>
+      </div>
       <button class="text" id="forgot-back" type="button">返回登录</button>
     </form>
     <div class="gate-links" id="login-links">
@@ -319,6 +333,14 @@
           <button class="btn" id="btn-create-user" type="button">新建账号</button>
         </div>
         <div id="users-batch-bar" class="batch-bar" hidden></div>
+        <div id="user-active-filter-bar" class="active-filter-bar" hidden>
+          <span class="filter-label">当前筛选：</span>
+          <span class="pill-tag" id="user-filter-pill-ip">
+            <span class="pill-icon">🌐</span>
+            <span id="user-filter-pill-text">IP 筛选</span>
+            <button type="button" class="pill-clear" id="btn-clear-user-ip-filter" title="清除此 IP 筛选">✕</button>
+          </span>
+        </div>
         <form id="user-search" class="search-row">
           <input id="user-keyword" type="search" placeholder="邮箱、手机或昵称" autocomplete="off">
           <input id="user-start-date" type="date" title="注册起始日期">

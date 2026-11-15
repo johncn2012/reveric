@@ -239,20 +239,28 @@
   };
   let loginTurnstileWidgetId = null;
   let registerTurnstileWidgetId = null;
+  let forgotTurnstileWidgetId = null;
   let loginTurnstileToken = '';
   let registerTurnstileToken = '';
+  let forgotTurnstileToken = '';
   let emailCodeTimer = null;
+  let forgotEmailCodeTimer = null;
 
-  function resetTurnstile(isLogin) {
-    if (isLogin) {
+  function resetTurnstile(target) {
+    if (target === true || target === 'login') {
       loginTurnstileToken = '';
       if (window.turnstile && loginTurnstileWidgetId !== null) {
         try { window.turnstile.reset(loginTurnstileWidgetId); } catch (_) {}
       }
-    } else {
+    } else if (target === false || target === 'register') {
       registerTurnstileToken = '';
       if (window.turnstile && registerTurnstileWidgetId !== null) {
         try { window.turnstile.reset(registerTurnstileWidgetId); } catch (_) {}
+      }
+    } else if (target === 'forgot') {
+      forgotTurnstileToken = '';
+      if (window.turnstile && forgotTurnstileWidgetId !== null) {
+        try { window.turnstile.reset(forgotTurnstileWidgetId); } catch (_) {}
       }
     }
   }
@@ -278,7 +286,7 @@
     } catch (_) {}
   }
 
-  function renderTurnstileWidget(containerId, isLogin) {
+  function renderTurnstileWidget(containerId, target) {
     if (!publicAuthConfig.cf_turnstile_enabled || !publicAuthConfig.cf_turnstile_site_key) {
       const el = $(containerId);
       if (el) el.hidden = true;
@@ -295,16 +303,19 @@
           sitekey: publicAuthConfig.cf_turnstile_site_key,
           theme: 'light',
           callback: function (token) {
-            if (isLogin) loginTurnstileToken = token;
-            else registerTurnstileToken = token;
+            if (target === true || target === 'login') loginTurnstileToken = token;
+            else if (target === false || target === 'register') registerTurnstileToken = token;
+            else if (target === 'forgot') forgotTurnstileToken = token;
           },
           'expired-callback': function () {
-            if (isLogin) loginTurnstileToken = '';
-            else registerTurnstileToken = '';
+            if (target === true || target === 'login') loginTurnstileToken = '';
+            else if (target === false || target === 'register') registerTurnstileToken = '';
+            else if (target === 'forgot') forgotTurnstileToken = '';
           },
         });
-        if (isLogin) loginTurnstileWidgetId = wId;
-        else registerTurnstileWidgetId = wId;
+        if (target === true || target === 'login') loginTurnstileWidgetId = wId;
+        else if (target === false || target === 'register') registerTurnstileWidgetId = wId;
+        else if (target === 'forgot') forgotTurnstileWidgetId = wId;
       } catch (_) {}
     }
 
@@ -359,9 +370,11 @@
 
     // 4. Cloudflare Turnstile 人机验证
     if (mode === 'login') {
-      renderTurnstileWidget('login-turnstile-container', true);
+      renderTurnstileWidget('login-turnstile-container', 'login');
     } else if (mode === 'register') {
-      renderTurnstileWidget('register-turnstile-container', false);
+      renderTurnstileWidget('register-turnstile-container', 'register');
+    } else if (mode === 'forgot') {
+      renderTurnstileWidget('forgot-turnstile-container', 'forgot');
     }
   }
 
@@ -412,6 +425,61 @@
     }, 1000);
   }
 
+  async function handleSendForgotEmailCode() {
+    const emailInput = $('forgot-email');
+    const sendBtn = $('btn-forgot-send-code');
+    if (!emailInput || !sendBtn) return;
+    const email = emailInput.value.trim();
+    if (!email || email.indexOf('@') === -1) {
+      showAlert('请输入有效的注册邮箱地址');
+      return;
+    }
+
+    if (publicAuthConfig.cf_turnstile_enabled && publicAuthConfig.cf_turnstile_site_key && !forgotTurnstileToken) {
+      showAlert('请先完成人机交互安全验证');
+      return;
+    }
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = '正在发送…';
+
+    const body = { email: email };
+    if (publicAuthConfig.cf_turnstile_enabled && publicAuthConfig.cf_turnstile_site_key) {
+      body.turnstile_token = forgotTurnstileToken;
+    }
+
+    const res = await request('/api/auth/forgot-password/send-code', {
+      method: 'POST',
+      body: body,
+    });
+
+    if (!res.ok) {
+      sendBtn.disabled = false;
+      sendBtn.textContent = '获取验证码';
+      resetTurnstile('forgot');
+      showAlert((res.data && res.data.message) || '验证码发送失败，请核对邮箱后重试');
+      return;
+    }
+
+    showAlert('重置验证码已发送至您的邮箱，请注意查收（10分钟内有效）');
+
+    let countdown = 60;
+    sendBtn.disabled = true;
+    sendBtn.textContent = countdown + 's 后重发';
+    if (forgotEmailCodeTimer) clearInterval(forgotEmailCodeTimer);
+    forgotEmailCodeTimer = setInterval(function () {
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(forgotEmailCodeTimer);
+        forgotEmailCodeTimer = null;
+        sendBtn.disabled = false;
+        sendBtn.textContent = '重新获取';
+      } else {
+        sendBtn.textContent = countdown + 's 后重发';
+      }
+    }, 1000);
+  }
+
   function showGate(mode) {
     gate.hidden = false;
     consoleEl.hidden = true;
@@ -421,7 +489,7 @@
     registerForm.hidden = mode !== 'register';
     forgotForm.hidden = mode !== 'forgot';
     loginLinks.hidden = mode !== 'login';
-    gateTitle.textContent = mode === 'register' ? '注册账号' : '进入创作台';
+    gateTitle.textContent = mode === 'register' ? '注册账号' : (mode === 'forgot' ? '重置密码' : '进入创作台');
     initGateSecurity(mode);
   }
   function showApp() {
@@ -1575,6 +1643,17 @@
     if (endDate) params.set('endDate', endDate);
     params.set('page', String(page));
     params.set('pageSize', '20');
+
+    const filterBar = $('user-active-filter-bar');
+    const pillText = $('user-filter-pill-text');
+    if (filterBar && pillText) {
+      if (keyword && (keyword.indexOf('.') !== -1 || keyword.indexOf(':') !== -1 || keyword.indexOf('/') !== -1)) {
+        pillText.textContent = 'IP: ' + keyword;
+        filterBar.hidden = false;
+      } else {
+        filterBar.hidden = true;
+      }
+    }
 
     const result = await request('/api/admin/users?' + params.toString());
     const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
@@ -3207,6 +3286,39 @@
             wrap.append(btnBlock);
           }
 
+          const btnCascade = document.createElement('button');
+          btnCascade.type = 'button';
+          btnCascade.className = 'btn-line btn-cascade';
+          btnCascade.style.padding = '2px 8px';
+          btnCascade.style.fontSize = '12px';
+          btnCascade.textContent = '一键封禁并冻结账号';
+          btnCascade.title = '封禁此 IP 并将名下全部关联创作者账号级联置为冻结状态';
+          btnCascade.addEventListener('click', async function () {
+            const ok = await ask({
+              title: '级联处置: 拦截 IP 并冻结关联账号',
+              copy: '即将拦截 IP [' + row.ip + ']，并强制冻结该 IP 名下全部 ' + row.user_count + ' 个关联创作者账号（立即吊销全部登录会话）。确定执行级联处置吗？',
+              confirm: '确认拦截并冻结全部账号',
+              modalClass: 'modal-danger',
+              reason: true,
+            });
+            if (!ok) return;
+            const res = await request('/api/admin/security/block-ip-and-cascade', {
+              method: 'POST',
+              body: {
+                ip: row.ip,
+                reason: ok.reason || '同 IP 关联多账号群注违规级联处置',
+                durationHours: 0,
+              },
+            });
+            if (res.ok) {
+              showAlert((res.data && res.data.message) || ('已成功拦截 IP [' + row.ip + '] 并级联冻结关联账号'));
+              await loadIpRegistrationStats();
+            } else {
+              showAlert((res.data && res.data.message) || '级联处置执行失败');
+            }
+          });
+          wrap.append(btnCascade);
+
           td.append(wrap);
         }
       }
@@ -3361,11 +3473,64 @@
       resetTurnstile(false);
     });
   });
+  if ($('btn-forgot-send-code')) {
+    $('btn-forgot-send-code').addEventListener('click', handleSendForgotEmailCode);
+  }
+
   forgotForm.addEventListener('submit', async function (event) {
     event.preventDefault();
-    const result = await request('/api/auth/forgot-password', { method: 'POST', body: {} });
-    showAlert(errorMessage(result, '找回密码尚未开通'));
+    const email = $('forgot-email') ? $('forgot-email').value.trim() : '';
+    const code = $('forgot-email-code') ? $('forgot-email-code').value.trim() : '';
+    const newPassword = $('forgot-password') ? $('forgot-password').value : '';
+
+    if (!email || !code || !newPassword) {
+      return showAlert('请完整填写邮箱、验证码与新密码');
+    }
+    if (newPassword.length < 8) {
+      return showAlert('新密码长度至少需要 8 位');
+    }
+
+    const body = {
+      email: email,
+      code: code,
+      new_password: newPassword,
+    };
+    if (publicAuthConfig.cf_turnstile_enabled && publicAuthConfig.cf_turnstile_site_key) {
+      body.turnstile_token = forgotTurnstileToken;
+    }
+
+    const submitBtn = $('btn-forgot-submit');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '正在重置密码…';
+    }
+
+    const result = await request('/api/auth/forgot-password/reset', { method: 'POST', body: body });
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '重置密码并直接登录';
+    }
+
+    if (!result.ok) {
+      resetTurnstile('forgot');
+      showAlert((result.data && result.data.message) || '重置密码失败，请核对验证码后重试');
+      return;
+    }
+
+    showAlert('密码已成功重置！请使用新密码登录');
+    if ($('login-account')) $('login-account').value = email;
+    if ($('login-password')) $('login-password').value = '';
+    showGate('login');
   });
+
+  if ($('btn-clear-user-ip-filter')) {
+    $('btn-clear-user-ip-filter').addEventListener('click', function () {
+      if ($('user-keyword')) $('user-keyword').value = '';
+      if ($('user-active-filter-bar')) $('user-active-filter-bar').hidden = true;
+      loadUsers(1);
+    });
+  }
   $('show-register').addEventListener('click', function () { showGate('register'); });
   $('register-back').addEventListener('click', function () { showGate('login'); });
   $('show-forgot').addEventListener('click', function () { showGate('forgot'); });

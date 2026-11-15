@@ -1,4 +1,5 @@
 import { query } from '../db.js';
+import { getIpSubnetPrefix } from '../utils/ip_helper.js';
 
 export interface BlockedIpRecord {
   ip: string;
@@ -39,23 +40,21 @@ export async function reloadBlockedIpsCache(): Promise<void> {
 }
 
 /**
- * 极速判定当前 IP 是否被拦截（无 DB IO 阻塞）
+ * 极速判定当前 IP 是否被拦截（无 DB IO 阻塞，支持单 IP 与 IPv6 /64 子网穿透拦截）
  */
 export function isIpBlocked(ip: string): boolean {
   if (!ip) return false;
   const norm = normalizeIp(ip);
-  const expiresAt = blockedIpsCache.get(norm);
-  if (expiresAt === undefined) {
-    return false;
+  const subnet = getIpSubnetPrefix(norm);
+
+  const targets = subnet && subnet !== norm ? [norm, subnet] : [norm];
+  for (const target of targets) {
+    const expiresAt = blockedIpsCache.get(target);
+    if (expiresAt === undefined) continue;
+    if (expiresAt === null) return true; // 永久封禁
+    if (expiresAt > Date.now()) return true; // 仍在封禁期内
+    blockedIpsCache.delete(target);
   }
-  if (expiresAt === null) {
-    return true; // 永久封禁
-  }
-  if (expiresAt > Date.now()) {
-    return true; // 仍在封禁期内
-  }
-  // 已过期，剔除缓存
-  blockedIpsCache.delete(norm);
   return false;
 }
 
