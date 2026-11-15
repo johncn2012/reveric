@@ -119,14 +119,35 @@ export function createApp() {
   app.use('/v1', gatewayRouter);
 
   // 全局未捕获异常处理中间件
-  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error('[Unhandled Server Error]', err);
-    if (!res.headersSent) {
-      res.status(err.status || 500).json({
-        error: err.code || 'server_error',
-        message: process.env.NODE_ENV === 'production' ? '服务处理异常，请稍后再试' : err.message,
+    if (res.headersSent) return;
+
+    // 处理客户端请求体 JSON 格式解析错误 (如 body-parser entity.parse.failed)
+    if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+      if (req.originalUrl && req.originalUrl.startsWith('/v1')) {
+        return res.status(400).json({
+          error: {
+            message: 'Invalid JSON in request body',
+            type: 'invalid_request_error',
+            param: null,
+            code: 'invalid_json',
+          },
+        });
+      }
+      return res.status(400).json({
+        error: 'invalid_json',
+        message: '请求 JSON 格式无效，请检查请求体格式',
       });
     }
+
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({
+      error: err.code || 'server_error',
+      message: process.env.NODE_ENV === 'production' && status === 500
+        ? '服务处理异常，请稍后再试'
+        : (err.message || '服务异常'),
+    });
   });
 
   return app;
