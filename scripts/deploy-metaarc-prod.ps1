@@ -12,7 +12,6 @@ Write-Host "==========================================" -ForegroundColor Cyan
 # 1. 确保 designs/website 与 server/metaarc/public 严格一致
 Write-Host "1. 同步前端设计稿与服务静态目录..." -ForegroundColor Gray
 Copy-Item -Path "designs/website/*" -Destination "server/metaarc/public/" -Force -Recurse
-Remove-Item -Path "server/metaarc/public/*.md" -Force -ErrorAction SilentlyContinue
 
 # 2. 生成部署归档包
 $TarPath = "server-deploy.tar.gz"
