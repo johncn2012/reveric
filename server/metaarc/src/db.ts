@@ -67,6 +67,9 @@ export async function initDbSchema(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit_logs(created_at DESC)`,
       `CREATE INDEX IF NOT EXISTS idx_admin_audit_target ON admin_audit_logs(target_type, target_id)`,
       `CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS idx_quota_txn_created_at ON quota_transactions(created_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS idx_quota_txn_user_type ON quota_transactions(user_id, type, created_at DESC)`,
       `CREATE INDEX IF NOT EXISTS idx_user_tasks_created_at ON user_tasks(created_at DESC)`,
       `CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at DESC)`,
       `CREATE TABLE IF NOT EXISTS blocked_ips (
