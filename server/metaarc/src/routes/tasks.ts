@@ -211,6 +211,54 @@ tasksRouter.post('/tasks/:id/cancel', requireAuth, async (req: Request, res: Res
   }
 });
 
+// 4.1 用户重试自己的失败任务
+tasksRouter.post('/tasks/:id/retry', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const taskId = req.params.id;
+    if (!UUID_REGEX.test(taskId)) {
+      return res.status(400).json({ error: 'invalid_task_id', message: '任务ID格式无效' });
+    }
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === 'admin';
+
+    const checkSql = isAdmin
+      ? 'SELECT id, status FROM user_tasks WHERE id = $1'
+      : 'SELECT id, status FROM user_tasks WHERE id = $1 AND user_id = $2';
+    const checkParams = isAdmin ? [taskId] : [taskId, userId];
+    const taskRes = await query(checkSql, checkParams);
+
+    if (taskRes.rows.length === 0) {
+      return res.status(404).json({ error: 'task_not_found', message: '任务不存在或无权操作' });
+    }
+
+    const task = taskRes.rows[0];
+    if (task.status !== 'failed') {
+      return res.status(400).json({ error: 'invalid_status', message: '只有失败状态的任务才支持重试' });
+    }
+
+    const updateRes = await query(
+      `UPDATE user_tasks
+       SET status = 'pending',
+           progress = 0,
+           error_message = NULL,
+           duration_ms = NULL,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [taskId]
+    );
+
+    return res.json({
+      success: true,
+      message: '任务已重新排队等待调度执行',
+      task: updateRes.rows[0],
+    });
+  } catch (err: any) {
+    console.error('[User Retry Task Error]', err);
+    return res.status(500).json({ error: 'server_error', message: err.message || '重试任务失败' });
+  }
+});
+
 // 5. 用户删除自己的任务记录（管理员可删除任何人的）
 tasksRouter.delete('/tasks/:id', requireAuth, async (req: Request, res: Response) => {
   try {

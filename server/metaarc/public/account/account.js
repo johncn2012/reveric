@@ -500,9 +500,9 @@
     const ledger = await request('/api/auth/quota/logs');
     renderLedger('ledger-slot', ledger);
     const tasks = await request('/api/tasks/list');
-    renderTasks('user-tasks-slot', tasks, false);
+    renderTasks('user-tasks-slot', tasks, false, function () { loadAccount(); });
     const media = await request('/api/media/list');
-    renderMedia('user-media-slot', media, false);
+    renderMedia('user-media-slot', media, false, function () { loadAccount(); });
   }
   function renderLedger(id, result) {
     const rows = result.ok && result.data && Array.isArray(result.data.data) ? result.data.data : null;
@@ -547,40 +547,40 @@
     ];
     if (admin) {
       columns.unshift({ label: '创作者', fill: function (td, row) { td.textContent = person(row); } });
-      columns.push({ label: '操作', fill: function (td, row) {
-        const box = document.createElement('div');
-        box.className = 'actions';
-        const detailBtn = document.createElement('button');
-        detailBtn.type = 'button';
-        detailBtn.textContent = '详情';
-        detailBtn.addEventListener('click', function () { return showTaskDetail(row); });
-        box.append(detailBtn);
-
-        if (['pending', 'running', 'processing'].includes(row.status)) {
-          const cancelBtn = document.createElement('button');
-          cancelBtn.type = 'button';
-          cancelBtn.textContent = '终止';
-          cancelBtn.addEventListener('click', function () { return cancelTask(row, onReload); });
-          box.append(cancelBtn);
-        }
-
-        if (row.status === 'failed') {
-          const retryBtn = document.createElement('button');
-          retryBtn.type = 'button';
-          retryBtn.textContent = '重试';
-          retryBtn.addEventListener('click', function () { return retryTask(row, onReload); });
-          box.append(retryBtn);
-        }
-
-        const delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.textContent = '删除';
-        delBtn.addEventListener('click', function () { return deleteTask(row, onReload); });
-        box.append(delBtn);
-
-        td.append(box);
-      } });
     }
+    columns.push({ label: '操作', fill: function (td, row) {
+      const box = document.createElement('div');
+      box.className = 'actions';
+      const detailBtn = document.createElement('button');
+      detailBtn.type = 'button';
+      detailBtn.textContent = '详情';
+      detailBtn.addEventListener('click', function () { return showTaskDetail(row); });
+      box.append(detailBtn);
+
+      if (['pending', 'running', 'processing'].includes(row.status)) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.textContent = '终止';
+        cancelBtn.addEventListener('click', function () { return cancelTask(row, onReload); });
+        box.append(cancelBtn);
+      }
+
+      if (row.status === 'failed') {
+        const retryBtn = document.createElement('button');
+        retryBtn.type = 'button';
+        retryBtn.textContent = '重试';
+        retryBtn.addEventListener('click', function () { return retryTask(row, onReload); });
+        box.append(retryBtn);
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = '删除';
+      delBtn.addEventListener('click', function () { return deleteTask(row, onReload); });
+      box.append(delBtn);
+
+      td.append(box);
+    } });
     fill(id, table(columns, rows));
   }
   async function showTaskDetail(row) {
@@ -627,9 +627,11 @@
     await ask({ title: '任务详情', reason: false, extra: box, modalClass: 'modal-lg', confirm: '关闭' });
   }
   async function cancelTask(row, onReload) {
-    const answer = await ask({ title: '终止任务', copy: '强制将进行中的任务标记为终止失败。', confirm: '确认终止', reason: false });
+    const answer = await ask({ title: '终止任务', copy: '终止该任务执行并标记为已取消。', confirm: '确认终止', reason: false });
     if (!answer) return;
-    const result = await request('/api/admin/tasks/' + row.id + '/cancel', { method: 'POST' });
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    const url = isAdmin ? '/api/admin/tasks/' + row.id + '/cancel' : '/api/tasks/' + row.id + '/cancel';
+    const result = await request(url, { method: 'POST' });
     if (!result.ok) return showAlert(errorMessage(result, '终止失败'));
     showAlert('任务已终止', true);
     if (onReload) onReload();
@@ -637,15 +639,19 @@
   async function retryTask(row, onReload) {
     const answer = await ask({ title: '重试任务', copy: '将该失败任务重新放入待调度队列，重置进度并清除报错。', confirm: '确认重试', reason: false });
     if (!answer) return;
-    const result = await request('/api/admin/tasks/' + row.id + '/retry', { method: 'POST' });
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    const url = isAdmin ? '/api/admin/tasks/' + row.id + '/retry' : '/api/tasks/' + row.id + '/retry';
+    const result = await request(url, { method: 'POST' });
     if (!result.ok) return showAlert(errorMessage(result, '重试任务失败'));
     showAlert('任务已重新排队等待调度执行', true);
     if (onReload) onReload();
   }
   async function deleteTask(row, onReload) {
-    const answer = await ask({ title: '删除任务记录', copy: '从调度队列中永久清除该记录。', confirm: '确认删除', reason: false });
+    const answer = await ask({ title: '删除任务记录', copy: '从任务列表中永久清除该记录。', confirm: '确认删除', reason: false });
     if (!answer) return;
-    const result = await request('/api/admin/tasks/' + row.id, { method: 'DELETE' });
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    const url = isAdmin ? '/api/admin/tasks/' + row.id : '/api/tasks/' + row.id;
+    const result = await request(url, { method: 'DELETE' });
     if (!result.ok) return showAlert(errorMessage(result, '删除失败'));
     showAlert('任务记录已删除', true);
     if (onReload) onReload();
@@ -662,6 +668,9 @@
           img.className = 'thumb-preview';
           img.alt = '';
           img.loading = 'lazy';
+          img.style.cursor = 'pointer';
+          img.title = '点击查看大图与详情';
+          img.addEventListener('click', function () { showMediaDetail(row, admin, onReload); });
           td.append(img);
         } else {
           td.textContent = '—';
@@ -673,35 +682,146 @@
     ];
     if (admin) {
       columns.splice(1, 0, { label: '创作者', fill: function (td, row) { td.textContent = person(row); } });
-      columns.push({ label: '操作', fill: function (td, row) {
-        const box = document.createElement('div');
-        box.className = 'actions';
-        if (row.cdn_url) {
-          const link = document.createElement('a');
-          link.href = row.cdn_url;
-          link.target = '_blank';
-          link.rel = 'noreferrer';
-          link.textContent = '直达';
-          link.className = 'btn-line';
-          link.style.minHeight = '30px';
-          link.style.padding = '0 8px';
-          link.style.fontSize = '12px';
-          box.append(link);
-        }
-        const delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.textContent = '删除';
-        delBtn.addEventListener('click', function () { return deleteMedia(row, onReload); });
-        box.append(delBtn);
-        td.append(box);
-      } });
     }
+    columns.push({ label: '操作', fill: function (td, row) {
+      const box = document.createElement('div');
+      box.className = 'actions';
+
+      const viewBtn = document.createElement('button');
+      viewBtn.type = 'button';
+      viewBtn.textContent = '详情';
+      viewBtn.addEventListener('click', function () { showMediaDetail(row, admin, onReload); });
+      box.append(viewBtn);
+
+      if (row.cdn_url) {
+        const link = document.createElement('a');
+        link.href = row.cdn_url;
+        link.target = '_blank';
+        link.rel = 'noreferrer';
+        link.textContent = '直达';
+        link.className = 'btn-line';
+        link.style.minHeight = '30px';
+        link.style.padding = '0 8px';
+        link.style.fontSize = '12px';
+        box.append(link);
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = '删除';
+      delBtn.addEventListener('click', function () { return deleteMedia(row, onReload); });
+      box.append(delBtn);
+
+      td.append(box);
+    } });
     fill(id, table(columns, rows));
+  }
+  async function showMediaDetail(row, admin, onReload) {
+    const box = document.createElement('div');
+    box.className = 'stack';
+
+    if (row.cdn_url) {
+      const isImg = row.asset_type === 'image' || (row.mime_type && row.mime_type.indexOf('image/') === 0);
+      const isVid = row.asset_type === 'video' || (row.mime_type && row.mime_type.indexOf('video/') === 0);
+      const isAud = row.asset_type === 'audio' || (row.mime_type && row.mime_type.indexOf('audio/') === 0);
+
+      const previewContainer = document.createElement('div');
+      previewContainer.style.background = '#0b0f19';
+      previewContainer.style.borderRadius = '8px';
+      previewContainer.style.padding = '12px';
+      previewContainer.style.textAlign = 'center';
+      previewContainer.style.marginBottom = '12px';
+
+      if (isImg) {
+        const img = document.createElement('img');
+        img.src = row.cdn_url;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '360px';
+        img.style.objectFit = 'contain';
+        img.style.borderRadius = '4px';
+        previewContainer.append(img);
+      } else if (isVid) {
+        const vid = document.createElement('video');
+        vid.src = row.cdn_url;
+        vid.controls = true;
+        vid.style.maxWidth = '100%';
+        vid.style.maxHeight = '360px';
+        vid.style.borderRadius = '4px';
+        previewContainer.append(vid);
+      } else if (isAud) {
+        const aud = document.createElement('audio');
+        aud.src = row.cdn_url;
+        aud.controls = true;
+        aud.style.width = '100%';
+        previewContainer.append(aud);
+      }
+      box.append(previewContainer);
+    }
+
+    function item(label, val) {
+      const p = document.createElement('p');
+      const b = document.createElement('b');
+      b.textContent = label + '：';
+      p.append(b, document.createTextNode(val || '—'));
+      return p;
+    }
+
+    box.append(item('资产编号', row.id));
+    if (admin) box.append(item('创作者', person(row)));
+    box.append(item('资产类型', row.asset_type));
+    box.append(item('文件类型 (MIME)', row.mime_type));
+    box.append(item('文件大小', formatBytes(row.byte_size)));
+    box.append(item('存储路径', row.storage_key));
+    box.append(item('创建时间', formatWhen(row.created_at)));
+
+    if (row.cdn_url) {
+      const cdnTitle = document.createElement('p');
+      cdnTitle.innerHTML = '<b>CDN 加速直链：</b>';
+      const cdnRow = document.createElement('div');
+      cdnRow.style.display = 'flex';
+      cdnRow.style.gap = '8px';
+      cdnRow.style.alignItems = 'center';
+
+      const cdnInput = document.createElement('input');
+      cdnInput.readOnly = true;
+      cdnInput.value = row.cdn_url;
+      cdnInput.style.flex = '1';
+      cdnInput.style.fontSize = '12px';
+
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.textContent = '复制直链';
+      copyBtn.className = 'btn-line';
+      copyBtn.style.padding = '0 12px';
+      copyBtn.style.fontSize = '12px';
+      copyBtn.addEventListener('click', function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(row.cdn_url).then(function () {
+            showAlert('CDN 链接已复制到剪贴板', true);
+          }).catch(function () {
+            cdnInput.select();
+            document.execCommand('copy');
+            showAlert('CDN 链接已复制', true);
+          });
+        } else {
+          cdnInput.select();
+          document.execCommand('copy');
+          showAlert('CDN 链接已复制', true);
+        }
+      });
+
+      cdnRow.append(cdnInput, copyBtn);
+      box.append(cdnTitle, cdnRow);
+    }
+
+    await ask({ title: '媒体资产详情', reason: false, extra: box, modalClass: 'modal-lg', confirm: '关闭' });
   }
   async function deleteMedia(row, onReload) {
     const answer = await ask({ title: '移除媒体记录', copy: '从登记簿中移除此媒体索引。', confirm: '确认删除', reason: false });
     if (!answer) return;
-    const result = await request('/api/admin/media/' + row.id, { method: 'DELETE' });
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    const url = isAdmin ? '/api/admin/media/' + row.id : '/api/media/' + row.id;
+    const result = await request(url, { method: 'DELETE' });
     if (!result.ok) return showAlert(errorMessage(result, '移除失败'));
     showAlert('媒体记录已移除', true);
     if (onReload) onReload();
