@@ -417,11 +417,116 @@
         cDesc.textContent = p.description || ((p.duration_days || 30) + '天有效');
 
         card.append(cTitle, cPrice, cPoints, cDesc);
+        if (p.price_cents > 0) {
+          const actBtn = document.createElement('button');
+          actBtn.type = 'button';
+          actBtn.className = isCurrent ? 'btn-line' : 'btn-primary';
+          actBtn.style.marginTop = '12px';
+          actBtn.style.width = '100%';
+          actBtn.textContent = isCurrent ? '续费该套餐 / 对公汇款' : '订购该套餐 / 对公汇款';
+          actBtn.addEventListener('click', function () {
+            subscribePlanModal(p);
+          });
+          card.append(actBtn);
+        } else {
+          const freeNote = document.createElement('p');
+          freeNote.className = 'fine';
+          freeNote.style.marginTop = '12px';
+          freeNote.style.color = '#64748b';
+          freeNote.textContent = '注册默认享有，免费体验';
+          card.append(freeNote);
+        }
         grid.append(card);
       });
       wrap.append(grid);
     }
     fill('plan-detail', wrap);
+  }
+
+  async function subscribePlanModal(p) {
+    const box = document.createElement('div');
+    box.style.display = 'grid';
+    box.style.gap = '12px';
+
+    const infoCard = document.createElement('div');
+    infoCard.style.padding = '12px';
+    infoCard.style.background = '#f8fafc';
+    infoCard.style.borderRadius = '6px';
+    infoCard.style.border = '1px solid #e2e8f0';
+
+    const pTitle = document.createElement('div');
+    pTitle.style.fontWeight = 'bold';
+    pTitle.style.fontSize = '16px';
+    pTitle.textContent = p.name + ' — ¥' + (p.price_cents / 100).toFixed(2) + (p.billing_cycle === 'monthly' ? ' / 月' : '');
+
+    const pMeta = document.createElement('div');
+    pMeta.className = 'fine';
+    pMeta.style.marginTop = '4px';
+    pMeta.textContent = '包含算力：' + formatNumber(p.quota_points) + ' 点 | 周期有效期：' + (p.duration_days || 30) + ' 天';
+    infoCard.append(pTitle, pMeta);
+
+    const channelLabel = document.createElement('label');
+    channelLabel.textContent = '汇款渠道';
+    const channelSelect = document.createElement('select');
+    [
+      ['bank_transfer', '企业对公银行转账（支持开具增值税发票）'],
+      ['offline_alipay', '支付宝转账 / 线下对账'],
+      ['offline_wechat', '微信支付转账 / 线下对账'],
+    ].forEach(function (pair) {
+      const opt = document.createElement('option');
+      opt.value = pair[0];
+      opt.textContent = pair[1];
+      channelSelect.append(opt);
+    });
+
+    const bankBox = document.createElement('div');
+    bankBox.style.padding = '12px';
+    bankBox.style.background = '#eff6ff';
+    bankBox.style.borderRadius = '6px';
+    bankBox.style.border = '1px solid #bfdbfe';
+    bankBox.style.fontSize = '13px';
+    bankBox.style.lineHeight = '1.6';
+    bankBox.innerHTML = '<strong>官方对公账户信息：</strong><br>' +
+      '• 户名：北京元弧智能科技有限公司<br>' +
+      '• 开户行：招商银行股份有限公司北京分行<br>' +
+      '• 账号：<code>1109 4528 8910 801</code><br>' +
+      '<span class="fine" style="color:#1e40af">💡 汇款附言请务必填写您的注册手机号或订单号。提交后可在【订单记录】录入交易流水号，审核通过后即刻到账。</span>';
+
+    const tradeNoLabel = document.createElement('label');
+    tradeNoLabel.textContent = '转账单号 / 汇款流水号（选填，转账后亦可在订单列表中登记）';
+    const tradeNoInput = document.createElement('input');
+    tradeNoInput.placeholder = '例如招商银行转账流水号、支付宝交易单号等';
+
+    box.append(infoCard, channelLabel, channelSelect, bankBox, tradeNoLabel, tradeNoInput);
+
+    const answer = await ask({
+      title: '订购套餐 — ' + p.name,
+      copy: '确认订购该套餐。系统将生成正式订购凭单，支持对公对账与财务极速核销。',
+      extra: box,
+      reason: false,
+      confirm: '提交并生成订单',
+      collect: function () {
+        return {
+          planId: p.id,
+          payChannel: channelSelect.value,
+          payTradeNo: tradeNoInput.value.trim() || undefined,
+        };
+      },
+    });
+    if (!answer) return;
+
+    const res = await request('/api/auth/orders/create', {
+      method: 'POST',
+      body: answer,
+    });
+    if (!res.ok) {
+      return showAlert(errorMessage(res, '生成订单失败'));
+    }
+
+    const orderData = res.data && res.data.order ? res.data.order : {};
+    showAlert('订单已生成（单号：' + (orderData.order_no || '已记录') + '），请根据账户指引完成付款', true);
+    showView('orders');
+    loadOrders(1);
   }
   async function loadSupport() {
     const slot = $('support-slot');
@@ -985,20 +1090,57 @@
       { label: '套餐/项目', fill: function (td, row) { td.textContent = row.plan_name || '算力充值'; } },
       { label: '金额', fill: function (td, row) { td.textContent = '¥' + (row.amount_cents / 100).toFixed(2); } },
       { label: '支付渠道', fill: function (td, row) { td.textContent = payChannelLabel(row.pay_channel); } },
+      { label: '转账流水号', fill: function (td, row) {
+        if (row.pay_trade_no) {
+          td.textContent = row.pay_trade_no;
+        } else if (row.status === 'pending') {
+          const emptySpan = document.createElement('span');
+          emptySpan.className = 'fine';
+          emptySpan.style.color = '#d97706';
+          emptySpan.textContent = '待登记单号';
+          td.append(emptySpan);
+        } else {
+          td.textContent = '—';
+        }
+      } },
       { label: '状态', fill: function (td, row) {
-        td.innerHTML = row.status === 'paid' ? '<span class="badge badge-success">已支付</span>' :
+        td.innerHTML = row.status === 'paid' ? '<span class="badge badge-success">已支付到账</span>' :
                        row.status === 'cancelled' ? '<span class="badge badge-neutral">已取消</span>' :
                        row.status === 'refunded' ? '<span class="badge badge-danger">已退款</span>' :
-                       '<span class="badge badge-warning">待支付 / 待核对</span>';
+                       '<span class="badge badge-warning">待核对 / 待到账</span>';
       } },
       { label: '创建时间', fill: function (td, row) { td.textContent = formatWhen(row.created_at); } },
       { label: '操作', fill: function (td, row) {
+        const box = document.createElement('div');
+        box.style.display = 'flex';
+        box.style.gap = '6px';
+        box.style.flexWrap = 'wrap';
+
+        const detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.className = 'btn-line';
+        detailBtn.textContent = row.status === 'pending' ? '转账指引' : '查看详情';
+        detailBtn.addEventListener('click', function () {
+          showUserOrderDetail(row);
+        });
+        box.append(detailBtn);
+
         if (row.status === 'pending') {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.textContent = '取消订单';
-          btn.className = 'btn-line';
-          btn.addEventListener('click', async function () {
+          const voucherBtn = document.createElement('button');
+          voucherBtn.type = 'button';
+          voucherBtn.className = 'btn-line';
+          voucherBtn.textContent = row.pay_trade_no ? '修改单号' : '填写转账单号';
+          voucherBtn.addEventListener('click', function () {
+            submitUserOrderVoucher(row);
+          });
+          box.append(voucherBtn);
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.type = 'button';
+          cancelBtn.className = 'btn-line';
+          cancelBtn.style.color = 'var(--danger, #b42318)';
+          cancelBtn.textContent = '取消';
+          cancelBtn.addEventListener('click', async function () {
             const answer = await ask({ title: '取消订单', copy: '确定取消订单 ' + (row.order_no || row.id.slice(0, 8)) + ' 吗？', confirm: '确认取消', reason: false });
             if (!answer) return;
             const res = await request('/api/auth/orders/' + row.id + '/cancel', { method: 'POST' });
@@ -1006,10 +1148,10 @@
             showAlert('订单已取消', true);
             loadOrders(currentUserOrderPage);
           });
-          td.append(btn);
-        } else {
-          td.textContent = '—';
+          box.append(cancelBtn);
         }
+
+        td.append(box);
       } }
     ], rows));
 
@@ -1018,6 +1160,99 @@
         loadOrders(p);
       });
     }
+  }
+
+  async function showUserOrderDetail(row) {
+    const box = document.createElement('div');
+    box.style.display = 'grid';
+    box.style.gap = '8px';
+
+    function addRow(label, value, isHtml) {
+      const line = document.createElement('div');
+      line.style.display = 'flex';
+      line.style.justifyContent = 'space-between';
+      line.style.padding = '6px 0';
+      line.style.borderBottom = '1px dashed #f1f5f9';
+      const k = document.createElement('span');
+      k.className = 'fine';
+      k.textContent = label;
+      const v = document.createElement('span');
+      if (isHtml) v.innerHTML = value;
+      else v.textContent = value;
+      line.append(k, v);
+      box.append(line);
+    }
+
+    addRow('订单编号', row.order_no || row.id);
+    addRow('套餐项目', row.plan_name || '算力充值');
+    addRow('订单金额', '¥' + (row.amount_cents / 100).toFixed(2));
+    addRow('包含算力', row.quota_points ? formatNumber(row.quota_points) + ' 点' : '—');
+    addRow('支付渠道', payChannelLabel(row.pay_channel));
+    addRow('转账/对账单号', row.pay_trade_no || '尚未登记');
+    addRow('当前状态', row.status === 'paid' ? '已支付到账' : row.status === 'cancelled' ? '已取消' : '待核对 / 待到账');
+    addRow('下单时间', formatWhen(row.created_at));
+    if (row.paid_at) addRow('到账时间', formatWhen(row.paid_at));
+
+    const bankBox = document.createElement('div');
+    bankBox.style.padding = '12px';
+    bankBox.style.background = '#eff6ff';
+    bankBox.style.borderRadius = '6px';
+    bankBox.style.border = '1px solid #bfdbfe';
+    bankBox.style.fontSize = '13px';
+    bankBox.style.lineHeight = '1.6';
+    bankBox.style.marginTop = '8px';
+    bankBox.innerHTML = '<strong>官方对公汇款账户：</strong><br>' +
+      '• 户名：北京元弧智能科技有限公司<br>' +
+      '• 开户行：招商银行股份有限公司北京分行<br>' +
+      '• 账号：<code>1109 4528 8910 801</code><br>' +
+      '<span class="fine" style="color:#1e40af">💡 汇款附言请务必填写您的订单号。转账后点击【填写转账单号】提交凭单流水；如需发票请发送开票信息至 contact@metaarc.com.cn</span>';
+    box.append(bankBox);
+
+    await ask({
+      title: '订单详情与汇款指引',
+      extra: box,
+      reason: false,
+      confirm: '关闭',
+    });
+  }
+
+  async function submitUserOrderVoucher(row) {
+    const box = document.createElement('div');
+    box.style.display = 'grid';
+    box.style.gap = '8px';
+
+    const tip = document.createElement('p');
+    tip.className = 'fine';
+    tip.textContent = '请填写银行转账回单号、网银流水号或支付宝/微信支付交易单号，财务核账后将立即为您开通权益。';
+
+    const input = document.createElement('input');
+    input.value = row.pay_trade_no || '';
+    input.placeholder = '输入转账流水凭据单号';
+    input.required = true;
+    box.append(tip, input);
+
+    const answer = await ask({
+      title: '登记付款流水单号',
+      copy: '订单号：' + (row.order_no || row.id.slice(0, 8)),
+      extra: box,
+      reason: false,
+      confirm: '确认提交',
+      collect: function () {
+        return { payTradeNo: input.value.trim() };
+      },
+    });
+    if (!answer || !answer.payTradeNo) return;
+
+    const res = await request('/api/auth/orders/' + row.id + '/voucher', {
+      method: 'POST',
+      body: { payTradeNo: answer.payTradeNo },
+    });
+    if (!res.ok) {
+      return showAlert(errorMessage(res, '提交流水号失败'));
+    }
+    showAlert('转账单号已成功登记，财务核验后将立即为您生效', true);
+    loadOrders(currentUserOrderPage);
+  }
   }
 
   async function loadWorkspace() {

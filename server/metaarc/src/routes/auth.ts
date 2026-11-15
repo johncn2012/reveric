@@ -58,7 +58,10 @@ export const authRouter = Router();
 const newApi = new NewApiConnector();
 
 function publicNewApiBaseUrl(): string {
-  return (process.env.NEW_API_PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+  const custom = (process.env.NEW_API_PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+  if (custom) return custom;
+  const appOrigin = (process.env.APP_URL || process.env.BASE_URL || 'https://metaarc.com.cn').trim().replace(/\/$/, '');
+  return `${appOrigin}/v1`;
 }
 
 async function ensureNewApiAccount(user: { id: string; email?: string; phone?: string; nickname?: string; quota?: string | number }) {
