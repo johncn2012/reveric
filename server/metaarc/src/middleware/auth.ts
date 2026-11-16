@@ -25,6 +25,14 @@ export function signJwt(payload: AuthUser, expiresIn = '30d'): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn as any });
 }
 
+export function verifyJwt(token: string): AuthUser | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

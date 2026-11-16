@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { query } from '../db.js';
-import { signJwt, requireAuth } from '../middleware/auth.js';
+import { signJwt, requireAuth, verifyJwt } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
 import { getClientIp, resolveIpLocation, getIpSubnetPrefix } from '../utils/ip_helper.js';
 import { getSystemSecuritySettings, getPublicAuthConfig } from '../services/system_settings_service.js';
