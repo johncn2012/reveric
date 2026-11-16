@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>更新日志 — 系统版本演进与发布动态 | MetaArc 元弧</title>
+<meta name="description" content="MetaArc 元弧官方系统更新日志。记录 v0.6.3 至初始版本的每一次功能升级、多智能体算法改进、安全风控加固与客户端发布动态。">
+<meta name="keywords" content="MetaArc更新日志,版本发布,v0.6.3,新功能动态,视听创作演进,MetaArc版本">
+<meta name="author" content="MetaArc 元弧">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<link rel="canonical" href="https://metaarc.com.cn/changelog">
+<link rel="icon" href="/assets/icon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/icon-180.png" sizes="180x180">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#ffffff">
+
+<!-- 社交分享与 Open Graph 元标签 -->
+<meta property="og:site_name" content="MetaArc 元弧">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:url" content="https://metaarc.com.cn/changelog">
+<meta property="og:title" content="更新日志 — MetaArc 元弧">
+<meta property="og:description" content="MetaArc 元弧官方系统更新日志。记录每次功能升级与发布动态。">
+<meta property="og:image" content="https://metaarc.com.cn/assets/story-ridge.jpg">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="更新日志 — MetaArc 元弧">
+<meta name="twitter:description" content="MetaArc 元弧官方系统更新日志。记录每次功能升级与发布动态。">
+<meta name="twitter:image" content="https://metaarc.com.cn/assets/story-ridge.jpg">
+
+<!-- Schema.org 结构化数据 (JSON-LD) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "首页",
+          "item": "https://metaarc.com.cn/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "更新日志",
+          "item": "https://metaarc.com.cn/changelog"
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<link rel="stylesheet" href="/landing.css">
+<style>
+.changelog-hero {
+  padding: 48px 0 24px;
+}
+.changelog-hero h1 {
+  font-size: clamp(36px, 3.8vw, 54px);
+  margin-bottom: 16px;
+  line-height: 1.15;
+}
+.changelog-hero p {
+  color: var(--muted);
+  font-size: 18px;
+  max-width: 32em;
+}
+.timeline {
+  margin-top: 36px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.release-entry {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  padding: 40px 0;
+  border-bottom: 1px solid var(--line);
+}
+.release-entry:last-child {
+  border-bottom: none;
+}
+.release-meta {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+}
+.release-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.release-tag.is-latest {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+.release-date {
+  color: var(--muted);
+  font-size: 14px;
+  display: block;
+}
+.release-content h2 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  color: var(--ink);
+}
+.release-content p {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.release-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.release-bullets li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.release-bullets li::before {
+  content: "•";
+  position: absolute;
+  left: 4px;
+  color: #0067e8;
+  font-weight: bold;
+}
+.badge-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.pill-feat { background: #dcfce7; color: #15803d; }
+.pill-sec { background: #fee2e2; color: #b91c1c; }
+.pill-perf { background: #fef3c7; color: #b45309; }
+.pill-opt { background: #f1f5f9; color: #475569; }
+
+@media (max-width: 768px) {
+  .release-entry {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 32px 0;
+  }
+  .release-meta {
+    position: static;
+  }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="frame topbar-inner">
+    <a class="brand" href="/"><img class="brand-mark" src="/assets/mark-black.svg" alt="MetaArc 元弧 Logo" width="36" height="36"><span class="brand-name">MetaArc <span>元弧</span></span></a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="topnav">菜单</button>
+    <nav class="topnav" id="topnav" aria-label="网站主导航">
+      <a href="/#method">工作方式</a>
+      <a href="/novel-to-video">小说转短剧</a>
+      <a href="/pricing">套餐权益</a>
+      <a href="/changelog" aria-current="page">更新动态</a>
+      <a href="/help/">帮助中心</a>
+    </nav>
+    <a class="btn btn-small" href="/account">进入用户中心</a>
+  </div>
+</header>
+
+<main class="frame">
+  <section class="changelog-hero">
+    <p class="index">RELEASE NOTES / 版本演进</p>
+    <h1>系统更新日志与产品动态</h1>
+    <p>记录每一次工程迭代与创作能力的进化。持续为影视、短剧与网文创作者提供稳健、自主可控的多智能体成片体验。</p>
+  </section>
+
+  <div class="timeline">
+    <!-- v0.6.3 -->
+    <article class="release-entry">
+      <div class="release-meta">
+        <span class="release-tag is-latest">v0.6.3 最新版本</span>
+        <time class="release-date">2026 年 11 月 16 日</time>
+      </div>
+      <div class="release-content">
+        <h2>Web 端智能无感更新、系统品牌纯正化与多源风控强化</h2>
+        <p>本次版本全面上线三位码版本自动演进机制与 Web 端智能检测通知，完成系统品牌纯正化与多项安全防御加固。</p>
+        <ul class="release-bullets">
+          <li><span class="badge-pill pill-feat">新功能</span><b>Web 端无感更新检测浮窗 (方案 A)：</b>控制台内置后台静默轮询与前台标签页可见性唤醒检测，检测到服务端新版本时右上角自动滑入卡片提示，创作者可随时一键平滑重载，绝不中断正在进行的任务。</li>
+          <li><span class="badge-pill pill-opt">优化</span><b>系统级品牌纯正化：</b>全站页脚彻底移除旧版开源署名，客户端「关于」面板统一定位为 MetaArc 元弧官方版权，全平台客户端包名统一收敛为 <code>cn.metaarc</code>。</li>
+          <li><span class="badge-pill pill-feat">新功能</span><b>特邀专属邀请码全量导出：</b>管理后台支持一键导出包含邀请码序列号、生效状态、使用次数与生成批次的标准 UTF-8 BOM CSV 数据表格。</li>
+          <li><span class="badge-pill pill-sec">安全加固</span><b>多源安全防护与防刷策略：</b>全量接入同一 IP 24小时注册限额拦截、管理员后台新建用户 8 位安全密码强校验、同 IP 聚类高危账号 5 笔样本安全切片及防暴力破解图形验证码。</li>
+          <li><span class="badge-pill pill-perf">SEO 提升</span><b>首屏渲染与结构化数据增强：</b>核心概念大图实现高优先级预加载，帮助中心接入全量 FAQPage 结构化摘要，大幅优化移动端 Core Web Vitals。</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- v0.6.2 -->
+    <article class="release-entry">
+      <div class="release-meta">
+        <span class="release-tag">v0.6.2</span>
+        <time class="release-date">2026 年 11 月 15 日</time>
+      </div>
+      <div class="release-content">
+        <h2>异地登录智能预警、注册威胁发现大盘与对公订购留痕</h2>
+        <p>重点强化用户账号隐私安全防护，提供同 IP 批量注册团伙穿透大盘与对公流水审核链路。</p>
+        <ul class="release-bullets">
+          <li><span class="badge-pill pill-sec">安全加固</span><b>异地登录黄色横幅预警：</b>用户登录后系统自动比对最近登录 IP 地理位置，跨省或跨国变更时在控制台醒目提示，创作者可随时一键退出其他会话以撤销凭据。</li>
+          <li><span class="badge-pill pill-feat">新功能</span><b>同 IP 注册聚类威胁发现大盘：</b>管理员后台上线多账号注册聚类透视能力，支持按最低注册数与关键字实时筛查潜在脚本号。</li>
+          <li><span class="badge-pill pill-feat">新功能</span><b>套餐购买意向登记与线下付款审核：</b>创作者中心支持自助勾选心仪算力套餐、生成对公转账订单并登记银行流水号，管理员核验后快速充值到账。</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- v0.6.1 -->
+    <article class="release-entry">
+      <div class="release-meta">
+        <span class="release-tag">v0.6.1</span>
+        <time class="release-date">2026 年 11 月 14 日</time>
+      </div>
+      <div class="release-content">
+        <h2>全站操作审计日志、诊断文件上报通道与管理体验升级</h2>
+        <p>提升企业运维透明度与问题排查响应效率，完善管理端各类筛选体验。</p>
+        <ul class="release-bullets">
+          <li><span class="badge-pill pill-sec">安全加固</span><b>系统全局操作审计日志 (Audit Log)：</b>全量记录管理员对用户封禁、密码重设、算力手动调整及安全参数修改行为，具备不可篡改性。</li>
+          <li><span class="badge-pill pill-feat">新功能</span><b>脱敏诊断报告上传专线：</b>客户端与控制台内置诊断包导出功能，支持将系统硬件配置、网络连通性及脱敏日志一键上传至官方支持网关。</li>
+          <li><span class="badge-pill pill-opt">优化</span><b>邀请码与用户管理体验优化：</b>修复多状态筛选器状态切换逻辑，优化多页数据翻页加载流畅度。</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- v0.6.0 -->
+    <article class="release-entry">
+      <div class="release-meta">
+        <span class="release-tag">v0.6.0 里程碑</span>
+        <time class="release-date">2026 年 11 月 12 日</time>
+      </div>
+      <div class="release-content">
+        <h2>MetaArc 元弧 AI 原生视听创作平台正式上线</h2>
+        <p>把小说、剧本、分镜、素材、剪辑和成片放在一条可以亲手接管的路径上，让文字拥有自己的银幕。</p>
+        <ul class="release-bullets">
+          <li><span class="badge-pill pill-feat">重大发布</span><b>六步多智能体视听创作流水线：</b>涵盖读原著提炼设定、改编视听场次剧本、拆分镜生成提示词、并行调度大模型渲染素材、六轨非线性精剪与高清无损成片导出。</li>
+          <li><span class="badge-pill pill-feat">重大发布</span><b>影视级 3D 虚拟导演台：</b>支持在三维视口中自由摆放机位景深、调配灯光与角色走位，从源头掌控视听镜头语言。</li>
+          <li><span class="badge-pill pill-feat">新功能</span><b>全平台客户端发布：</b>支持 Windows 64 位、针对 Apple Silicon 优化的 macOS 以及 Android arm64 原生应用。</li>
+          <li><span class="badge-pill pill-feat">新功能</span><b>开放多模态 API 网关：</b>高度兼容 OpenAI <code>/v1</code> 接口标准，支持生成专属访问密钥对接 Cherry Studio、NextChat、Chatbox 等第三方生态。</li>
+        </ul>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="frame">
+    <div class="footer-grid">
+      <a href="/#method">工作方式</a>
+      <a href="/novel-to-video">小说转短剧</a>
+      <a href="/pricing">套餐权益</a>
+      <a href="/changelog">更新动态</a>
+      <a href="/help/">帮助中心</a>
+    </div>
+    <p class="footer-legal">© MetaArc 元弧 · <a href="mailto:contact@metaarc.com.cn">联系支持</a></p>
+    <p class="footer-note">概念影像为生成效果演示。企业订阅与算力服务请咨询商务支持。</p>
+  </div>
+</footer>
+<script src="/landing.js"></script>
+</body>
+</html>

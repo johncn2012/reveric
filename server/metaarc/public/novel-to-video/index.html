@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 小说转短剧平台 — 从网文原著到视听成片一站式创作 | MetaArc 元弧</title>
+<meta name="description" content="MetaArc 元弧小说转视频视听创作台。支持网文章节自动改编短剧剧本、人物角色一致性锁脸、分镜提示词编排与多轨自动剪辑，让小说故事拥有自己的银幕。注册即享 500 点免费算力。">
+<meta name="keywords" content="小说转视频,AI短剧制作,小说推文视频生成器,网文改编剧本,分镜自动生成,角色一致性,短剧工作流,MetaArc">
+<meta name="author" content="MetaArc 元弧">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<link rel="canonical" href="https://metaarc.com.cn/novel-to-video">
+<link rel="icon" href="/assets/icon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/icon-180.png" sizes="180x180">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#ffffff">
+
+<!-- 社交分享与 Open Graph 元标签 -->
+<meta property="og:site_name" content="MetaArc 元弧">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:url" content="https://metaarc.com.cn/novel-to-video">
+<meta property="og:title" content="AI 小说转短剧平台 — MetaArc 元弧">
+<meta property="og:description" content="从网文原著到视听成片的一站式 AI 视听创作平台。角色一致性锁脸、智能分镜、多轨剪辑。">
+<meta property="og:image" content="https://metaarc.com.cn/assets/story-ridge.jpg">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AI 小说转短剧平台 — MetaArc 元弧">
+<meta name="twitter:description" content="从网文原著到视听成片的一站式 AI 视听创作平台。">
+<meta name="twitter:image" content="https://metaarc.com.cn/assets/story-ridge.jpg">
+
+<!-- Schema.org 结构化数据 (JSON-LD) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "首页",
+          "item": "https://metaarc.com.cn/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "小说转短剧解决方案",
+          "item": "https://metaarc.com.cn/novel-to-video"
+        }
+      ]
+    },
+    {
+      "@type": "HowTo",
+      "name": "如何使用 MetaArc 将小说网文改编为视听短剧成片？",
+      "description": "通过 MetaArc 多智能体流水线，六步轻松将纯文字小说转化为高品质有声视听短剧成片。",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "导入小说原著章节",
+          "text": "粘贴小说文本或上传文档，系统自动提取世界观背景、主要人物设定与关系图谱。"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "AI 提炼视听剧本",
+          "text": "智能体将大段小说描写重构为剧集场次、角色对白和情绪起伏曲线。"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "自动拆解分镜脚本",
+          "text": "按场次细化分镜镜头语言，生成运镜轨迹、景别景深及精准视觉提示词。"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 4,
+          "name": "生成素材并保持角色一致性",
+          "text": "调度大模型生成概念立绘与高质量动态视频片段，严格锁定角色面部特征与服装。"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 5,
+          "name": "六轨时间线智能剪辑",
+          "text": "音画同步自动对齐、旁白配音与环境音效智能合成，一键排布多轨工程。"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 6,
+          "name": "全高清短剧成片导出",
+          "text": "实时预览调校，无损导出 1080P/4K 成片，可直接用于短视频平台发布。"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://metaarc.com.cn/novel-to-video#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "生成的人物在多个镜头里会经常“变脸”吗？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "MetaArc 内置角色特征库（Actor Profile）与面部特征锁定技术。在整个短剧工程中，同一角色的面孔轮廓、服饰基调与发型均会跨镜头稳定锚定，解决传统 AI 生成变脸的顽疾。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "制作一集 2~3 分钟的短剧大概需要多久？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "在 MetaArc 流水线中，原著解析与分镜剧本生成仅需数分钟。搭配并行任务渲染，通常 1 到 2 小时内即可完成全集样片的自动化初剪与调优，相较传统手工制作提效数十倍。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "生成的短剧版权归谁所有？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "您在 MetaArc 平台上使用自己的小说原著或合法授权文本生成的全部剧本、分镜图、音视频素材及最终成片，版权完全归创作者所有，支持全渠道商业化发布与变现。"
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<link rel="stylesheet" href="/landing.css">
+<style>
+.solution-hero {
+  padding: 48px 0 32px;
+}
+.solution-hero h1 {
+  font-size: clamp(38px, 4vw, 56px);
+  margin-bottom: 20px;
+  line-height: 1.12;
+}
+.solution-hero p {
+  color: var(--muted);
+  font-size: 19px;
+  max-width: 32em;
+  line-height: 1.6;
+}
+.contrast-section {
+  margin-top: 56px;
+  border-top: 1px solid var(--line);
+  padding-top: 40px;
+}
+.contrast-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin-top: 24px;
+}
+.contrast-card {
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+.contrast-card.is-old {
+  background: var(--wash);
+}
+.contrast-card.is-metaarc {
+  background: #f0f7ff;
+  border-color: #bae6fd;
+}
+.contrast-card h3 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.contrast-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.contrast-list li {
+  padding: 8px 0;
+  font-size: 15px;
+  line-height: 1.6;
+  border-bottom: 1px dashed rgba(0,0,0,0.08);
+}
+.contrast-list li:last-child {
+  border-bottom: none;
+}
+.features-matrix {
+  margin-top: 56px;
+  border-top: 1px solid var(--line);
+  padding-top: 40px;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  margin-top: 28px;
+}
+.feat-item {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.feat-item .feat-num {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0067e8;
+  margin-bottom: 8px;
+}
+.feat-item h4 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+.feat-item p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+}
+.cta-banner {
+  margin: 64px 0 24px;
+  padding: 48px 36px;
+  background: #14202e;
+  color: #fff;
+  border-radius: 16px;
+  text-align: center;
+}
+.cta-banner h2 {
+  font-size: clamp(28px, 3vw, 40px);
+  margin-bottom: 14px;
+  color: #fff;
+}
+.cta-banner p {
+  color: #94a3b8;
+  font-size: 17px;
+  margin-bottom: 24px;
+  max-width: 28em;
+  margin-left: auto;
+  margin-right: auto;
+}
+.cta-banner .btn {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #fff;
+  padding: 0 28px;
+  font-size: 16px;
+}
+.cta-banner .btn:hover {
+  background: #0369a1;
+}
+
+@media (max-width: 860px) {
+  .contrast-grid, .features-grid { grid-template-columns: 1fr; }
+  .cta-banner { padding: 36px 20px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="frame topbar-inner">
+    <a class="brand" href="/"><img class="brand-mark" src="/assets/mark-black.svg" alt="MetaArc 元弧 Logo" width="36" height="36"><span class="brand-name">MetaArc <span>元弧</span></span></a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="topnav">菜单</button>
+    <nav class="topnav" id="topnav" aria-label="网站主导航">
+      <a href="/#method">工作方式</a>
+      <a href="/novel-to-video" aria-current="page">小说转短剧</a>
+      <a href="/pricing">套餐权益</a>
+      <a href="/changelog">更新动态</a>
+      <a href="/help/">帮助中心</a>
+    </nav>
+    <a class="btn btn-small" href="/account">进入用户中心</a>
+  </div>
+</header>
+
+<main class="frame">
+  <section class="solution-hero">
+    <p class="index">AI NOVEL TO VIDEO SOLUTION / 小说转短剧解决方案</p>
+    <h1>让小说，走出文字。<br><span class="keep">一键拆解为高品质视听短剧。</span></h1>
+    <p>专为网文作者、短剧编剧与推文视频创作者打造。从章节故事、场次对白、分镜构图到多轨剪辑，把繁琐的多工具割裂流程收敛进一条可掌控的 AI 原生流水线。</p>
+    <div style="margin-top: 24px; display: flex; gap: 16px; flex-wrap: wrap;">
+      <a class="btn" href="/account">免费试用（送 500 点算力）</a>
+      <a class="btn is-quiet" href="/#method">观看工作方式</a>
+    </div>
+  </section>
+
+  <!-- 对照表 -->
+  <section class="contrast-section">
+    <h2>告别割裂拼凑，拥抱全闭环流水线</h2>
+    <p style="color:var(--muted); margin-top:6px;">为什么传统“多工具拼装”做短剧如此痛苦，而 MetaArc 能真正成片？</p>
+    <div class="contrast-grid">
+      <div class="contrast-card is-old">
+        <h3><span style="color:#e11d48;">✕</span> 传统多工具拼接模式</h3>
+        <ul class="contrast-list">
+          <li><b>多工具反复切换：</b>GPT写剧本、Midjourney跑图、可灵跑视频、剪映手动对齐，效率低下。</li>
+          <li><b>严重人物变脸：</b>每张图的人物长相、发型、衣服无法锁死，生成的短剧难以让人产生代入感。</li>
+          <li><b>音画严重脱节：</b>视频时长与对白音频无法精确匹配，反复手动剪辑调轴耗费大量精力。</li>
+          <li><b>创作黑箱无从修改：</b>遇到不理想的镜头只能重抽整条视频，无法精确定位修改某一句话或某个机位。</li>
+        </ul>
+      </div>
+
+      <div class="contrast-card is-metaarc">
+        <h3><span style="color:#0284c7;">✓</span> MetaArc 原生闭环工作流</h3>
+        <ul class="contrast-list">
+          <li><b>全链路单一路径：</b>文字导入到短剧导出全程在同一个工作台内流转，数据与上下文天然连贯。</li>
+          <li><b>角色面部特征锁死：</b>内置 Actor 角色库系统，确保同一角色在全剧每一个景别中特征稳定如一。</li>
+          <li><b>六轨时间线智能对齐：</b>台词、旁白、环境音、配乐与视频自动毫秒级对齐，随时拖拽精修。</li>
+          <li><b>每一步可亲手接管：</b>从剧本对白、分镜提示词到 3D 虚拟导演台机位，创作者随时接手细修。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 核心能力矩阵 -->
+  <section class="features-matrix">
+    <h2>小说成片核心技术特性</h2>
+    <div class="features-grid">
+      <div class="feat-item">
+        <div class="feat-num">01 / CONSISTENCY</div>
+        <h4>角色面孔与资产跨镜头锁定</h4>
+        <p>基于特征空间锚定算法，自动提取小说主角与配角视觉特征，无论中景、特写或背影，角色形象严谨一致。</p>
+      </div>
+
+      <div class="feat-item">
+        <div class="feat-num">02 / DIRECTOR STAGE</div>
+        <h4>3D 虚拟导演台影视运镜</h4>
+        <p>不再依赖玄学提示词。创作者可在三维视口中直观调整推拉摇移、机位俯仰、景深层次与角色站位走线。</p>
+      </div>
+
+      <div class="feat-item">
+        <div class="feat-num">03 / MULTI-TRACK TIMELINE</div>
+        <h4>六轨多模态自动精剪</h4>
+        <p>解说音轨、角色对白、环境音效、背景音乐、视觉画面与字幕层自动混音编排，支持一键高清 4K 导出。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 六步工作流 -->
+  <section class="contrast-section">
+    <h2>从一章原著到成片的六个步骤</h2>
+    <ol class="steps" style="margin-top: 24px;">
+      <li><span>01</span><h3>读原著</h3><p>粘贴小说章节，智能提取世界观、势力格局与主角人物小传。</p></li>
+      <li><span>02</span><h3>改编剧本</h3><p>将小说叙事段落自动重构为短剧场次、对白节奏与情绪曲线。</p></li>
+      <li><span>03</span><h3>拆分镜</h3><p>精准推演分镜镜头语言、机位焦距与影视级绘图提示词。</p></li>
+      <li><span>04</span><h3>生成素材</h3><p>多智能体并行调度生成角色立绘、概念场景与动态视频镜头。</p></li>
+      <li><span>05</span><h3>智能剪辑</h3><p>多轨音画自动对齐、智能生成情绪配音与动态字幕。</p></li>
+      <li><span>06</span><h3>成片导出</h3><p>全景预览检查、细节随时微调回滚，一键无损高清 4K 导出。</p></li>
+    </ol>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-banner">
+    <h2>现在就让你的故事登上银幕</h2>
+    <p>注册即可免费获得 500 点基础算力，无需下载安装即可在浏览器中开启第一部小说短剧创作之旅。</p>
+    <a class="btn" href="/account">进入用户中心免费创作</a>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="frame">
+    <div class="footer-grid">
+      <a href="/#method">工作方式</a>
+      <a href="/novel-to-video">小说转短剧</a>
+      <a href="/pricing">套餐权益</a>
+      <a href="/changelog">更新动态</a>
+      <a href="/help/">帮助中心</a>
+    </div>
+    <p class="footer-legal">© MetaArc 元弧 · <a href="mailto:contact@metaarc.com.cn">联系支持</a></p>
+    <p class="footer-note">概念影像为生成效果演示。企业订阅与算力服务请咨询商务支持。</p>
+  </div>
+</footer>
+<script src="/landing.js"></script>
+</body>
+</html>

@@ -88,6 +88,29 @@ export function createApp() {
   app.get('/help', sendHelpPage);
   app.get('/help/', sendHelpPage);
 
+  const sendHtmlFile = (relPath: string, missingMsg: string): express.RequestHandler => {
+    const fullPath = path.join(websiteDist, relPath);
+    return (_req, res) => {
+      res.sendFile(fullPath, (err) => {
+        if (err && !res.headersSent) {
+          res.status(404).type('text/plain').send(missingMsg);
+        }
+      });
+    };
+  };
+
+  const sendPricingPage = sendHtmlFile(path.join('pricing', 'index.html'), 'pricing page missing');
+  app.get('/pricing', sendPricingPage);
+  app.get('/pricing/', sendPricingPage);
+
+  const sendChangelogPage = sendHtmlFile(path.join('changelog', 'index.html'), 'changelog page missing');
+  app.get('/changelog', sendChangelogPage);
+  app.get('/changelog/', sendChangelogPage);
+
+  const sendNovelToVideoPage = sendHtmlFile(path.join('novel-to-video', 'index.html'), 'novel-to-video page missing');
+  app.get('/novel-to-video', sendNovelToVideoPage);
+  app.get('/novel-to-video/', sendNovelToVideoPage);
+
   app.get('/version.json', (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     const versionFile = path.join(websiteDist, 'version.json');
