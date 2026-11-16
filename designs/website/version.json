@@ -2,5 +2,5 @@
   "version": "0.6.3",
   "build_time": "2026-11-16T21:50:00Z",
   "channel": "stable",
-  "release_notes": "MetaArc v0.6.3 正式发布：全面升级系统品牌纯正化、优化全量邀请码导出、强化端到端安全风控策略与更新检测。"
+  "release_notes": "MetaArc v0.6.3 正式发布：上线 Web 控制台无感更新检测、全量特邀邀请码导出与多源安全风控策略。"
 }
