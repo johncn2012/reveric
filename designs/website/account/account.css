@@ -682,6 +682,88 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
   margin-left: 4px;
 }
 
+/* 右上角新版本浮窗提示 (方案 A) */
+.metaarc-update-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 99999;
+  max-width: 360px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, #e4e7ec);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.14), 0 4px 8px rgba(16, 24, 40, 0.06);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0;
+  transform: translateY(-16px) scale(0.96);
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.metaarc-update-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.metaarc-update-toast.is-hiding {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+}
+.metaarc-update-toast .toast-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.metaarc-update-toast .toast-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.metaarc-update-toast .toast-content {
+  flex: 1;
+  min-width: 0;
+}
+.metaarc-update-toast .toast-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #101828);
+  margin-bottom: 4px;
+}
+.metaarc-update-toast .toast-desc {
+  font-size: 12px;
+  color: var(--muted, #667085);
+  line-height: 1.45;
+}
+.metaarc-update-toast .toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--line, #f2f4f7);
+  padding-top: 10px;
+}
+.metaarc-update-toast .toast-actions .btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+  height: 30px;
+  border-radius: 6px;
+}
+.metaarc-update-toast .toast-actions .btn-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted, #667085);
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: 12px;
+  height: 30px;
+  border-radius: 6px;
+}
+.metaarc-update-toast .toast-actions .btn-ghost:hover {
+  background: #f2f4f7;
+  color: var(--text, #101828);
+}
+
 @media (max-width: 860px) {
   .gate-bar, .gate-layout { width: min(1240px, calc(100% - 32px)); }
   .gate-layout { grid-template-columns: 1fr; gap: 20px; padding-top: 8px; }

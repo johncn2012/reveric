@@ -1,11 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>账号中心 — MetaArc 元弧 | 进入创作台</title>
-<meta name="description" content="MetaArc 元弧创作者用户中心。登录与注册创作者账号，查看项目进度、算力点数配额与套餐账单。">
-<meta name="keywords" content="MetaArc账号,元弧登录,元弧注册,AI创作台,算力配额,创作者中心">
+<title>账号中心 �?MetaArc 元弧 | 进入创作�?/title>
+<meta name="description" content="MetaArc 元弧创作者用户中心。登录与注册创作者账号，查看项目进度、算力点数配额与套餐账单�?>
+<meta name="keywords" content="MetaArc账号,元弧登录,元弧注册,AI创作�?算力配额,创作者中�?>
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://metaarc.com.cn/account">
 <link rel="icon" href="/assets/icon-32.png" type="image/png" sizes="32x32">
@@ -13,19 +13,19 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#f4f6f8">
 
-<!-- 社交分享与 Open Graph 元标签 -->
+<!-- 社交分享�?Open Graph 元标�?-->
 <meta property="og:site_name" content="MetaArc 元弧">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://metaarc.com.cn/account">
-<meta property="og:title" content="账号中心 — MetaArc 元弧">
-<meta property="og:description" content="MetaArc 元弧创作者用户中心。登录与注册创作者账号，查看项目进度、算力点数配额与套餐账单。">
+<meta property="og:title" content="账号中心 �?MetaArc 元弧">
+<meta property="og:description" content="MetaArc 元弧创作者用户中心。登录与注册创作者账号，查看项目进度、算力点数配额与套餐账单�?>
 <meta property="og:image" content="https://metaarc.com.cn/assets/story-ridge.jpg">
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="账号中心 — MetaArc 元弧">
-<meta name="twitter:description" content="MetaArc 元弧创作者用户中心。登录与注册创作者账号，查看项目进度、算力点数配额与套餐账单。">
+<meta name="twitter:title" content="账号中心 �?MetaArc 元弧">
+<meta name="twitter:description" content="MetaArc 元弧创作者用户中心。登录与注册创作者账号，查看项目进度、算力点数配额与套餐账单�?>
 <meta name="twitter:image" content="https://metaarc.com.cn/assets/story-ridge.jpg">
 
 <!-- Schema.org 面包屑结构化数据 -->
@@ -50,7 +50,7 @@
 }
 </script>
 
-<link rel="stylesheet" href="/account/account.css?v=20261115">
+<link rel="stylesheet" href="/account/account.css?v=0.6.3">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body>
@@ -64,11 +64,11 @@
   <div class="gate-layout">
     <section class="gate-story">
       <p class="eyebrow">从小说到成片</p>
-      <p class="gate-display">让文字，拥有自己的银幕。</p>
-      <p class="gate-aside">登录之后，在这里查看套餐权益、算力用量明细、下载客户端与订单核销。</p>
+      <p class="gate-display">让文字，拥有自己的银幕�?/p>
+      <p class="gate-aside">登录之后，在这里查看套餐权益、算力用量明细、下载客户端与订单核销�?/p>
     </section>
     <main class="gate-card">
-    <h1 id="gate-title">进入创作台</h1>
+    <h1 id="gate-title">进入创作�?/h1>
     <p class="form-error" id="gate-error" hidden></p>
     <form id="login-form">
       <label for="login-account">邮箱或手机号</label>
@@ -77,12 +77,12 @@
       <input id="login-password" name="password" type="password" autocomplete="current-password" required>
       <div id="login-captcha-row" class="captcha-row" hidden>
         <div class="captcha-input-wrap">
-          <label for="login-captcha-code">验证码</label>
+          <label for="login-captcha-code">验证�?/label>
           <input id="login-captcha-code" name="captcha_code" type="text" autocomplete="off" placeholder="4位验证码" maxlength="6">
           <input id="login-captcha-id" name="captcha_id" type="hidden">
         </div>
-        <div class="captcha-img-wrap" id="login-captcha-btn" title="看不清？点击刷新验证码">
-          <img id="login-captcha-img" src="" alt="验证码" width="120" height="40">
+        <div class="captcha-img-wrap" id="login-captcha-btn" title="看不清？点击刷新验证�?>
+          <img id="login-captcha-img" src="" alt="验证�? width="120" height="40">
         </div>
       </div>
       <div id="login-turnstile-container" class="turnstile-container" hidden></div>
@@ -90,25 +90,25 @@
     </form>
     <form id="register-form" hidden>
       <div id="register-closed-alert" class="alert-box" hidden>
-        <p>系统当前已暂停开放新用户自主注册。如需申请使用，请联系管理员或发送邮件至 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>。</p>
+        <p>系统当前已暂停开放新用户自主注册。如需申请使用，请联系管理员或发送邮件至 <a href="mailto:contact@metaarc.com.cn">contact@metaarc.com.cn</a>�?/p>
       </div>
       <div id="register-fields">
         <label for="register-account">邮箱或手机号</label>
         <input id="register-account" name="account" type="text" autocomplete="username" required>
         <div id="register-invite-code-row" class="invite-code-row" hidden>
           <label for="register-invite-code">邀请码 <span id="register-invite-code-hint" class="field-hint"></span></label>
-          <input id="register-invite-code" name="invite_code" type="text" autocomplete="off" placeholder="选填：填入邀请码可获赠额外算力" maxlength="32">
+          <input id="register-invite-code" name="invite_code" type="text" autocomplete="off" placeholder="选填：填入邀请码可获赠额外算�? maxlength="32">
         </div>
         <div id="register-email-code-row" class="email-code-row" hidden>
-          <label for="register-email-code">邮箱验证码</label>
+          <label for="register-email-code">邮箱验证�?/label>
           <div class="code-input-group">
             <input id="register-email-code" name="email_code" type="text" autocomplete="one-time-code" placeholder="6位数字验证码" maxlength="8">
-            <button class="btn btn-line" id="btn-send-email-code" type="button">获取验证码</button>
+            <button class="btn btn-line" id="btn-send-email-code" type="button">获取验证�?/button>
           </div>
         </div>
         <label for="register-nickname">昵称（可选）</label>
         <input id="register-nickname" name="nickname" type="text" autocomplete="nickname">
-        <label for="register-password">密码（至少 8 位）</label>
+        <label for="register-password">密码（至�?8 位）</label>
         <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
         <div id="register-turnstile-container" class="turnstile-container" hidden></div>
         <button class="btn" id="btn-register-submit" type="submit">注册</button>
@@ -120,16 +120,16 @@
         <label for="forgot-email">注册邮箱</label>
         <input id="forgot-email" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
         <div class="email-code-row">
-          <label for="forgot-email-code">邮箱验证码</label>
+          <label for="forgot-email-code">邮箱验证�?/label>
           <div class="code-input-group">
             <input id="forgot-email-code" name="email_code" type="text" autocomplete="one-time-code" placeholder="6位数字验证码" maxlength="6" required>
-            <button class="btn btn-line" id="btn-forgot-send-code" type="button">获取验证码</button>
+            <button class="btn btn-line" id="btn-forgot-send-code" type="button">获取验证�?/button>
           </div>
         </div>
         <label for="forgot-password">新密码（至少 8 位）</label>
-        <input id="forgot-password" name="new_password" type="password" autocomplete="new-password" minlength="8" placeholder="包含字母与数字" required>
+        <input id="forgot-password" name="new_password" type="password" autocomplete="new-password" minlength="8" placeholder="包含字母与数�? required>
         <div id="forgot-turnstile-container" class="turnstile-container" hidden></div>
-        <button class="btn" id="btn-forgot-submit" type="submit">重置密码并直接登录</button>
+        <button class="btn" id="btn-forgot-submit" type="submit">重置密码并直接登�?/button>
       </div>
       <button class="text" id="forgot-back" type="button">返回登录</button>
     </form>
@@ -148,26 +148,26 @@
     <nav id="user-nav" aria-label="用户中心">
       <p class="side-label">我的账号</p>
       <button type="button" data-view="overview">概览</button>
-      <button type="button" data-view="plan">订阅与权益</button>
+      <button type="button" data-view="plan">订阅与权�?/button>
       <button type="button" data-view="usage">用量明细</button>
-      <button type="button" data-view="downloads">下载与更新</button>
+      <button type="button" data-view="downloads">下载与更�?/button>
       <p class="side-label">管理</p>
       <button type="button" data-view="security">账号安全</button>
       <button type="button" data-view="orders">订单记录</button>
-      <button type="button" data-view="support">诊断与支持</button>
+      <button type="button" data-view="support">诊断与支�?/button>
       <a class="side-link" id="admin-entry" href="/admin" hidden>管理员工作台</a>
     </nav>
     <nav id="admin-nav" aria-label="管理员工作台" hidden>
       <p class="side-label">管理员工作台</p>
-      <button type="button" data-view="workspace">工作台概览</button>
-      <button type="button" data-view="users">用户与权限</button>
+      <button type="button" data-view="workspace">工作台概�?/button>
+      <button type="button" data-view="users">用户与权�?/button>
       <button type="button" data-view="plans">套餐权益</button>
       <button type="button" data-view="orders-admin">订单管理</button>
       <button type="button" data-view="usage-review">用量核对</button>
-      <p class="side-label">运营与系统</p>
+      <p class="side-label">运营与系�?/p>
       <button type="button" data-view="security-settings">安全策略</button>
       <button type="button" data-view="releases">发布更新</button>
-      <button type="button" data-view="diagnostics">诊断与健康</button>
+      <button type="button" data-view="diagnostics">诊断与健�?/button>
       <button type="button" data-view="audit">审计日志</button>
       <a class="side-link" href="/account">返回用户中心</a>
     </nav>
@@ -181,7 +181,7 @@
       <div class="who">
         <a href="/help/">帮助中心</a>
         <span id="who-name"></span>
-        <button id="btn-logout" type="button">退出</button>
+        <button id="btn-logout" type="button">退�?/button>
       </div>
     </header>
 
@@ -198,22 +198,22 @@
     </div>
 
     <section data-panel="overview">
-      <p class="lead" id="hello-line">故事从这里继续，账号事务清楚有序。</p>
+      <p class="lead" id="hello-line">故事从这里继续，账号事务清楚有序�?/p>
       <div class="grid-2">
         <article class="card">
-          <h2>开始之前，先准备好你的创作空间。</h2>
-          <p>安装客户端，核对账号权益与算力用量。</p>
+          <h2>开始之前，先准备好你的创作空间�?/h2>
+          <p>安装客户端，核对账号权益与算力用量�?/p>
           <a class="btn" href="/help/#install">查看安装说明</a>
         </article>
         <ol class="path">
           <li><button type="button" data-jump="downloads">01 查看安装说明</button></li>
           <li><button type="button" data-jump="plan">02 核对账号权益</button></li>
-          <li><button type="button" data-jump="support">03 了解诊断与支持</button></li>
+          <li><button type="button" data-jump="support">03 了解诊断与支�?/button></li>
         </ol>
       </div>
       <div class="grid-2">
-        <article class="card" id="overview-plan"><p class="empty">正在读取权益…</p></article>
-        <article class="card" id="overview-quota"><p class="empty">正在读取点数…</p></article>
+        <article class="card" id="overview-plan"><p class="empty">正在读取权益�?/p></article>
+        <article class="card" id="overview-quota"><p class="empty">正在读取点数�?/p></article>
       </div>
       <div class="grid-2">
         <article class="card">
@@ -223,49 +223,49 @@
         </article>
         <article class="card">
           <h2>需要帮助？</h2>
-          <p>安装、登录、生成或订单遇到问题，可查阅官方指南或联系技术支持。</p>
-          <a class="text" href="/help/#support">查看诊断与支持</a>
+          <p>安装、登录、生成或订单遇到问题，可查阅官方指南或联系技术支持�?/p>
+          <a class="text" href="/help/#support">查看诊断与支�?/a>
         </article>
       </div>
     </section>
 
     <section data-panel="plan" hidden>
-      <article class="card" id="plan-detail"><p class="empty">正在读取套餐…</p></article>
+      <article class="card" id="plan-detail"><p class="empty">正在读取套餐�?/p></article>
     </section>
 
     <section data-panel="usage" hidden>
-      <article class="card" id="usage-summary"><p class="empty">正在读取用量…</p></article>
+      <article class="card" id="usage-summary"><p class="empty">正在读取用量�?/p></article>
       <article class="card">
         <div class="row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <div>
             <h2>点数流水</h2>
-            <p class="fine">流水是点数变动，不是付款。</p>
+            <p class="fine">流水是点数变动，不是付款�?/p>
           </div>
           <div style="display:flex; gap:8px; align-items:center;">
             <select id="user-ledger-type" style="padding:4px 8px; font-size:13px; border-radius:6px; border:1px solid var(--line, #cbd5e1); background:#fff;">
               <option value="">全部业务类型</option>
-              <option value="purchase">充值到账</option>
-              <option value="consumption">创作消耗</option>
+              <option value="purchase">充值到�?/option>
+              <option value="consumption">创作消�?/option>
               <option value="admin_grant">额度调整</option>
-              <option value="refund">退款冲正</option>
+              <option value="refund">退款冲�?/option>
             </select>
           </div>
         </div>
-        <div id="ledger-slot"><p class="empty">正在读取流水…</p></div>
+        <div id="ledger-slot"><p class="empty">正在读取流水�?/p></div>
         <div id="ledger-pages"></div>
       </article>
       <article class="card">
         <h2>创作任务</h2>
-        <div id="user-tasks-slot"><p class="empty">正在读取任务…</p></div>
+        <div id="user-tasks-slot"><p class="empty">正在读取任务�?/p></div>
       </article>
       <article class="card">
         <h2>云端文件</h2>
-        <div id="user-media-slot"><p class="empty">正在读取文件记录…</p></div>
+        <div id="user-media-slot"><p class="empty">正在读取文件记录�?/p></div>
       </article>
     </section>
 
     <section data-panel="downloads" hidden>
-      <article class="card" id="downloads-slot"><p class="empty">正在读取发布状态…</p></article>
+      <article class="card" id="downloads-slot"><p class="empty">正在读取发布状态�?/p></article>
     </section>
 
     <section data-panel="security" hidden>
@@ -274,7 +274,7 @@
         <form id="form-update-profile" class="stack">
           <label for="profile-nickname-input">昵称</label>
           <input id="profile-nickname-input" type="text" autocomplete="nickname" maxlength="64">
-          <label for="profile-phone-input">联系手机号</label>
+          <label for="profile-phone-input">联系手机�?/label>
           <input id="profile-phone-input" type="tel" autocomplete="tel" placeholder="用于安全验证与重要业务通知">
           <button class="btn" type="submit">保存个人资料</button>
         </form>
@@ -288,16 +288,16 @@
           <input id="new-pwd-input" type="password" autocomplete="new-password" minlength="8" required>
           <button class="btn" type="submit">修改密码</button>
         </form>
-        <button class="btn btn-line" id="btn-logout-others" type="button">退出其他网页会话</button>
-        <p class="fine">这会退出带有会话版本的其他网页登录。更早的客户端登录会保留到过期。</p>
+        <button class="btn btn-line" id="btn-logout-others" type="button">退出其他网页会�?/button>
+        <p class="fine">这会退出带有会话版本的其他网页登录。更早的客户端登录会保留到过期�?/p>
       </article>
       <article class="card">
-        <h2>最近登录</h2>
-        <div id="login-logs-slot"><p class="empty">正在读取登录记录…</p></div>
+        <h2>最近登�?/h2>
+        <div id="login-logs-slot"><p class="empty">正在读取登录记录�?/p></div>
       </article>
       <article class="card">
-        <h2>客户端密钥</h2>
-        <p class="fine">桌面创作台用这把密钥连接账号点数。重置后，旧密钥立即失效。</p>
+        <h2>客户端密�?/h2>
+        <p class="fine">桌面创作台用这把密钥连接账号点数。重置后，旧密钥立即失效�?/p>
         <div id="key-slot"></div>
       </article>
     </section>
@@ -305,15 +305,15 @@
     <section data-panel="orders" hidden>
       <article class="card">
         <h2>订单记录</h2>
-        <p>查看订阅与算力充值订单。支持对公转账流水凭单登记与核对，待支付订单可自主取消。</p>
+        <p>查看订阅与算力充值订单。支持对公转账流水凭单登记与核对，待支付订单可自主取消�?/p>
         <div class="filters" id="user-order-filters">
           <button type="button" data-user-order-filter="" class="is-on">全部</button>
-          <button type="button" data-user-order-filter="status:pending">待支付</button>
-          <button type="button" data-user-order-filter="status:paid">已完成</button>
-          <button type="button" data-user-order-filter="status:cancelled">已取消</button>
-          <button type="button" data-user-order-filter="status:refunded">已退款</button>
+          <button type="button" data-user-order-filter="status:pending">待支�?/button>
+          <button type="button" data-user-order-filter="status:paid">已完�?/button>
+          <button type="button" data-user-order-filter="status:cancelled">已取�?/button>
+          <button type="button" data-user-order-filter="status:refunded">已退�?/button>
         </div>
-        <div id="orders-slot"><p class="empty">正在读取订单记录…</p></div>
+        <div id="orders-slot"><p class="empty">正在读取订单记录�?/p></div>
         <div id="user-orders-pages"></div>
       </article>
     </section>
@@ -321,31 +321,31 @@
     <section data-panel="support" hidden>
       <article class="card" id="support-slot">
         <h2>技术支持与问题诊断</h2>
-        <p>正在读取诊断与支持服务…</p>
+        <p>正在读取诊断与支持服务�?/p>
       </article>
     </section>
 
     <section data-panel="workspace" hidden>
-      <p class="lead">平台运营大盘、创作者、算力用量、发布更新与安全审计综合管控台。</p>
-      <div id="workspace-stats"><p class="empty">正在读取工作台…</p></div>
+      <p class="lead">平台运营大盘、创作者、算力用量、发布更新与安全审计综合管控台�?/p>
+      <div id="workspace-stats"><p class="empty">正在读取工作台�?/p></div>
       <div class="jump-row">
-        <button type="button" data-jump="users">用户与权限</button>
+        <button type="button" data-jump="users">用户与权�?/button>
         <button type="button" data-jump="orders-admin">订单管理</button>
         <button type="button" data-jump="usage-review">用量核对</button>
         <button type="button" data-jump="releases">发布记录</button>
         <button type="button" data-jump="audit">审计日志</button>
       </div>
       <article class="card">
-        <h2>进行中创作任务队列</h2>
-        <p class="fine">实时展示创作者提交的模型生成调度队列。</p>
-        <div id="workspace-tasks"><p class="empty">正在读取任务…</p></div>
+        <h2>进行中创作任务队�?/h2>
+        <p class="fine">实时展示创作者提交的模型生成调度队列�?/p>
+        <div id="workspace-tasks"><p class="empty">正在读取任务�?/p></div>
       </article>
     </section>
 
     <section data-panel="users" hidden>
       <article class="card">
         <div class="row">
-          <h2>用户与权限</h2>
+          <h2>用户与权�?/h2>
           <button class="btn" id="btn-create-user" type="button">新建账号</button>
         </div>
         <div id="users-batch-bar" class="batch-bar" hidden></div>
@@ -353,27 +353,27 @@
           <span class="filter-label">当前筛选：</span>
           <span class="pill-tag" id="user-filter-pill-ip">
             <span class="pill-icon">🌐</span>
-            <span id="user-filter-pill-text">IP 筛选</span>
-            <button type="button" class="pill-clear" id="btn-clear-user-ip-filter" title="清除此 IP 筛选">✕</button>
+            <span id="user-filter-pill-text">IP 筛�?/span>
+            <button type="button" class="pill-clear" id="btn-clear-user-ip-filter" title="清除�?IP 筛�?>�?/button>
           </span>
         </div>
         <form id="user-search" class="search-row">
           <input id="user-keyword" type="search" placeholder="邮箱、手机或昵称" autocomplete="off">
           <input id="user-start-date" type="date" title="注册起始日期">
-          <span class="date-sep">至</span>
+          <span class="date-sep">�?/span>
           <input id="user-end-date" type="date" title="注册截止日期">
-          <button class="btn btn-line" type="submit">筛选</button>
+          <button class="btn btn-line" type="submit">筛�?/button>
           <button class="btn btn-line" id="btn-export-users" type="button">导出 CSV</button>
         </form>
         <div class="filters" id="user-filters">
           <button type="button" data-user-filter="" class="is-on">全部</button>
           <button type="button" data-user-filter="plan:free">基础体验</button>
-          <button type="button" data-user-filter="plan:creator">创作者</button>
+          <button type="button" data-user-filter="plan:creator">创作�?/button>
           <button type="button" data-user-filter="plan:pro">专业</button>
-          <button type="button" data-user-filter="plan:studio">工作室</button>
-          <button type="button" data-user-filter="status:suspended">已封禁</button>
+          <button type="button" data-user-filter="plan:studio">工作�?/button>
+          <button type="button" data-user-filter="status:suspended">已封�?/button>
         </div>
-        <div id="users-slot"><p class="empty">尚未读取用户。</p></div>
+        <div id="users-slot"><p class="empty">尚未读取用户�?/p></div>
         <div id="users-pages"></div>
       </article>
     </section>
@@ -381,11 +381,11 @@
     <section data-panel="plans" hidden>
       <article class="card">
         <div class="row">
-          <h2>套餐与定价</h2>
+          <h2>套餐与定�?/h2>
           <button class="btn" id="btn-create-plan" type="button">新建套餐</button>
         </div>
-        <p class="fine">上下架与编辑配置需要填写原因并写入审计。可在线维护套餐价格、算力点数与排序。</p>
-        <div id="plans-slot"><p class="empty">正在读取套餐…</p></div>
+        <p class="fine">上下架与编辑配置需要填写原因并写入审计。可在线维护套餐价格、算力点数与排序�?/p>
+        <div id="plans-slot"><p class="empty">正在读取套餐�?/p></div>
       </article>
     </section>
 
@@ -394,27 +394,27 @@
         <div class="row">
           <h2>订单管理</h2>
           <div style="display:flex; gap:8px;">
-            <button class="btn btn-line" id="btn-cleanup-expired-orders" type="button" style="color:var(--danger, #b42318);">清理超时未支付订单</button>
+            <button class="btn btn-line" id="btn-cleanup-expired-orders" type="button" style="color:var(--danger, #b42318);">清理超时未支付订�?/button>
             <button class="btn" id="btn-create-order" type="button">手工录单</button>
           </div>
         </div>
-        <p class="fine">线上支付未开通时，支持管理员在此录入线下对账转账订单，或审核确认待付款订单并自动发点。</p>
+        <p class="fine">线上支付未开通时，支持管理员在此录入线下对账转账订单，或审核确认待付款订单并自动发点�?/p>
         <form id="order-search" class="search-row">
-          <input id="order-keyword" type="search" placeholder="订单号、账号、交易单号" autocomplete="off">
+          <input id="order-keyword" type="search" placeholder="订单号、账号、交易单�? autocomplete="off">
           <input id="order-start-date" type="date" title="下单起始日期">
-          <span class="date-sep">至</span>
+          <span class="date-sep">�?/span>
           <input id="order-end-date" type="date" title="下单截止日期">
-          <button class="btn btn-line" type="submit">筛选</button>
+          <button class="btn btn-line" type="submit">筛�?/button>
           <button class="btn btn-line" id="btn-export-orders" type="button">导出 CSV</button>
         </form>
         <div class="filters" id="order-filters">
           <button type="button" data-order-filter="" class="is-on">全部</button>
-          <button type="button" data-order-filter="status:pending">待支付 / 待核对</button>
-          <button type="button" data-order-filter="status:paid">已完成</button>
-          <button type="button" data-order-filter="status:cancelled">已取消</button>
-          <button type="button" data-order-filter="status:refunded">已退款</button>
+          <button type="button" data-order-filter="status:pending">待支�?/ 待核�?/button>
+          <button type="button" data-order-filter="status:paid">已完�?/button>
+          <button type="button" data-order-filter="status:cancelled">已取�?/button>
+          <button type="button" data-order-filter="status:refunded">已退�?/button>
         </div>
-        <div id="admin-orders-slot"><p class="empty">尚未读取订单。</p></div>
+        <div id="admin-orders-slot"><p class="empty">尚未读取订单�?/p></div>
         <div id="admin-orders-pages"></div>
       </article>
     </section>
@@ -429,17 +429,17 @@
           <input id="quota-keyword" type="search" placeholder="账号、类型或备注" autocomplete="off">
           <select id="quota-type" title="流水业务类型" style="padding: 0 10px; border: 1px solid var(--line, #cbd5e1); border-radius: 6px; font-size: 13px; background: #fff;">
             <option value="">全部业务类型</option>
-            <option value="purchase">充值到账 (purchase)</option>
-            <option value="consumption">模型消耗 (consumption)</option>
-            <option value="admin_grant">管理员调账 (admin_grant)</option>
-            <option value="refund">退款冲正 (refund)</option>
+            <option value="purchase">充值到�?(purchase)</option>
+            <option value="consumption">模型消�?(consumption)</option>
+            <option value="admin_grant">管理员调�?(admin_grant)</option>
+            <option value="refund">退款冲�?(refund)</option>
           </select>
           <input id="quota-start-date" type="date" title="流水起始日期">
-          <span class="date-sep">至</span>
+          <span class="date-sep">�?/span>
           <input id="quota-end-date" type="date" title="流水截止日期">
-          <button class="btn btn-line" type="submit">筛选</button>
+          <button class="btn btn-line" type="submit">筛�?/button>
         </form>
-        <div id="quota-review-slot"><p class="empty">正在读取流水…</p></div>
+        <div id="quota-review-slot"><p class="empty">正在读取流水�?/p></div>
         <div id="quota-review-pages"></div>
       </article>
     </section>
@@ -447,30 +447,30 @@
     <section data-panel="security-settings" hidden>
       <article class="card">
         <div class="row">
-          <h2>系统安全策略与访问限制</h2>
+          <h2>系统安全策略与访问限�?/h2>
           <button class="btn" id="btn-save-security-settings" type="button">保存安全策略</button>
         </div>
-        <p class="fine">配置新用户注册准入机制、登录验证码防护、邮箱真实验证与 Cloudflare Turnstile 人机交互校验。</p>
+        <p class="fine">配置新用户注册准入机制、登录验证码防护、邮箱真实验证与 Cloudflare Turnstile 人机交互校验�?/p>
 
         <form id="form-security-settings" class="policy-card">
           <div class="policy-item" style="align-items:flex-start;">
             <div class="policy-info" style="flex:1;">
               <h4>用户注册准入模式</h4>
-              <p>控制系统的新用户接纳方式：<strong>自由开放</strong>（任何人可注册）、<strong>仅限邀请码</strong>（仅持有效邀请码可注册）、<strong>暂停注册</strong>（全局关闭注册表单）。</p>
+              <p>控制系统的新用户接纳方式�?strong>自由开�?/strong>（任何人可注册）�?strong>仅限邀请码</strong>（仅持有效邀请码可注册）�?strong>暂停注册</strong>（全局关闭注册表单）�?/p>
             </div>
             <div style="width:160px;">
               <select id="setting-registration-mode" style="width:100%;">
-                <option value="open">自由开放注册</option>
+                <option value="open">自由开放注�?/option>
                 <option value="invite_only">仅限邀请码准入</option>
-                <option value="closed">暂停新用户注册</option>
+                <option value="closed">暂停新用户注�?/option>
               </select>
             </div>
           </div>
 
           <div class="policy-item">
             <div class="policy-info">
-              <h4>拦截临时/匿名一次性邮箱 (Disposable Email Shield)</h4>
-              <p>智能识别并拒绝 60+ 常见一次性匿名临时邮箱域名（如 tempmail、mailinator、guerrillamail 等），阻断羊毛党自动化批量生成小号。</p>
+              <h4>拦截临时/匿名一次性邮�?(Disposable Email Shield)</h4>
+              <p>智能识别并拒�?60+ 常见一次性匿名临时邮箱域名（�?tempmail、mailinator、guerrillamail 等），阻断羊毛党自动化批量生成小号�?/p>
             </div>
             <label class="toggle-switch">
               <input id="setting-block-disposable-email" type="checkbox" checked>
@@ -481,11 +481,11 @@
           <div class="policy-item" style="flex-direction:column; align-items:stretch; gap:12px;">
             <div class="policy-info">
               <h4>邮箱域名后缀准入控制 (Domain Allow/Blocklist)</h4>
-              <p>针对企业内测、高校合作或特定群体定制准入范围。逗号分隔多个域名后缀，留空表示不限制。</p>
+              <p>针对企业内测、高校合作或特定群体定制准入范围。逗号分隔多个域名后缀，留空表示不限制�?/p>
             </div>
             <div style="display:flex; gap:12px; margin-top:4px;">
               <div style="flex:1;">
-                <label for="setting-allowed-email-domains" style="margin-top:0;">允许注册的域名白名单 (留空不限制)</label>
+                <label for="setting-allowed-email-domains" style="margin-top:0;">允许注册的域名白名单 (留空不限�?</label>
                 <input id="setting-allowed-email-domains" type="text" placeholder="例如: metaarc.com.cn, pku.edu.cn" autocomplete="off">
               </div>
               <div style="flex:1;">
@@ -497,8 +497,8 @@
 
           <div class="policy-item">
             <div class="policy-info">
-              <h4>登录图形验证码</h4>
-              <p>强制要求在登录时输入图形验证码，阻断针对用户密码的暴力撞库与脚本扫描。</p>
+              <h4>登录图形验证�?/h4>
+              <p>强制要求在登录时输入图形验证码，阻断针对用户密码的暴力撞库与脚本扫描�?/p>
             </div>
             <label class="toggle-switch">
               <input id="setting-require-login-captcha" type="checkbox" checked>
@@ -508,8 +508,8 @@
 
           <div class="policy-item">
             <div class="policy-info">
-              <h4>注册邮箱验证码</h4>
-              <p>开启后，邮箱注册必须接收并验证 6 位邮件验证码，保证用户身份真实有效。</p>
+              <h4>注册邮箱验证�?/h4>
+              <p>开启后，邮箱注册必须接收并验证 6 位邮件验证码，保证用户身份真实有效�?/p>
             </div>
             <label class="toggle-switch">
               <input id="setting-require-email-code" type="checkbox">
@@ -520,7 +520,7 @@
           <div class="policy-item" style="align-items:flex-start;">
             <div class="policy-info" style="flex:1;">
               <h4>同一 IP 单日注册上限</h4>
-              <p>同一来源 IP 在 24 小时内最多允许注册的账号数量。设为 0 表示不限制。</p>
+              <p>同一来源 IP �?24 小时内最多允许注册的账号数量。设�?0 表示不限制�?/p>
             </div>
             <div style="width:120px;">
               <input id="setting-max-reg-per-ip-day" type="number" min="0" max="1000" value="5" style="text-align:center;">
@@ -531,7 +531,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div class="policy-info">
                 <h4>Cloudflare Turnstile 人机交互校验</h4>
-                <p>无感智能人机防护，有效阻断恶意脚本、爬虫与群发自动化工具。</p>
+                <p>无感智能人机防护，有效阻断恶意脚本、爬虫与群发自动化工具�?/p>
               </div>
               <label class="toggle-switch">
                 <input id="setting-cf-turnstile-enabled" type="checkbox">
@@ -544,7 +544,7 @@
                 <input id="setting-cf-site-key" type="text" placeholder="0x4AAAAAA..." autocomplete="off">
               </div>
               <div style="flex:1;">
-                <label for="setting-cf-secret-key" style="margin-top:0;">Secret Key (服务端密钥)</label>
+                <label for="setting-cf-secret-key" style="margin-top:0;">Secret Key (服务端密�?</label>
                 <input id="setting-cf-secret-key" type="password" placeholder="0x4AAAAAA..." autocomplete="off">
               </div>
             </div>
@@ -554,21 +554,21 @@
 
       <article class="card" style="margin-top:24px;">
         <div class="row">
-          <h2>同 IP 注册聚类与风险分析</h2>
+          <h2>�?IP 注册聚类与风险分�?/h2>
           <div style="display:flex; gap:8px;">
             <select id="ip-reg-min-count">
               <option value="1">全部注册来源 IP (>= 1)</option>
-              <option value="2" selected>同 IP 多账号注册 (>= 2)</option>
-              <option value="5">高风险聚集 (>= 5)</option>
+              <option value="2" selected>�?IP 多账号注�?(>= 2)</option>
+              <option value="5">高风险聚�?(>= 5)</option>
             </select>
           </div>
         </div>
-        <p class="fine">汇总同一网络来源注册的账号聚合情况，及时识别脚本批量灌水、多开羊毛与风险 IP。</p>
+        <p class="fine">汇总同一网络来源注册的账号聚合情况，及时识别脚本批量灌水、多开羊毛与风�?IP�?/p>
         <form id="ip-reg-search" class="search-row">
           <input id="ip-reg-keyword" type="search" placeholder="输入 IP 地址或归属地查询" autocomplete="off">
-          <button class="btn btn-line" type="submit">筛选</button>
+          <button class="btn btn-line" type="submit">筛�?/button>
         </form>
-        <div id="ip-reg-stats-slot"><p class="empty">正在读取聚类统计…</p></div>
+        <div id="ip-reg-stats-slot"><p class="empty">正在读取聚类统计�?/p></div>
       </article>
 
       <article class="card" id="invite-codes-card" style="margin-top:24px;">
@@ -579,19 +579,19 @@
             <button class="btn btn-line" id="btn-create-invite-code" type="button">+ 生成邀请码</button>
           </div>
         </div>
-        <p class="fine">为内测用户、合作伙伴或企业团队批量签发注册邀请码，支持单码多次使用、额外体验额度奖励与到期自动失效。</p>
+        <p class="fine">为内测用户、合作伙伴或企业团队批量签发注册邀请码，支持单码多次使用、额外体验额度奖励与到期自动失效�?/p>
         <form id="invite-codes-search" class="search-row">
-          <input id="invite-keyword" type="search" placeholder="搜索邀请码或备注说明" autocomplete="off">
+          <input id="invite-keyword" type="search" placeholder="搜索邀请码或备注说�? autocomplete="off">
           <select id="invite-status-filter">
-            <option value="all">全部状态</option>
-            <option value="active" selected>生效中</option>
-            <option value="disabled">已禁用</option>
+            <option value="all">全部状�?/option>
+            <option value="active" selected>生效�?/option>
+            <option value="disabled">已禁�?/option>
             <option value="exhausted">已耗尽</option>
-            <option value="expired">已过期</option>
+            <option value="expired">已过�?/option>
           </select>
-          <button class="btn btn-line" type="submit">筛选</button>
+          <button class="btn btn-line" type="submit">筛�?/button>
         </form>
-        <div id="invite-codes-slot"><p class="empty">正在读取邀请码列表…</p></div>
+        <div id="invite-codes-slot"><p class="empty">正在读取邀请码列表�?/p></div>
         <div id="invite-codes-pages"></div>
       </article>
     </section>
@@ -602,8 +602,8 @@
           <h2>客户端版本与发布更新</h2>
           <button class="btn" id="btn-save-releases" type="button">保存发布配置</button>
         </div>
-        <p class="fine">在线维护 Windows、macOS 与 Android 官方客户端版本号、下载地址、安装包大小及更新日志，保存即时同步至客户端升级检测与下载中心。</p>
-        <div id="releases-admin-slot"><p class="empty">正在读取客户端更新配置…</p></div>
+        <p class="fine">在线维护 Windows、macOS �?Android 官方客户端版本号、下载地址、安装包大小及更新日志，保存即时同步至客户端升级检测与下载中心�?/p>
+        <div id="releases-admin-slot"><p class="empty">正在读取客户端更新配置�?/p></div>
       </article>
       <article class="card" id="releases-preview-card">
         <h2>用户下载中心实际呈现</h2>
@@ -613,26 +613,26 @@
 
     <section data-panel="diagnostics" hidden>
       <article class="card">
-        <h2>安全风控与防护指标</h2>
-        <p class="fine">实时监测恶意登录尝试与异常 IP 聚类。</p>
-        <div id="security-stats-slot"><p class="empty">正在读取安全态势…</p></div>
-        <h3>近 48 小时异常/高频登录失败 IP 聚类分析</h3>
-        <div id="threat-ips-slot"><p class="empty">正在分析安全日志…</p></div>
+        <h2>安全风控与防护指�?/h2>
+        <p class="fine">实时监测恶意登录尝试与异�?IP 聚类�?/p>
+        <div id="security-stats-slot"><p class="empty">正在读取安全态势�?/p></div>
+        <h3>�?48 小时异常/高频登录失败 IP 聚类分析</h3>
+        <div id="threat-ips-slot"><p class="empty">正在分析安全日志�?/p></div>
 
         <div class="row" style="margin-top:28px;">
-          <h3>🛡️ IP 安全访问控制黑名单 (Denylist)</h3>
+          <h3>🛡�?IP 安全访问控制黑名�?(Denylist)</h3>
           <button class="btn btn-line" id="btn-add-blocked-ip" type="button">+ 手动拦截 IP</button>
         </div>
-        <p class="fine">已被系统安全拦截的恶意爬虫、撞库攻击或高危请求来源。匹配 IP 发起的任何请求均直接返回 403 拒绝访问。</p>
-        <div id="blocked-ips-slot"><p class="empty">正在读取拦截规则…</p></div>
+        <p class="fine">已被系统安全拦截的恶意爬虫、撞库攻击或高危请求来源。匹�?IP 发起的任何请求均直接返回 403 拒绝访问�?/p>
+        <div id="blocked-ips-slot"><p class="empty">正在读取拦截规则�?/p></div>
       </article>
       <article class="card">
         <div class="row">
-          <h2>诊断与运行健康</h2>
-          <button class="btn btn-line" id="btn-expire-check" type="button">检查到期订阅</button>
+          <h2>诊断与运行健�?/h2>
+          <button class="btn btn-line" id="btn-expire-check" type="button">检查到期订�?/button>
         </div>
-        <p class="fine">实时服务运行状态探针，监控数据库、内存、外部大模型网关与对象存储。</p>
-        <div id="health-slot"><p class="empty">正在读取健康状态…</p></div>
+        <p class="fine">实时服务运行状态探针，监控数据库、内存、外部大模型网关与对象存储�?/p>
+        <div id="health-slot"><p class="empty">正在读取健康状态�?/p></div>
         
         <div class="row" style="margin-top:20px;">
           <h3>创作任务队列</h3>
@@ -642,18 +642,18 @@
           </div>
         </div>
         <form id="task-filter-form" class="search-row">
-          <input id="task-keyword" type="search" placeholder="提示词、任务ID、账号" autocomplete="off">
+          <input id="task-keyword" type="search" placeholder="提示词、任务ID、账�? autocomplete="off">
           <select id="task-status-filter">
-            <option value="">全部状态</option>
-            <option value="pending">排队中 (pending)</option>
-            <option value="running">运行中 (running)</option>
-            <option value="completed">已完成 (completed)</option>
-            <option value="failed">已失败 (failed)</option>
-            <option value="cancelled">已取消 (cancelled)</option>
+            <option value="">全部状�?/option>
+            <option value="pending">排队�?(pending)</option>
+            <option value="running">运行�?(running)</option>
+            <option value="completed">已完�?(completed)</option>
+            <option value="failed">已失�?(failed)</option>
+            <option value="cancelled">已取�?(cancelled)</option>
           </select>
-          <button class="btn btn-line" type="submit">筛选任务</button>
+          <button class="btn btn-line" type="submit">筛选任�?/button>
         </form>
-        <div id="admin-tasks-slot"><p class="empty">正在读取任务…</p></div>
+        <div id="admin-tasks-slot"><p class="empty">正在读取任务�?/p></div>
         <div id="admin-tasks-pages"></div>
 
         <div class="row" style="margin-top:24px;">
@@ -661,7 +661,7 @@
           <button class="btn btn-line" id="btn-export-media" type="button">导出资产 CSV</button>
         </div>
         <form id="media-filter-form" class="search-row">
-          <input id="media-keyword" type="search" placeholder="存储Key、URL、账号" autocomplete="off">
+          <input id="media-keyword" type="search" placeholder="存储Key、URL、账�? autocomplete="off">
           <select id="media-type-filter">
             <option value="">全部类型</option>
             <option value="image">图像 (image)</option>
@@ -669,9 +669,9 @@
             <option value="audio">音频 (audio)</option>
             <option value="export">导出文件 (export)</option>
           </select>
-          <button class="btn btn-line" type="submit">筛选资产</button>
+          <button class="btn btn-line" type="submit">筛选资�?/button>
         </form>
-        <div id="admin-media-slot"><p class="empty">正在读取文件索引…</p></div>
+        <div id="admin-media-slot"><p class="empty">正在读取文件索引�?/p></div>
         <div id="admin-media-pages"></div>
       </article>
     </section>
@@ -682,14 +682,14 @@
           <h2>变更审计</h2>
           <button class="btn btn-line" id="btn-export-audit" type="button">导出审计日志 CSV</button>
         </div>
-        <p class="fine">记录操作者、对象、原因和变更前后。登录记录单独列出。</p>
-        <div id="audit-slot"><p class="empty">正在读取审计…</p></div>
+        <p class="fine">记录操作者、对象、原因和变更前后。登录记录单独列出�?/p>
+        <div id="audit-slot"><p class="empty">正在读取审计�?/p></div>
         <div id="audit-pages"></div>
         <div class="row" style="margin-top:24px;">
-          <h3>全局登录与安全审计</h3>
+          <h3>全局登录与安全审�?/h3>
           <button class="btn btn-line" id="btn-export-logins" type="button">导出登录记录 CSV</button>
         </div>
-        <div id="admin-login-slot"><p class="empty">正在读取登录记录…</p></div>
+        <div id="admin-login-slot"><p class="empty">正在读取登录记录�?/p></div>
         <div id="admin-login-pages"></div>
       </article>
     </section>
@@ -697,7 +697,7 @@
     <section id="admin-denied" hidden>
       <article class="card">
         <h2>需要管理员权限</h2>
-        <p>当前账号不具备管理员权限，如需开通请联系超级管理员。</p>
+        <p>当前账号不具备管理员权限，如需开通请联系超级管理员�?/p>
         <a class="btn" href="/account">返回用户中心</a>
       </article>
     </section>
@@ -723,6 +723,6 @@
     </div>
   </form>
 </div>
-<script src="/account/account.js?v=20261113"></script>
+<script src="/account/account.js?v=0.6.3"></script>
 </body>
 </html>

@@ -1,36 +1,36 @@
 ﻿{
-  "channel": "stable",
-  "signed": true,
-  "releases": [
-    {
-      "platform": "windows",
-      "arch": "x64",
-      "version": "1.0.0",
-      "download_url": "https://metaarc.com.cn/downloads/MetaArc-1.0.0-windows-setup.exe",
-      "file_size": 89456720,
-      "release_notes": "MetaArc 1.0.0 Windows 正式版发布：多模型大语言与图像创作、本地智能知识库与高性能工作台。",
-      "signed": true,
-      "channel": "stable"
-    },
-    {
-      "platform": "macos",
-      "arch": "arm64",
-      "version": "1.0.0",
-      "download_url": "https://metaarc.com.cn/downloads/MetaArc-1.0.0-macos-arm64.zip",
-      "file_size": 95624110,
-      "release_notes": "MetaArc 1.0.0 macOS Apple Silicon 正式版发布：针对 M 系列芯片深度优化、原生高帧率渲染。",
-      "signed": true,
-      "channel": "stable"
-    },
-    {
-      "platform": "android",
-      "arch": "arm64",
-      "version": "1.0.0",
-      "download_url": "https://metaarc.com.cn/downloads/MetaArc-1.0.0-android-arm64.apk",
-      "file_size": 47250000,
-      "release_notes": "MetaArc 1.0.0 Android 移动端创作者版本发布：随身灵感记录与即时算力流转。",
-      "signed": true,
-      "channel": "stable"
-    }
-  ]
+    "channel":  "stable",
+    "signed":  true,
+    "releases":  [
+                     {
+                         "platform":  "windows",
+                         "arch":  "x64",
+                         "version":  "0.6.3",
+                         "download_url":  "https://metaarc.com.cn/downloads/MetaArc-0.6.3-windows-setup.exe",
+                         "file_size":  89456720,
+                         "release_notes":  "MetaArc 1.0.0 Windows 正式版发布：多模型大语言与图像创作、本地智能知识库与高性能工作台。",
+                         "signed":  true,
+                         "channel":  "stable"
+                     },
+                     {
+                         "platform":  "macos",
+                         "arch":  "arm64",
+                         "version":  "0.6.3",
+                         "download_url":  "https://metaarc.com.cn/downloads/MetaArc-0.6.3-macos-arm64.zip",
+                         "file_size":  95624110,
+                         "release_notes":  "MetaArc 1.0.0 macOS Apple Silicon 正式版发布：针对 M 系列芯片深度优化、原生高帧率渲染。",
+                         "signed":  true,
+                         "channel":  "stable"
+                     },
+                     {
+                         "platform":  "android",
+                         "arch":  "arm64",
+                         "version":  "0.6.3",
+                         "download_url":  "https://metaarc.com.cn/downloads/MetaArc-0.6.3-android-arm64.apk",
+                         "file_size":  47250000,
+                         "release_notes":  "MetaArc 1.0.0 Android 移动端创作者版本发布：随身灵感记录与即时算力流转。",
+                         "signed":  true,
+                         "channel":  "stable"
+                     }
+                 ]
 }

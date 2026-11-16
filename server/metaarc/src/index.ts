@@ -87,6 +87,17 @@ export function createApp() {
   };
   app.get('/help', sendHelpPage);
   app.get('/help/', sendHelpPage);
+
+  app.get('/version.json', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    const versionFile = path.join(websiteDist, 'version.json');
+    if (fs.existsSync(versionFile)) {
+      res.sendFile(versionFile);
+    } else {
+      res.json({ version: '0.6.3', build_time: new Date().toISOString(), channel: 'stable' });
+    }
+  });
+
   app.use(express.static(websiteDist));
 
   // 健康检查。/api/health 与 /health 共用同一探针。
