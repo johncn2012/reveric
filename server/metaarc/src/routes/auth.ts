@@ -179,35 +179,7 @@ const registerAccount = async (req: Request, res: Response) => {
     const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
     const location = resolveIpLocation(clientIp, req.headers);
 
-    // 3. Cloudflare Turnstile 人机验证校验
-    if (settings.cf_turnstile_enabled && settings.cf_turnstile_site_key) {
-      const token = turnstile_token || req.body['cf-turnstile-response'];
-      const passed = await verifyTurnstileToken(token, clientIp);
-      if (!passed) {
-        return res.status(400).json({
-          error: 'invalid_turnstile',
-          message: '人机交互安全校验未通过，请完成验证后再提交。',
-        });
-      }
-    }
-
-    // 4. 同 IP 24小时内注册频率限制
-    const maxPerIpDay = typeof settings.max_reg_per_ip_day === 'number' ? settings.max_reg_per_ip_day : 5;
-    if (maxPerIpDay > 0) {
-      const regCheck = await query(
-        `SELECT count(*) FROM users
-         WHERE (reg_ip = $1 OR last_login_ip = $1) AND created_at >= NOW() - INTERVAL '24 hours'`,
-        [clientIp]
-      );
-      const regCount = parseInt(regCheck.rows[0]?.count || '0', 10);
-      if (regCount >= maxPerIpDay) {
-        return res.status(429).json({
-          error: 'too_many_registrations',
-          message: `当前网络来源今日注册账号已达上限（单日最多允许 ${maxPerIpDay} 个账号），请明天再试。`,
-        });
-      }
-    }
-
+    // 3. 基础参数与格式初步校验（前置快速校验，避免无意义的数据库查询）
     if (!password || typeof password !== 'string' || password.length < 8) {
       return res.status(400).json({ error: 'invalid_password', message: '密码长度至少为 8 位' });
     }
@@ -218,7 +190,7 @@ const registerAccount = async (req: Request, res: Response) => {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
         return res.status(400).json({ error: 'invalid_email', message: '邮箱格式不正确' });
       }
-      // 5. 邮箱准入控制 (临时一次性邮箱拦截、白名单/黑名单校验)
+      // 邮箱准入控制 (临时一次性邮箱拦截、白名单/黑名单校验)
       const emailPolicy = checkEmailDomainPolicy(cleanEmail, settings);
       if (!emailPolicy.allowed) {
         return res.status(400).json({
@@ -231,7 +203,19 @@ const registerAccount = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'invalid_phone', message: '手机号格式不正确' });
     }
 
-    // 6. 注册邮箱验证码校验 (若系统开启，强制要求邮箱注册并核验验证码，防止虚假手机号绕过)
+    // 4. Cloudflare Turnstile 人机验证校验
+    if (settings.cf_turnstile_enabled && settings.cf_turnstile_site_key) {
+      const token = turnstile_token || req.body['cf-turnstile-response'];
+      const passed = await verifyTurnstileToken(token, clientIp);
+      if (!passed) {
+        return res.status(400).json({
+          error: 'invalid_turnstile',
+          message: '人机交互安全校验未通过，请完成验证后再提交。',
+        });
+      }
+    }
+
+    // 5. 注册邮箱验证码校验 (若系统开启，强制要求邮箱注册并核验验证码，防止虚假手机号绕过)
     if (settings.require_email_code) {
       if (!cleanEmail) {
         return res.status(400).json({
@@ -245,6 +229,23 @@ const registerAccount = async (req: Request, res: Response) => {
       const verifyRes = await verifyEmailCode(cleanEmail, email_code.trim(), 'register');
       if (!verifyRes.success) {
         return res.status(400).json({ error: 'invalid_email_code', message: verifyRes.message || '邮箱验证码错误或已失效，请重新获取' });
+      }
+    }
+
+    // 6. 同 IP 24小时内注册频率限制
+    const maxPerIpDay = typeof settings.max_reg_per_ip_day === 'number' ? settings.max_reg_per_ip_day : 5;
+    if (maxPerIpDay > 0) {
+      const regCheck = await query(
+        `SELECT count(*) FROM users
+         WHERE (reg_ip = $1 OR last_login_ip = $1) AND created_at >= NOW() - INTERVAL '24 hours'`,
+        [clientIp]
+      );
+      const regCount = parseInt(regCheck.rows[0]?.count || '0', 10);
+      if (regCount >= maxPerIpDay) {
+        return res.status(429).json({
+          error: 'too_many_registrations',
+          message: `当前网络来源今日注册账号已达上限（单日最多允许 ${maxPerIpDay} 个账号），请明天再试。`,
+        });
       }
     }
 
