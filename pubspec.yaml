@@ -1,5 +1,5 @@
-﻿name: reveric
-description: "MetaArc �?AI 驱动的小说与剧本创作工作台�?
+name: reveric
+description: "MetaArc — AI 驱动的小说与剧本创作工作台。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -130,7 +130,7 @@ dev_dependencies:
   fake_async: ^1.3.3
   test: ^1.31.1
   build_runner: ^2.16.1
-  # �?Flutter SDK �?test 工具链共�?analyzer 13�?4�?
+  # 与 Flutter SDK 的 test 工具链共用 analyzer 13–14。
   drift_dev: 2.35.1
   riverpod_generator:
     git:
@@ -211,7 +211,7 @@ flutter:
     - assets/audio/voices/
     - assets/images/agent_avatars/dark/
     - assets/images/agent_avatars/light/
-    # Bundled Control Skills 与按需读取�?references
+    # Bundled Control Skills 与按需读取的 references
     - assets/bundled_skills/setup/SKILL.md
     - assets/bundled_skills/setup/references/original.md
     - assets/bundled_skills/setup/references/fanfic.md
@@ -306,8 +306,8 @@ patrol:
   macos:
     bundle_id: cn.metaarc.debug
 
-# 打包前需注释掉此配置，让 Flutter 内置 SQLite �?
-# Windows/Android 用户系统不自�?SQLite，使�?system source 会导致应用无法运�?
+# 打包前需注释掉此配置，让 Flutter 内置 SQLite 库
+# Windows/Android 用户系统不自带 SQLite，使用 system source 会导致应用无法运行
 # hooks:
 #   user_defines:
 #     sqlite3:
