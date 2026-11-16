@@ -167,17 +167,6 @@ class AboutSettingsSection extends HookConsumerWidget {
           _buildExternalLinkButton(
             colors,
             typo,
-            label: revericGitHubRepoUrl,
-            onTap: () => _openExternalUrl(
-              context,
-              Uri.parse(revericGitHubRepoUrl),
-              LocaleKeys.settingsAboutOpenRepositoryFailed,
-            ),
-          ),
-          SizedBox(height: descriptionGap),
-          _buildExternalLinkButton(
-            colors,
-            typo,
             label: metaArcOfficialWebsiteUrl,
             onTap: () => _openExternalUrl(
               context,

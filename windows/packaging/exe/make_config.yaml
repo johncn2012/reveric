@@ -1,9 +1,9 @@
 # Install identity stays ai.reveric so an upgrade replaces the existing setup.
 # Changing AppId would leave the old installation beside the new one.
 # The executable inside the setup is MetaArc.exe.
-app_id: ai.reveric
+app_id: cn.metaarc
 publisher: MetaArc
-publisher_url: "https://MetaArc.COM.CN"
+publisher_url: "https://metaarc.com.cn"
 display_name: MetaArc
 create_desktop_icon: true
 setup_icon_file: windows\runner\resources\app_icon.ico

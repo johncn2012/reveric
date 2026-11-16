@@ -1,19 +1,20 @@
 {
-  "name": "reveric-plugin-sdk",
+  "name": "metaarc-plugin-sdk",
   "version": "0.1.0",
-  "description": "SDK, TSX page compiler and build CLI for Reveric plugins.",
+  "description": "SDK, TSX page compiler and build CLI for MetaArc plugins.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/looplj/reveric.git",
+    "url": "git+https://github.com/johncn2012/MetaArc.git",
     "directory": "plugins/sdk"
   },
-  "homepage": "https://github.com/looplj/reveric/tree/unstable/plugins/sdk#readme",
+  "homepage": "https://metaarc.com.cn",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "bin": {
+    "metaarc-plugin": "./cli.mjs",
     "reveric-plugin": "./cli.mjs"
   },
   "exports": {
