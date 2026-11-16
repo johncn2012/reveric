@@ -8,7 +8,7 @@ import { requireAdmin } from '../middleware/auth.js';
 import { NewApiConnector } from '../services/new_api_connector.js';
 import { cleanReason, insertAudit, runMutation } from '../services/admin_audit.js';
 import { blockIp, unblockIp, listBlockedIps, normalizeIp } from '../services/ip_blocker.js';
-import { getIpSubnetPrefix } from '../utils/ip_helper.js';
+import { getClientIp, resolveIpLocation, getIpSubnetPrefix } from '../utils/ip_helper.js';
 import { getSystemSecuritySettings, updateSystemSecuritySettings } from '../services/system_settings_service.js';
 
 export const adminRouter = Router();
