@@ -83,7 +83,7 @@ export async function getSystemSecuritySettings(): Promise<SystemSecuritySetting
 export async function getPublicAuthConfig() {
   const settings = await getSystemSecuritySettings();
   const regMode = settings.registration_mode || (settings.allow_registration ? 'open' : 'closed');
-  const allowReg = regMode !== 'closed' && Boolean(settings.allow_registration);
+  const allowReg = regMode !== 'closed';
 
   return {
     allow_registration: allowReg,

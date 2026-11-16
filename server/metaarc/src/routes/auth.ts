@@ -119,7 +119,7 @@ const registerAccount = async (req: Request, res: Response) => {
 
     // 1. 注册功能开启 / 关闭检查与准入模式 (open:自由开放, invite_only:内测邀请码, closed:暂停注册)
     const regMode = settings.registration_mode || (settings.allow_registration ? 'open' : 'closed');
-    if (regMode === 'closed' || !settings.allow_registration) {
+    if (regMode === 'closed') {
       return res.status(403).json({
         error: 'registration_closed',
         message: '当前系统已暂停开放新用户自主注册，请联系管理员或稍后重试。',
@@ -845,7 +845,7 @@ const sendEmailCode = async (req: Request, res: Response) => {
 
     const settings = await getSystemSecuritySettings();
     const regMode = settings.registration_mode || (settings.allow_registration ? 'open' : 'closed');
-    if (regMode === 'closed' || !settings.allow_registration) {
+    if (regMode === 'closed') {
       return res.status(403).json({ error: 'registration_closed', message: '当前系统已暂停开放新用户注册' });
     }
 
