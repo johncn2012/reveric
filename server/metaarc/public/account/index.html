@@ -108,8 +108,8 @@
         </div>
         <label for="register-nickname">昵称（可选）</label>
         <input id="register-nickname" name="nickname" type="text" autocomplete="nickname">
-        <label for="register-password">密码（至少 6 位）</label>
-        <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+        <label for="register-password">密码（至少 8 位）</label>
+        <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
         <div id="register-turnstile-container" class="turnstile-container" hidden></div>
         <button class="btn" id="btn-register-submit" type="submit">注册</button>
       </div>
@@ -284,8 +284,8 @@
         <form id="form-change-password" class="stack">
           <label for="old-pwd-input">当前密码</label>
           <input id="old-pwd-input" type="password" autocomplete="current-password" required>
-          <label for="new-pwd-input">新密码（至少 6 位）</label>
-          <input id="new-pwd-input" type="password" autocomplete="new-password" minlength="6" required>
+          <label for="new-pwd-input">新密码（至少 8 位）</label>
+          <input id="new-pwd-input" type="password" autocomplete="new-password" minlength="8" required>
           <button class="btn" type="submit">修改密码</button>
         </form>
         <button class="btn btn-line" id="btn-logout-others" type="button">退出其他网页会话</button>

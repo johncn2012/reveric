@@ -81,7 +81,8 @@
   async function request(path, options) {
     const headers = { Accept: 'application/json' };
     if (options && options.body) headers['Content-Type'] = 'application/json';
-    if (token()) headers.Authorization = 'Bearer ' + token();
+    const currentToken = token();
+    if (currentToken) headers.Authorization = 'Bearer ' + currentToken;
     const res = await fetch(path, {
       method: (options && options.method) || 'GET',
       headers: headers,
@@ -89,6 +90,16 @@
     });
     let data = null;
     try { data = await res.json(); } catch (_) { data = null; }
+
+    // 登录态失效检测与平滑处理
+    if (res.status === 401 && currentToken && !path.includes('/auth/login') && !path.includes('/auth/register') && !path.includes('/auth/reset-password') && !path.includes('/auth/logout')) {
+      console.warn('[Session Expired] 收到 401，登录凭证失效，退出当前会话');
+      setToken('');
+      currentUser = null;
+      showGate('login');
+      showError('登录态已失效或已在其他端退出，请重新登录');
+    }
+
     return { ok: res.ok, status: res.status, data: data };
   }
   function errorMessage(result, fallback) {
@@ -1721,7 +1732,14 @@
         }
       },
       { label: '账号', fill: function (td, row) { td.textContent = person(row); } },
-      { label: '邮箱 / 手机', fill: function (td, row) { td.textContent = [row.email, row.phone].filter(Boolean).join(' / ') || '—'; } },
+      { label: '邮箱 / 手机', fill: function (td, row) {
+        const contact = [row.email, row.phone].filter(Boolean).join(' / ') || '—';
+        if (row.invited_by_code) {
+          td.innerHTML = '<span>' + contact + '</span> <span class="badge" style="background:rgba(99,102,241,0.15);color:#818cf8;font-size:10px;padding:1px 6px;border-radius:4px;" title="通过特邀邀请码注册">特邀:' + row.invited_by_code + '</span>';
+        } else {
+          td.textContent = contact;
+        }
+      } },
       { label: '注册 / 登录 IP', fill: function (td, row) {
         const ip = row.reg_ip || row.last_login_ip || '—';
         const loc = row.reg_location || row.last_login_location || '';
@@ -1942,6 +1960,8 @@
       item('套餐方案', planName(u.plan)),
       item('账号角色', u.role === 'admin' ? '管理员' : '普通创作者'),
       item('账号状态', u.status === 'suspended' ? '已封禁' : '正常'),
+      item('注册来源 / 邀请码', u.invited_by_code ? ('特邀邀请码 ' + u.invited_by_code) : '开放自主注册'),
+      item('注册 IP / 归属', (u.reg_ip || '—') + (u.reg_location ? ' (' + u.reg_location + ')' : '') + (u.reg_ip_prefix ? ' [' + u.reg_ip_prefix + ']' : '')),
       item('套餐有效期', u.expires_at ? formatWhen(u.expires_at) : '长期有效'),
       item('注册时间', formatWhen(u.created_at)),
       item('最后登录时间', formatWhen(u.last_login_at)),
@@ -3198,7 +3218,10 @@
         if ($('cf-keys-group')) $('cf-keys-group').hidden = !s.cf_turnstile_enabled;
       }
       if ($('setting-cf-site-key')) $('setting-cf-site-key').value = s.cf_turnstile_site_key || '';
-      if ($('setting-cf-secret-key')) $('setting-cf-secret-key').value = s.cf_turnstile_secret_key || '';
+      if ($('setting-cf-secret-key')) {
+        $('setting-cf-secret-key').value = s.cf_turnstile_secret_key || '';
+        $('setting-cf-secret-key').placeholder = s.has_turnstile_secret ? '已配置安全密钥（保持掩码或留空则不修改）' : '0x4AAAAAA...';
+      }
     }
     await Promise.all([
       loadIpRegistrationStats(),
@@ -3790,7 +3813,7 @@
     const account = $('register-account').value.trim();
     const password = $('register-password').value;
     const nickname = $('register-nickname').value.trim();
-    if (!account || password.length < 6) return showAlert('请输入账号，且密码至少 6 位');
+    if (!account || password.length < 8) return showAlert('请输入账号，且密码至少 8 位');
 
     if (publicAuthConfig.require_email_code && account.indexOf('@') < 0) {
       return showAlert('系统当前已开启邮箱安全校验，请使用邮箱地址进行注册');
@@ -3883,7 +3906,10 @@
   $('register-back').addEventListener('click', function () { showGate('login'); });
   $('show-forgot').addEventListener('click', function () { showGate('forgot'); });
   $('forgot-back').addEventListener('click', function () { showGate('login'); });
-  $('btn-logout').addEventListener('click', function () {
+  $('btn-logout').addEventListener('click', async function () {
+    try {
+      await request('/api/auth/logout', { method: 'POST', body: {} });
+    } catch (_) {}
     setToken('');
     currentUser = null;
     showGate('login');
@@ -4235,9 +4261,12 @@
   });
   $('form-change-password').addEventListener('submit', async function (event) {
     event.preventDefault();
+    const oldPassword = $('old-pwd-input').value;
+    const newPassword = $('new-pwd-input').value;
+    if (newPassword.length < 8) return showAlert('新密码长度至少为 8 位');
     const result = await request('/api/auth/change-password', {
       method: 'POST',
-      body: { oldPassword: $('old-pwd-input').value, newPassword: $('new-pwd-input').value },
+      body: { oldPassword: oldPassword, newPassword: newPassword },
     });
     if (!result.ok) return showAlert(errorMessage(result, '没有修改密码'));
     if (result.data && result.data.token) setToken(result.data.token);

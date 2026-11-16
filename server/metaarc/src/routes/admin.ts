@@ -75,13 +75,13 @@ adminRouter.get('/admin/overview', async (_req: Request, res: Response) => {
 adminRouter.get('/admin/users', async (req: Request, res: Response) => {
   try {
     const { keyword, plan, status, filter, ip, startDate, endDate, limit = '50', offset = '0', page, pageSize } = req.query;
-    let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location, reg_ip, reg_location, expires_at, created_at, updated_at FROM users';
+    let sql = 'SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location, reg_ip, reg_location, reg_ip_prefix, invited_by_code, expires_at, created_at, updated_at FROM users';
     const params: any[] = [];
     const whereClauses: string[] = [];
 
     if (keyword && typeof keyword === 'string' && keyword.trim()) {
       params.push(`%${keyword.trim()}%`);
-      whereClauses.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length} OR last_login_ip ILIKE $${params.length} OR last_login_location ILIKE $${params.length} OR reg_ip ILIKE $${params.length} OR reg_location ILIKE $${params.length})`);
+      whereClauses.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length} OR last_login_ip ILIKE $${params.length} OR last_login_location ILIKE $${params.length} OR reg_ip ILIKE $${params.length} OR reg_location ILIKE $${params.length} OR invited_by_code ILIKE $${params.length})`);
     }
 
     if (ip && typeof ip === 'string' && ip.trim()) {
@@ -2287,6 +2287,7 @@ adminRouter.get('/admin/users/:id/detail', async (req: Request, res: Response) =
     const userRes = await query(
       `SELECT id, email, phone, nickname, plan, quota, total_quota, role, status,
               new_api_key, new_api_user_id, last_login_at, last_login_ip, last_login_location,
+              reg_ip, reg_location, reg_ip_prefix, invited_by_code,
               expires_at, created_at, updated_at
        FROM users WHERE id = $1`,
       [id],
@@ -2914,9 +2915,17 @@ adminRouter.post('/admin/releases/manifest', async (req: Request, res: Response)
 adminRouter.get('/admin/settings', async (_req: Request, res: Response) => {
   try {
     const settings = await getSystemSecuritySettings();
+    const rawSecret = settings.cf_turnstile_secret_key || '';
+    const maskedSecret = rawSecret.length > 8
+      ? `${'●'.repeat(8)}${rawSecret.slice(-4)}`
+      : (rawSecret ? '●●●●●●●●' : '');
     return res.json({
       success: true,
-      data: settings,
+      data: {
+        ...settings,
+        cf_turnstile_secret_key: maskedSecret,
+        has_turnstile_secret: Boolean(rawSecret),
+      },
     });
   } catch (err: any) {
     console.error('[Admin Get Settings Error]', err);
@@ -2957,6 +2966,12 @@ adminRouter.post('/admin/settings', async (req: Request, res: Response) => {
           }
         } else if (key === 'max_reg_per_ip_day') {
           updates[key] = Math.max(0, parseInt(req.body[key], 10) || 0);
+        } else if (key === 'cf_turnstile_secret_key') {
+          const val = String(req.body[key] || '').trim();
+          // 若传入掩码占位符或空字符串，则保留原有密钥不予覆盖
+          if (val && !val.includes('●') && !val.includes('*')) {
+            updates[key] = val;
+          }
         } else {
           updates[key] = String(req.body[key] || '').trim();
         }
@@ -2965,6 +2980,11 @@ adminRouter.post('/admin/settings', async (req: Request, res: Response) => {
 
     const updated = await updateSystemSecuritySettings(updates);
 
+    const maskSecret = (s: any) => ({
+      ...s,
+      cf_turnstile_secret_key: s?.cf_turnstile_secret_key ? '●●●●●●●●' : '',
+    });
+
     await runMutation(async (client) => {
       await insertAudit({
         actorId: actorId(req),
@@ -2972,15 +2992,24 @@ adminRouter.post('/admin/settings', async (req: Request, res: Response) => {
         targetType: 'system_settings',
         targetId: 'security',
         reason,
-        beforeValue,
-        afterValue: updated,
+        beforeValue: maskSecret(beforeValue),
+        afterValue: maskSecret(updated),
       }, client);
     });
+
+    const rawUpdatedSecret = updated.cf_turnstile_secret_key || '';
+    const maskedUpdatedSecret = rawUpdatedSecret.length > 8
+      ? `${'●'.repeat(8)}${rawUpdatedSecret.slice(-4)}`
+      : (rawUpdatedSecret ? '●●●●●●●●' : '');
 
     return res.json({
       success: true,
       message: '系统安全策略已更新并即刻生效',
-      data: updated,
+      data: {
+        ...updated,
+        cf_turnstile_secret_key: maskedUpdatedSecret,
+        has_turnstile_secret: Boolean(rawUpdatedSecret),
+      },
     });
   } catch (err: any) {
     console.error('[Admin Update Settings Error]', err);

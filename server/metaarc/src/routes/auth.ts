@@ -70,6 +70,7 @@ function publicNewApiBaseUrl(): string {
 }
 
 async function ensureNewApiAccount(user: { id: string; email?: string; phone?: string; nickname?: string; quota?: string | number }) {
+  if (!newApi.isConfigured()) return null;
   try {
     const initialQuota = parseFloat(String(user.quota || '0'));
     const provision = await newApi.provisionUserAccount({
@@ -207,8 +208,8 @@ const registerAccount = async (req: Request, res: Response) => {
       }
     }
 
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ error: 'invalid_password', message: '密码长度至少为 6 位' });
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'invalid_password', message: '密码长度至少为 8 位' });
     }
     if (!cleanEmail && !cleanPhone) {
       return res.status(400).json({ error: 'invalid_account', message: '必须提供手机号或邮箱' });
@@ -303,30 +304,38 @@ const registerAccount = async (req: Request, res: Response) => {
     // 联动 New-API: 自动化创建 New-API 账号并签发专属 Token
     let newApiUserId: number | null = null;
     let newApiKey = '';
-    try {
-      const provision = await newApi.provisionUserAccount({
-        id: newUser.id,
-        email: newUser.email,
-        phone: newUser.phone,
-        nickname: newUser.nickname,
-      });
-      newApiUserId = provision.user.id;
-      newApiKey = provision.token.key;
+    if (newApi.isConfigured()) {
+      try {
+        const provision = await newApi.provisionUserAccount({
+          id: newUser.id,
+          email: newUser.email,
+          phone: newUser.phone,
+          nickname: newUser.nickname,
+        });
+        newApiUserId = provision.user.id;
+        newApiKey = provision.token.key;
 
-      // 为新用户充值初始赠送额度 (折算为 New-API quota)
-      await newApi.topUpUserQuota({
-        newApiUserId,
-        metaarcPoints: initialQuota,
-        remark: '注册赠送新人体验包',
-      });
+        // 为新用户充值初始赠送额度 (折算为 New-API quota)
+        await newApi.topUpUserQuota({
+          newApiUserId,
+          metaarcPoints: initialQuota,
+          remark: '注册赠送新人体验包',
+        });
 
-      // 更新本地用户关联的 new_api_key 与 new_api_user_id
-      await query(
-        'UPDATE users SET new_api_user_id = $1, new_api_key = $2, updated_at = NOW() WHERE id = $3',
-        [newApiUserId, newApiKey, newUser.id]
-      );
-    } catch (newApiErr) {
-      console.warn('[Register] New-API 自动接入异常（将使用本地离线模式）:', newApiErr);
+        // 更新本地用户关联的 new_api_key 与 new_api_user_id
+        await query(
+          'UPDATE users SET new_api_user_id = $1, new_api_key = $2, updated_at = NOW() WHERE id = $3',
+          [newApiUserId, newApiKey, newUser.id]
+        );
+      } catch (newApiErr) {
+        console.warn('[Register] New-API 自动接入异常（将使用本地离线模式）:', newApiErr);
+        newApiKey = `sk-metaarc-${crypto.randomBytes(16).toString('hex')}`;
+        await query(
+          'UPDATE users SET new_api_key = $1, updated_at = NOW() WHERE id = $2',
+          [newApiKey, newUser.id]
+        );
+      }
+    } else {
       newApiKey = `sk-metaarc-${crypto.randomBytes(16).toString('hex')}`;
       await query(
         'UPDATE users SET new_api_key = $1, updated_at = NOW() WHERE id = $2',
@@ -464,6 +473,31 @@ const loginAccount = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'account_suspended', message: '账号已被封禁，请联系管理员' });
     }
 
+    // 账号级连续密码错误防护: 15 分钟内连续 5 次密码错误，则临时锁定
+    const accountLockCheck = await query(
+      `SELECT count(*) FROM login_logs
+       WHERE user_id = $1 AND status = 'failed'
+         AND created_at >= NOW() - INTERVAL '15 minutes'
+         AND created_at > COALESCE((SELECT MAX(created_at) FROM login_logs WHERE user_id = $1 AND status = 'success'), '1970-01-01'::timestamptz)`,
+      [user.id]
+    );
+    const accountFailCount = parseInt(accountLockCheck.rows[0]?.count || '0', 10);
+    if (accountFailCount >= 5) {
+      await recordLoginLog({
+        userId: user.id,
+        account: cleanAccount,
+        ip: clientIp,
+        location,
+        userAgent,
+        status: 'failed',
+        failReason: 'account_locked: 账号连续密码错误达到 5 次上限',
+      });
+      return res.status(429).json({
+        error: 'account_locked',
+        message: '该账号连续密码错误已达 5 次，为保护账户安全已被临时锁定 15 分钟。请稍后再试或通过重置密码解锁。',
+      });
+    }
+
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
       await recordLoginLog({
@@ -582,7 +616,7 @@ const readProfile = async (req: Request, res: Response) => {
     }
 
     // 如果关联了 New-API 用户，尝试实时查询 New-API 中的剩余配额
-    if (user.new_api_user_id) {
+    if (user.new_api_user_id && newApi.isConfigured()) {
       try {
         const remoteQuota = await newApi.queryUserQuota(user.new_api_user_id);
         if (remoteQuota !== null) {
@@ -713,8 +747,8 @@ const changePassword = async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const oldPassword = req.body.oldPassword || req.body.old_password;
     const newPassword = req.body.newPassword || req.body.new_password;
-    if (!oldPassword || !newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
-      return res.status(400).json({ error: 'invalid_password', message: '新密码长度至少为 6 位' });
+    if (!oldPassword || !newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: 'invalid_password', message: '新密码长度至少为 8 位' });
     }
 
     const userRes = await query('SELECT password_hash FROM users WHERE id = $1', [userId]);
@@ -1013,6 +1047,30 @@ for (const path of ['/auth/update-profile', '/update-profile']) {
 for (const path of ['/auth/change-password', '/change-password']) {
   authRouter.post(path, requireAuth, (req, res) => {
     void changePassword(req, res);
+  });
+}
+
+for (const path of ['/auth/logout', '/logout']) {
+  authRouter.post(path, async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const decoded = verifyJwt(token);
+        if (decoded && decoded.userId) {
+          await query(
+            `UPDATE users
+             SET session_version = session_version + 1, updated_at = NOW()
+             WHERE id = $1`,
+            [decoded.userId]
+          );
+        }
+      }
+      return res.json({ success: true, message: '已安全退出登录' });
+    } catch (err: any) {
+      console.warn('[Logout Error]', err);
+      return res.json({ success: true, message: '已退出登录' });
+    }
   });
 }
 authRouter.post('/auth/logout-others', requireAuth, async (req, res) => {

@@ -32,9 +32,18 @@ export class NewApiConnector {
   constructor(config?: Partial<NewApiConfig>) {
     this.baseUrl = (config?.baseUrl || process.env.NEW_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
     this.adminKey = config?.adminKey || process.env.NEW_API_ADMIN_KEY || '';
-    if (!this.adminKey) {
-      console.warn('[NewApiConnector] 警告: 未配置 NEW_API_ADMIN_KEY，调用管理接口可能会返回 401');
-    }
+  }
+
+  /**
+   * 检查是否配置了有效的外部 New-API 服务地址与通信密钥
+   */
+  public isConfigured(): boolean {
+    return Boolean(
+      this.adminKey &&
+        this.baseUrl &&
+        !this.baseUrl.includes('your-new-api-host') &&
+        !this.baseUrl.includes('example.com')
+    );
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
