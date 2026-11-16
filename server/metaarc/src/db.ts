@@ -46,7 +46,9 @@ export async function initDbSchema(): Promise<void> {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`,
       `CREATE INDEX IF NOT EXISTS idx_login_logs_user_created ON login_logs(user_id, created_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS idx_login_logs_user_status_created ON login_logs(user_id, status, created_at DESC)`,
       `CREATE INDEX IF NOT EXISTS idx_login_logs_ip ON login_logs(ip)`,
+      `CREATE INDEX IF NOT EXISTS idx_login_logs_ip_status_created ON login_logs(ip, status, created_at DESC)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip VARCHAR(64)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_location VARCHAR(128)`,
@@ -124,6 +126,7 @@ export async function initDbSchema(): Promise<void> {
       `ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS fail_attempts INT NOT NULL DEFAULT 0`,
       `ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS type VARCHAR(32) NOT NULL DEFAULT 'register'`,
       `CREATE INDEX IF NOT EXISTS idx_email_verif_email_type ON email_verifications(email, type, expires_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_email_verif_email_created ON email_verifications(email, created_at DESC)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_ip_prefix VARCHAR(64)`,
       `CREATE INDEX IF NOT EXISTS idx_users_reg_ip_prefix ON users(reg_ip_prefix)`,
       `CREATE TABLE IF NOT EXISTS invite_codes (

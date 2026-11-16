@@ -191,8 +191,8 @@ adminRouter.post('/admin/users/create', async (req: Request, res: Response) => {
 
     const reason = cleanReason(req.body?.reason);
     if (!reason) return reasonRequired(res);
-    if (!cleanEmail || cleanPassword.length < 6) {
-      return res.status(400).json({ error: 'invalid_fields', message: '请输入有效邮箱和至少 6 位初始密码' });
+    if (!cleanEmail || cleanPassword.length < 8) {
+      return res.status(400).json({ error: 'invalid_fields', message: '请输入有效邮箱和至少 8 位初始密码' });
     }
 
     const checkSql = 'SELECT id FROM users WHERE email = $1' + (cleanPhone ? ' OR phone = $2' : '') + ' LIMIT 1';
@@ -205,13 +205,16 @@ adminRouter.post('/admin/users/create', async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(cleanPassword, salt);
     const initialLocalKey = 'sk-metaarc-' + crypto.randomBytes(16).toString('hex');
+    const clientIp = getClientIp(req);
+    const location = resolveIpLocation(clientIp, req.headers);
+    const ipPrefix = getIpSubnetPrefix(clientIp);
 
     const newUser = await runMutation(async (client) => {
       const inserted = await client.query(
-        `INSERT INTO users (email, phone, password_hash, nickname, role, status, plan, quota, total_quota, new_api_key)
-         VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9)
-         RETURNING id, email, phone, nickname, role, status, plan, quota, total_quota, new_api_key, created_at`,
-        [cleanEmail, cleanPhone || null, hash, cleanNickname || null, cleanRole, cleanPlan, initQuota, initQuota, initialLocalKey],
+        `INSERT INTO users (email, phone, password_hash, nickname, role, status, plan, quota, total_quota, new_api_key, reg_ip, reg_location, reg_ip_prefix)
+         VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9, $10, $11, $12)
+         RETURNING id, email, phone, nickname, role, status, plan, quota, total_quota, new_api_key, reg_ip, reg_location, reg_ip_prefix, created_at`,
+        [cleanEmail, cleanPhone || null, hash, cleanNickname || null, cleanRole, cleanPlan, initQuota, initQuota, initialLocalKey, clientIp, location, ipPrefix],
       );
       const created = inserted.rows[0];
       if (initQuota > 0) {
@@ -1273,7 +1276,7 @@ adminRouter.post('/admin/users/:id/reset-password', async (req: Request, res: Re
     const reason = cleanReason(req.body?.reason);
     if (!reason) return reasonRequired(res);
     const supplied = req.body.newPassword || req.body.new_password;
-    const pwd = (typeof supplied === 'string' && supplied.trim().length >= 6)
+    const pwd = (typeof supplied === 'string' && supplied.trim().length >= 8)
       ? supplied.trim()
       : `MetaArc@${Math.random().toString(36).substring(2, 8).toUpperCase()}!`;
 
@@ -1303,6 +1306,20 @@ adminRouter.post('/admin/users/:id/reset-password', async (req: Request, res: Re
       }, client);
       return userRes.rows[0];
     });
+
+    // 管理员重置密码后，记录成功日志以即刻清空该账号先前的连续输错临时锁定
+    const clientIp = getClientIp(req);
+    await query(
+      `INSERT INTO login_logs (user_id, account, ip, ip_location, user_agent, status, fail_reason, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'success', 'admin_reset_password', NOW())`,
+      [
+        targetUserId,
+        user.email || user.phone || 'user',
+        clientIp,
+        resolveIpLocation(clientIp, req.headers),
+        (req.headers['user-agent'] || '').slice(0, 255),
+      ]
+    );
 
     return res.json({
       success: true,
@@ -2153,9 +2170,22 @@ adminRouter.get('/admin/security/stats', async (_req: Request, res: Response) =>
     const userStatsSql = `
       SELECT COUNT(*) as suspended_count FROM users WHERE status = 'suspended'
     `;
-    const [todayRes, userRes] = await Promise.all([query(todaySql), query(userStatsSql)]);
+    const blockedIpsSql = `
+      SELECT COUNT(*) as blocked_count FROM blocked_ips WHERE expires_at > NOW()
+    `;
+    const activeInvitesSql = `
+      SELECT COUNT(*) as active_count FROM invite_codes WHERE status = 'active' AND (expires_at IS NULL OR expires_at > NOW())
+    `;
+    const [todayRes, userRes, blockedRes, invitesRes] = await Promise.all([
+      query(todaySql),
+      query(userStatsSql),
+      query(blockedIpsSql),
+      query(activeInvitesSql),
+    ]);
     const stats = todayRes.rows[0] || {};
     const suspended = userRes.rows[0] || {};
+    const blocked = blockedRes.rows[0] || {};
+    const invites = invitesRes.rows[0] || {};
 
     return res.json({
       success: true,
@@ -2164,6 +2194,8 @@ adminRouter.get('/admin/security/stats', async (_req: Request, res: Response) =>
         today_failed: parseInt(stats.today_failed || '0', 10),
         today_ips: parseInt(stats.today_ips || '0', 10),
         suspended_users: parseInt(suspended.suspended_count || '0', 10),
+        blocked_ips: parseInt(blocked.blocked_count || '0', 10),
+        active_invites: parseInt(invites.active_count || '0', 10),
       },
     });
   } catch (err: any) {
@@ -2375,7 +2407,7 @@ adminRouter.get('/admin/security/threat-ips', async (_req: Request, res: Respons
       SELECT ip, COALESCE(ip_location, '未知') as ip_location,
              COUNT(*) as fail_count,
              COUNT(DISTINCT account) as targeted_accounts_count,
-             ARRAY_AGG(DISTINCT account) FILTER (WHERE account IS NOT NULL) as sample_accounts,
+             (ARRAY_AGG(DISTINCT account) FILTER (WHERE account IS NOT NULL))[1:5] as sample_accounts,
              MAX(created_at) as last_attempt_at
       FROM login_logs
       WHERE status = 'failed' AND created_at >= NOW() - INTERVAL '48 hours'
@@ -2498,7 +2530,7 @@ adminRouter.get('/admin/export/:entity', async (req: Request, res: Response) => 
       const where: string[] = [];
       if (keyword && typeof keyword === 'string' && keyword.trim()) {
         params.push(`%${keyword.trim()}%`);
-        where.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length})`);
+        where.push(`(email ILIKE $${params.length} OR phone ILIKE $${params.length} OR nickname ILIKE $${params.length} OR invited_by_code ILIKE $${params.length} OR reg_ip ILIKE $${params.length})`);
       }
       if (plan && typeof plan === 'string' && plan.trim()) {
         params.push(plan.trim());
@@ -2517,10 +2549,10 @@ adminRouter.get('/admin/export/:entity', async (req: Request, res: Response) => 
         where.push(`created_at <= ($${params.length}::timestamptz + INTERVAL '1 day')`);
       }
       const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-      const sql = `SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, last_login_at, last_login_ip, created_at FROM users ${whereSql} ORDER BY created_at DESC LIMIT 5000`;
+      const sql = `SELECT id, email, phone, nickname, plan, quota, total_quota, role, status, reg_ip, reg_location, reg_ip_prefix, invited_by_code, last_login_at, last_login_ip, created_at FROM users ${whereSql} ORDER BY created_at DESC LIMIT 5000`;
       const result = await query(sql, params);
 
-      headers = ['用户ID', '邮箱', '手机号', '昵称', '套餐', '剩余点数', '累计发放点数', '角色', '状态', '最后登录时间', '最后登录IP', '注册时间'];
+      headers = ['用户ID', '邮箱', '手机号', '昵称', '套餐', '剩余点数', '累计发放点数', '角色', '状态', '邀请码', '注册IP', '注册地', 'IP子网', '最后登录时间', '最后登录IP', '注册时间'];
       rows = result.rows.map(r => [
         r.id,
         r.email || '',
@@ -2531,6 +2563,10 @@ adminRouter.get('/admin/export/:entity', async (req: Request, res: Response) => 
         r.total_quota || '0',
         r.role || '',
         r.status || '',
+        r.invited_by_code || '',
+        r.reg_ip || '',
+        r.reg_location || '',
+        r.reg_ip_prefix || '',
         r.last_login_at ? new Date(r.last_login_at).toISOString() : '',
         r.last_login_ip || '',
         r.created_at ? new Date(r.created_at).toISOString() : '',
@@ -2770,6 +2806,37 @@ adminRouter.get('/admin/export/:entity', async (req: Request, res: Response) => 
         r.reason || '',
         JSON.stringify(r.before_value || {}),
         JSON.stringify(r.after_value || {}),
+        r.created_at ? new Date(r.created_at).toISOString() : '',
+      ]);
+    } else if (entity === 'invite-codes') {
+      const params: any[] = [];
+      const where: string[] = [];
+      if (keyword && typeof keyword === 'string' && keyword.trim()) {
+        params.push(`%${keyword.trim()}%`);
+        where.push(`(code ILIKE $${params.length} OR note ILIKE $${params.length})`);
+      }
+      if (status && typeof status === 'string' && status.trim()) {
+        params.push(status.trim());
+        where.push(`status = $${params.length}`);
+      }
+      const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const sql = `
+        SELECT code, status, used_count, max_uses, bonus_quota, target_plan, note, expires_at, created_at
+        FROM invite_codes
+        ${whereSql}
+        ORDER BY created_at DESC LIMIT 5000
+      `;
+      const result = await query(sql, params);
+      headers = ['邀请码', '状态', '已使用次数', '最大可用次数', '赠送点数', '目标套餐', '备注说明', '过期时间', '创建时间'];
+      rows = result.rows.map(r => [
+        r.code,
+        r.status,
+        r.used_count || 0,
+        r.max_uses || 1,
+        r.bonus_quota || 0,
+        r.target_plan || 'free',
+        r.note || '',
+        r.expires_at ? new Date(r.expires_at).toISOString() : '永久有效',
         r.created_at ? new Date(r.created_at).toISOString() : '',
       ]);
     } else {

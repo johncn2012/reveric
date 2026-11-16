@@ -67,7 +67,20 @@ async function sendVerificationCode(params: {
     };
   }
 
-  // 2. 检查同一 IP 10 分钟内发送次数上限 (防恶意轰炸)
+  // 2. 检查该邮箱 24 小时内累计发送次数上限 (防单邮箱轰炸)
+  const emailDailyCheck = await query<{ cnt: string }>(
+    `SELECT COUNT(*) as cnt FROM email_verifications
+     WHERE email = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
+    [normalizedEmail]
+  );
+  if (parseInt(emailDailyCheck.rows[0]?.cnt || '0', 10) >= 10) {
+    return {
+      success: false,
+      message: '该邮箱今日请求验证码已达上限（单日最多 10 次），请明日再试',
+    };
+  }
+
+  // 3. 检查同一 IP 10 分钟内发送次数上限 (防恶意轰炸)
   const ipCheck = await query<{ cnt: string }>(
     `SELECT COUNT(*) as cnt FROM email_verifications
      WHERE ip = $1 AND created_at > NOW() - INTERVAL '10 minutes'`,

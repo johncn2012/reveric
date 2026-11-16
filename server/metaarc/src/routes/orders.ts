@@ -106,17 +106,21 @@ const submitOrderVoucher = async (req: Request, res: Response) => {
     }
 
     const cleanTradeNo = payTradeNo.trim().slice(0, 128);
-    const check = await query('SELECT id, status FROM orders WHERE id = $1 AND user_id = $2', [id, userId]);
+    const check = await query(
+      'SELECT id, status FROM orders WHERE (id::text = $1 OR order_no = $1) AND user_id = $2',
+      [id, userId]
+    );
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'order_not_found', message: '订单不存在' });
     }
-    if (check.rows[0].status !== 'pending') {
+    const orderRecord = check.rows[0];
+    if (orderRecord.status !== 'pending') {
       return res.status(400).json({ error: 'invalid_status', message: '只有待对账/待审核状态的订单可提交或修改流水号' });
     }
 
     const updateRes = await query(
       "UPDATE orders SET pay_trade_no = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
-      [cleanTradeNo, id]
+      [cleanTradeNo, orderRecord.id]
     );
 
     return res.json({

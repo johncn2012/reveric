@@ -3018,6 +3018,8 @@
     secBox.append(secStat('今日登录拦截', formatNumber(secData.today_failed || 0), (secData.today_failed || 0) > 0 ? '存在失败尝试' : '安全状态平稳'));
     secBox.append(secStat('今日活跃来源IP', formatNumber(secData.today_ips || 0), '独立公网 IP'));
     secBox.append(secStat('已封禁账号数', formatNumber(secData.suspended_users || 0), '受限账号'));
+    secBox.append(secStat('当前拦截 IP 数', formatNumber(secData.blocked_ips || 0), (secData.blocked_ips || 0) > 0 ? '黑名单生效中' : '无黑名单拦截'));
+    secBox.append(secStat('生效中特邀码', formatNumber(secData.active_invites || 0), '内测/渠道码'));
     fill('security-stats-slot', secBox);
 
     // 威胁分析: 异常高频失败 IP
@@ -3453,7 +3455,23 @@
         label: '使用进度',
         fill: function (td, row) {
           const max = row.max_uses === 0 ? '不限' : row.max_uses;
-          td.innerHTML = '<strong>' + row.used_count + '</strong> / ' + max + ' 次';
+          if (row.used_count > 0) {
+            const link = document.createElement('a');
+            link.href = '#';
+            link.style.cursor = 'pointer';
+            link.style.textDecoration = 'underline';
+            link.style.color = '#0052cc';
+            link.innerHTML = '<strong>' + row.used_count + '</strong>';
+            link.title = '点击查看使用此邀请码注册的用户';
+            link.addEventListener('click', function (e) {
+              e.preventDefault();
+              if ($('user-keyword')) $('user-keyword').value = row.code;
+              showView('users');
+            });
+            td.append(link, document.createTextNode(' / ' + max + ' 次'));
+          } else {
+            td.innerHTML = '<strong>0</strong> / ' + max + ' 次';
+          }
         }
       },
       {
@@ -4341,6 +4359,16 @@
   if ($('btn-create-invite-code')) {
     $('btn-create-invite-code').addEventListener('click', function () {
       createInviteCodeModal();
+    });
+  }
+  if ($('btn-export-invite-codes')) {
+    $('btn-export-invite-codes').addEventListener('click', function () {
+      const params = new URLSearchParams();
+      const keyword = $('invite-keyword') ? $('invite-keyword').value.trim() : '';
+      const status = $('invite-status-filter') ? $('invite-status-filter').value : 'all';
+      if (keyword) params.set('keyword', keyword);
+      if (status && status !== 'all') params.set('status', status);
+      downloadCsv('/api/admin/export/invite-codes?' + params.toString(), 'metaarc-invite-codes.csv');
     });
   }
   if ($('invite-codes-search')) {

@@ -8,7 +8,17 @@ import type { PoolClient } from 'pg';
 
 import { pool } from '../db.js';
 
-const REDACTED_KEYS = ['password', 'password_hash', 'new_api_key', 'temporary_password', 'newPassword', 'apiKey'];
+const REDACTED_KEYS = [
+  'password',
+  'password_hash',
+  'new_api_key',
+  'temporary_password',
+  'newPassword',
+  'apiKey',
+  'cf_turnstile_secret_key',
+  'secret_key',
+  'secretKey',
+];
 
 export type AuditEntry = {
   actorId: string;
