@@ -9,6 +9,7 @@ import { getSystemSecuritySettings, getPublicAuthConfig } from '../services/syst
 import { generateCaptcha, verifyCaptcha } from '../services/captcha_service.js';
 import { sendRegisterEmailCode, sendResetPasswordEmailCode, verifyEmailCode } from '../services/email_service.js';
 import { verifyTurnstileToken } from '../services/turnstile_service.js';
+import { checkEmailDomainPolicy } from '../services/email_shield.js';
 
 async function recordLoginLog(params: {
   userId?: string;
@@ -116,24 +117,68 @@ const registerAccount = async (req: Request, res: Response) => {
   try {
     const settings = await getSystemSecuritySettings();
 
-    // 1. 注册功能开启 / 关闭检查
-    if (!settings.allow_registration) {
+    // 1. 注册功能开启 / 关闭检查与准入模式 (open:自由开放, invite_only:内测邀请码, closed:暂停注册)
+    const regMode = settings.registration_mode || (settings.allow_registration ? 'open' : 'closed');
+    if (regMode === 'closed' || !settings.allow_registration) {
       return res.status(403).json({
         error: 'registration_closed',
         message: '当前系统已暂停开放新用户自主注册，请联系管理员或稍后重试。',
       });
     }
 
-    const { email, phone, password, nickname, email_code, turnstile_token } = req.body;
+    const { email, phone, password, nickname, email_code, turnstile_token, invite_code } = req.body;
     const cleanEmail = typeof email === 'string' ? email.trim() : '';
     const cleanPhone = typeof phone === 'string' ? phone.trim() : '';
     const cleanNickname = typeof nickname === 'string' ? nickname.trim() : '';
+    const cleanInviteCode = typeof invite_code === 'string' ? invite_code.trim().toUpperCase() : '';
+
+    // 2. 内测邀请码模式准入与校验
+    if (regMode === 'invite_only' && !cleanInviteCode) {
+      return res.status(400).json({
+        error: 'invite_code_required',
+        message: '当前系统处于内测特邀阶段，必须填写有效邀请码方可注册。',
+      });
+    }
+
+    let verifiedInvite: any = null;
+    if (cleanInviteCode) {
+      const inviteRes = await query(
+        'SELECT * FROM invite_codes WHERE UPPER(code) = $1 LIMIT 1',
+        [cleanInviteCode]
+      );
+      if (inviteRes.rows.length === 0) {
+        return res.status(400).json({
+          error: 'invalid_invite_code',
+          message: '输入的邀请码不存在或已作废，请核对后重试。',
+        });
+      }
+      const inv = inviteRes.rows[0];
+      if (inv.status !== 'active') {
+        return res.status(400).json({
+          error: 'invite_code_disabled',
+          message: '该邀请码已被管理员禁用。',
+        });
+      }
+      if (inv.expires_at && new Date(inv.expires_at).getTime() < Date.now()) {
+        return res.status(400).json({
+          error: 'invite_code_expired',
+          message: '该邀请码已过期失效。',
+        });
+      }
+      if (inv.max_uses > 0 && inv.used_count >= inv.max_uses) {
+        return res.status(400).json({
+          error: 'invite_code_exhausted',
+          message: '该邀请码可用次数已达上限。',
+        });
+      }
+      verifiedInvite = inv;
+    }
 
     const clientIp = getClientIp(req);
     const userAgent = (req.headers['user-agent'] || '').slice(0, 255);
     const location = resolveIpLocation(clientIp, req.headers);
 
-    // 2. Cloudflare Turnstile 人机验证校验
+    // 3. Cloudflare Turnstile 人机验证校验
     if (settings.cf_turnstile_enabled && settings.cf_turnstile_site_key) {
       const token = turnstile_token || req.body['cf-turnstile-response'];
       const passed = await verifyTurnstileToken(token, clientIp);
@@ -145,7 +190,7 @@ const registerAccount = async (req: Request, res: Response) => {
       }
     }
 
-    // 3. 同 IP 24小时内注册频率限制
+    // 4. 同 IP 24小时内注册频率限制
     const maxPerIpDay = typeof settings.max_reg_per_ip_day === 'number' ? settings.max_reg_per_ip_day : 5;
     if (maxPerIpDay > 0) {
       const regCheck = await query(
@@ -168,14 +213,24 @@ const registerAccount = async (req: Request, res: Response) => {
     if (!cleanEmail && !cleanPhone) {
       return res.status(400).json({ error: 'invalid_account', message: '必须提供手机号或邮箱' });
     }
-    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      return res.status(400).json({ error: 'invalid_email', message: '邮箱格式不正确' });
+    if (cleanEmail) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        return res.status(400).json({ error: 'invalid_email', message: '邮箱格式不正确' });
+      }
+      // 5. 邮箱准入控制 (临时一次性邮箱拦截、白名单/黑名单校验)
+      const emailPolicy = checkEmailDomainPolicy(cleanEmail, settings);
+      if (!emailPolicy.allowed) {
+        return res.status(400).json({
+          error: 'disallowed_email_domain',
+          message: emailPolicy.reason || '不支持使用该邮箱注册',
+        });
+      }
     }
     if (cleanPhone && !/^\+?[0-9]{5,20}$/.test(cleanPhone)) {
       return res.status(400).json({ error: 'invalid_phone', message: '手机号格式不正确' });
     }
 
-    // 4. 注册邮箱验证码校验 (若系统开启，强制要求邮箱注册并核验验证码，防止虚假手机号绕过)
+    // 6. 注册邮箱验证码校验 (若系统开启，强制要求邮箱注册并核验验证码，防止虚假手机号绕过)
     if (settings.require_email_code) {
       if (!cleanEmail) {
         return res.status(400).json({
@@ -201,13 +256,15 @@ const registerAccount = async (req: Request, res: Response) => {
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-    const initialQuota = 500; // 注册默认赠送 500 点算力
+    const bonusQuota = verifiedInvite ? (parseInt(verifiedInvite.bonus_quota, 10) || 0) : 0;
+    const initialQuota = 500 + bonusQuota; // 注册默认赠送 500 点算力 + 邀请码奖励
+    const targetPlan = (verifiedInvite && verifiedInvite.target_plan) ? verifiedInvite.target_plan : 'free';
 
-    // 插入本地用户，显式记录 reg_ip, reg_location, reg_ip_prefix
+    // 插入本地用户，显式记录 reg_ip, reg_location, reg_ip_prefix, invited_by_code
     const ipPrefix = getIpSubnetPrefix(clientIp);
     const insertSql = `
-      INSERT INTO users (email, phone, password_hash, nickname, plan, quota, total_quota, role, last_login_ip, last_login_location, last_login_at, reg_ip, reg_location, reg_ip_prefix)
-      VALUES ($1, $2, $3, $4, 'free', $5, $5, 'user', $6, $7, NOW(), $6, $7, $8)
+      INSERT INTO users (email, phone, password_hash, nickname, plan, quota, total_quota, role, last_login_ip, last_login_location, last_login_at, reg_ip, reg_location, reg_ip_prefix, invited_by_code)
+      VALUES ($1, $2, $3, $4, $5, $6, $6, 'user', $7, $8, NOW(), $7, $8, $9, $10)
       RETURNING id, email, phone, nickname, plan, quota, total_quota, role, created_at
     `;
     const userRes = await query(insertSql, [
@@ -215,12 +272,22 @@ const registerAccount = async (req: Request, res: Response) => {
       cleanPhone || null,
       passwordHash,
       cleanNickname || '创作者',
+      targetPlan,
       initialQuota,
       clientIp,
       location,
       ipPrefix,
+      verifiedInvite ? verifiedInvite.code : null,
     ]);
     const newUser = userRes.rows[0];
+
+    // 原子增加邀请码使用次数
+    if (verifiedInvite) {
+      await query(
+        'UPDATE invite_codes SET used_count = used_count + 1 WHERE code = $1',
+        [verifiedInvite.code]
+      );
+    }
 
     // 记录首次注册安全日志
     await recordLoginLog({
@@ -542,6 +609,39 @@ const readProfile = async (req: Request, res: Response) => {
     const storageLimitMb = planRes.rows[0]?.storage_limit_mb || 500;
     const maxConcurrency = planRes.rows[0]?.max_concurrency || 1;
 
+    // 异地登录告警检测：对比最近两次成功登录的地点与网络特征
+    let securityAlert: any = null;
+    try {
+      const recentLoginsRes = await query(
+        `SELECT ip, ip_location, created_at FROM login_logs 
+         WHERE user_id = $1 AND status = 'success' 
+         ORDER BY created_at DESC LIMIT 2`,
+        [userId]
+      );
+      if (recentLoginsRes.rows.length >= 2) {
+        const curLogin = recentLoginsRes.rows[0];
+        const prevLogin = recentLoginsRes.rows[1];
+        const curLoc = (curLogin.ip_location || '').trim();
+        const prevLoc = (prevLogin.ip_location || '').trim();
+        const isLocalOrUnknown = (loc: string) =>
+          !loc || loc.includes('未知') || loc.includes('局域网') || loc.includes('本地');
+
+        if (!isLocalOrUnknown(curLoc) && !isLocalOrUnknown(prevLoc) && curLoc !== prevLoc) {
+          securityAlert = {
+            is_cross_region: true,
+            current_location: curLoc,
+            current_ip: curLogin.ip,
+            prev_location: prevLoc,
+            prev_ip: prevLogin.ip,
+            prev_time: prevLogin.created_at,
+            message: `检测到本次登录地点（${curLoc}）与上次（${prevLoc}）存在异地变动，若非本人操作请立即前往修改密码。`,
+          };
+        }
+      }
+    } catch (alertErr) {
+      console.warn('[Profile Security Alert Warning]', alertErr);
+    }
+
     return res.json({
       success: true,
       user: {
@@ -563,6 +663,7 @@ const readProfile = async (req: Request, res: Response) => {
         last_login_ip: user.last_login_ip,
         last_login_location: user.last_login_location,
         expires_at: user.expires_at,
+        security_alert: securityAlert,
       },
     });
   } catch (err: any) {
@@ -743,8 +844,18 @@ const sendEmailCode = async (req: Request, res: Response) => {
     }
 
     const settings = await getSystemSecuritySettings();
-    if (!settings.allow_registration) {
+    const regMode = settings.registration_mode || (settings.allow_registration ? 'open' : 'closed');
+    if (regMode === 'closed' || !settings.allow_registration) {
       return res.status(403).json({ error: 'registration_closed', message: '当前系统已暂停开放新用户注册' });
+    }
+
+    // 邮箱准入控制 (临时一次性邮箱拦截、白名单/黑名单校验)
+    const emailPolicy = checkEmailDomainPolicy(cleanEmail, settings);
+    if (!emailPolicy.allowed) {
+      return res.status(400).json({
+        error: 'disallowed_email_domain',
+        message: emailPolicy.reason || '不支持使用该邮箱获取验证码',
+      });
     }
 
     const clientIp = getClientIp(req);

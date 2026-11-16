@@ -99,6 +99,10 @@ export async function initDbSchema(): Promise<void> {
       `INSERT INTO system_settings (key, value, description)
        VALUES 
          ('allow_registration', 'true'::jsonb, '是否开放新用户自主注册'),
+         ('registration_mode', '"open"'::jsonb, '注册准入模式 (open:自由开放, invite_only:仅限邀请码, closed:暂停注册)'),
+         ('block_disposable_email', 'true'::jsonb, '是否拦截临时一次性匿名邮箱注册'),
+         ('allowed_email_domains', '""'::jsonb, '允许注册的邮箱域名后缀白名单(逗号分隔，留空不限制)'),
+         ('blocked_email_domains', '""'::jsonb, '禁止注册的自定义邮箱域名后缀黑名单(逗号分隔)'),
          ('require_login_captcha', 'true'::jsonb, '用户登录是否需要输入图形验证码'),
          ('require_email_code', 'false'::jsonb, '邮箱注册是否必须验证邮箱验证码'),
          ('max_reg_per_ip_day', '5'::jsonb, '同 IP 24小时内允许注册的最大账号数量'),
@@ -122,6 +126,21 @@ export async function initDbSchema(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS idx_email_verif_email_type ON email_verifications(email, type, expires_at)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_ip_prefix VARCHAR(64)`,
       `CREATE INDEX IF NOT EXISTS idx_users_reg_ip_prefix ON users(reg_ip_prefix)`,
+      `CREATE TABLE IF NOT EXISTS invite_codes (
+          code VARCHAR(32) PRIMARY KEY,
+          created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          max_uses INT NOT NULL DEFAULT 1,
+          used_count INT NOT NULL DEFAULT 0,
+          bonus_quota INT NOT NULL DEFAULT 0,
+          target_plan VARCHAR(32) DEFAULT 'free',
+          note VARCHAR(255),
+          expires_at TIMESTAMPTZ,
+          status VARCHAR(16) NOT NULL DEFAULT 'active',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_invite_codes_status ON invite_codes(status, expires_at)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by_code VARCHAR(32)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_invited_by ON users(invited_by_code)`,
     ];
     const failures: unknown[] = [];
     for (const statement of statements) {

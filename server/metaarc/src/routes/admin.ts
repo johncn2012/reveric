@@ -2932,6 +2932,10 @@ adminRouter.post('/admin/settings', async (req: Request, res: Response) => {
 
     const allowedKeys = [
       'allow_registration',
+      'registration_mode',
+      'block_disposable_email',
+      'allowed_email_domains',
+      'blocked_email_domains',
       'require_login_captcha',
       'require_email_code',
       'max_reg_per_ip_day',
@@ -2943,8 +2947,14 @@ adminRouter.post('/admin/settings', async (req: Request, res: Response) => {
     const updates: any = {};
     for (const key of allowedKeys) {
       if (req.body[key] !== undefined) {
-        if (key.includes('enabled') || key.startsWith('allow_') || key.startsWith('require_')) {
+        if (key === 'block_disposable_email' || key.includes('enabled') || key.startsWith('allow_') || key.startsWith('require_')) {
           updates[key] = Boolean(req.body[key]);
+        } else if (key === 'registration_mode') {
+          const mode = String(req.body[key] || '').trim();
+          if (['open', 'invite_only', 'closed'].includes(mode)) {
+            updates[key] = mode;
+            updates['allow_registration'] = mode !== 'closed';
+          }
         } else if (key === 'max_reg_per_ip_day') {
           updates[key] = Math.max(0, parseInt(req.body[key], 10) || 0);
         } else {
@@ -3123,5 +3133,215 @@ adminRouter.post('/admin/security/block-ip-and-cascade', async (req: Request, re
   } catch (err: any) {
     console.error('[Admin Block IP and Cascade Error]', err);
     return res.status(500).json({ error: 'server_error', message: '级联处置失败，请稍后重试' });
+  }
+});
+
+// 34. 邀请码列表查询 (支持状态、关键词、分页)
+adminRouter.get('/admin/invite-codes', async (req: Request, res: Response) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.page_size as string, 10) || 20));
+    const offset = (page - 1) * pageSize;
+    const status = (req.query.status as string || 'all').trim();
+    const keyword = (req.query.keyword as string || '').trim().toUpperCase();
+
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (status === 'active') {
+      conditions.push(`ic.status = 'active' AND (ic.expires_at IS NULL OR ic.expires_at > NOW()) AND (ic.max_uses = 0 OR ic.used_count < ic.max_uses)`);
+    } else if (status === 'disabled') {
+      conditions.push(`ic.status = 'disabled'`);
+    } else if (status === 'exhausted') {
+      conditions.push(`ic.max_uses > 0 AND ic.used_count >= ic.max_uses`);
+    } else if (status === 'expired') {
+      conditions.push(`ic.expires_at IS NOT NULL AND ic.expires_at <= NOW()`);
+    }
+
+    if (keyword) {
+      conditions.push(`(UPPER(ic.code) LIKE $${paramIdx} OR UPPER(COALESCE(ic.note, '')) LIKE $${paramIdx})`);
+      params.push(`%${keyword}%`);
+      paramIdx++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countSql = `SELECT count(*) FROM invite_codes ic ${whereClause}`;
+    const countRes = await query(countSql, params);
+    const total = parseInt(countRes.rows[0]?.count || '0', 10);
+
+    const listSql = `
+      SELECT ic.*, u.email as creator_email, u.nickname as creator_nickname
+      FROM invite_codes ic
+      LEFT JOIN users u ON ic.created_by = u.id
+      ${whereClause}
+      ORDER BY ic.created_at DESC
+      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+    `;
+    params.push(pageSize, offset);
+
+    const listRes = await query(listSql, params);
+
+    return res.json({
+      success: true,
+      data: listRes.rows,
+      total,
+      page,
+      page_size: pageSize,
+    });
+  } catch (err: any) {
+    console.error('[Admin List Invite Codes Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '无法获取邀请码列表' });
+  }
+});
+
+// 35. 批量或单个生成邀请码
+adminRouter.post('/admin/invite-codes/create', async (req: Request, res: Response) => {
+  try {
+    const reason = cleanReason(req.body?.reason) || '管理员生成注册邀请码';
+    const count = Math.min(50, Math.max(1, parseInt(req.body?.count, 10) || 1));
+    const maxUses = Math.max(0, parseInt(req.body?.max_uses, 10) || 1);
+    const bonusQuota = Math.max(0, parseInt(req.body?.bonus_quota, 10) || 0);
+    const targetPlan = String(req.body?.target_plan || 'free').trim();
+    const note = String(req.body?.note || '').trim().slice(0, 255);
+    const customCode = count === 1 && typeof req.body?.code === 'string' ? req.body.code.trim().toUpperCase() : '';
+    const expiresAt = req.body?.expires_at ? new Date(req.body.expires_at) : null;
+
+    if (customCode && !/^[A-Z0-9_-]{4,32}$/.test(customCode)) {
+      return res.status(400).json({ error: 'invalid_code', message: '自定义邀请码需为 4-32 位大写英文字母、数字或短横线' });
+    }
+
+    const createdCodes: any[] = [];
+    const creatorId = actorId(req) || null;
+
+    await runMutation(async (client) => {
+      for (let i = 0; i < count; i++) {
+        let code = customCode;
+        if (!code) {
+          code = 'ARC-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+        }
+
+        const insertRes = await client.query(
+          `INSERT INTO invite_codes (code, created_by, max_uses, used_count, bonus_quota, target_plan, note, expires_at, status)
+           VALUES ($1, $2, $3, 0, $4, $5, $6, $7, 'active')
+           RETURNING *`,
+          [code, creatorId, maxUses, bonusQuota, targetPlan, note || null, expiresAt]
+        );
+        createdCodes.push(insertRes.rows[0]);
+      }
+
+      await insertAudit({
+        actorId: creatorId || '',
+        action: 'create_invite_codes',
+        targetType: 'invite_codes',
+        targetId: createdCodes.map((c) => c.code).join(','),
+        reason,
+        beforeValue: null,
+        afterValue: {
+          count: createdCodes.length,
+          maxUses,
+          bonusQuota,
+          targetPlan,
+          codes: createdCodes.map((c) => c.code),
+        },
+      }, client);
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `成功生成 ${createdCodes.length} 个邀请码`,
+      data: createdCodes,
+    });
+  } catch (err: any) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'code_exists', message: '该邀请码已存在，请换一个名称' });
+    }
+    console.error('[Admin Create Invite Codes Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '生成邀请码失败' });
+  }
+});
+
+// 36. 启用 / 禁用指定邀请码
+adminRouter.post('/admin/invite-codes/:code/toggle', async (req: Request, res: Response) => {
+  try {
+    const code = (req.params.code || '').trim().toUpperCase();
+    const { status, reason } = req.body;
+    const cleanRes = cleanReason(reason) || '修改邀请码状态';
+
+    if (!['active', 'disabled'].includes(status)) {
+      return res.status(400).json({ error: 'invalid_status', message: '状态只能为 active 或 disabled' });
+    }
+
+    const beforeRes = await query('SELECT * FROM invite_codes WHERE UPPER(code) = $1', [code]);
+    if (beforeRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '邀请码不存在' });
+    }
+    const before = beforeRes.rows[0];
+
+    await runMutation(async (client) => {
+      await client.query('UPDATE invite_codes SET status = $1 WHERE UPPER(code) = $2', [status, code]);
+
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'toggle_invite_code',
+        targetType: 'invite_codes',
+        targetId: code,
+        reason: cleanRes,
+        beforeValue: { status: before.status },
+        afterValue: { status },
+      }, client);
+    });
+
+    return res.json({
+      success: true,
+      message: status === 'active' ? '邀请码已重新启用' : '邀请码已禁用',
+    });
+  } catch (err: any) {
+    console.error('[Admin Toggle Invite Code Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '更新邀请码状态失败' });
+  }
+});
+
+// 37. 删除未使用的邀请码 (已产生使用记录的不允许物理删除，防止溯源断链)
+adminRouter.delete('/admin/invite-codes/:code', async (req: Request, res: Response) => {
+  try {
+    const code = (req.params.code || '').trim().toUpperCase();
+    const reason = cleanReason(req.body?.reason) || '删除未使用邀请码';
+
+    const checkRes = await query('SELECT * FROM invite_codes WHERE UPPER(code) = $1', [code]);
+    if (checkRes.rows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: '邀请码不存在' });
+    }
+    const target = checkRes.rows[0];
+
+    if (target.used_count > 0) {
+      return res.status(400).json({
+        error: 'code_in_use',
+        message: `该邀请码已产生 ${target.used_count} 次使用记录，为保证审计溯源完整不可删除；可将其设为「已禁用」。`,
+      });
+    }
+
+    await runMutation(async (client) => {
+      await client.query('DELETE FROM invite_codes WHERE UPPER(code) = $1 AND used_count = 0', [code]);
+
+      await insertAudit({
+        actorId: actorId(req),
+        action: 'delete_invite_code',
+        targetType: 'invite_codes',
+        targetId: code,
+        reason,
+        beforeValue: target,
+        afterValue: null,
+      }, client);
+    });
+
+    return res.json({
+      success: true,
+      message: '邀请码已安全删除',
+    });
+  } catch (err: any) {
+    console.error('[Admin Delete Invite Code Error]', err);
+    return res.status(500).json({ error: 'server_error', message: '删除邀请码失败' });
   }
 });

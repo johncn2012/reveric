@@ -338,17 +338,40 @@
   async function initGateSecurity(mode) {
     await loadPublicAuthConfig();
 
-    // 1. 注册开关与界面呈现
+    // 1. 注册开关、准入模式与邀请码呈现
     const regClosedAlert = $('register-closed-alert');
     const regFields = $('register-fields');
     const showRegBtn = $('show-register');
-    if (publicAuthConfig.allow_registration === false) {
+    const regMode = publicAuthConfig.registration_mode || (publicAuthConfig.allow_registration === false ? 'closed' : 'open');
+    const inviteRow = $('register-invite-code-row');
+    const inviteInput = $('register-invite-code');
+    const inviteHint = $('register-invite-code-hint');
+
+    if (regMode === 'closed' || publicAuthConfig.allow_registration === false) {
       if (regClosedAlert) regClosedAlert.hidden = false;
       if (regFields) regFields.hidden = true;
       if (showRegBtn) showRegBtn.title = '系统当前已暂停开放新用户自主注册';
     } else {
       if (regClosedAlert) regClosedAlert.hidden = true;
       if (regFields) regFields.hidden = false;
+      if (showRegBtn) showRegBtn.title = '';
+
+      if (inviteRow) {
+        inviteRow.hidden = false;
+        if (regMode === 'invite_only') {
+          if (inviteInput) {
+            inviteInput.required = true;
+            inviteInput.placeholder = '内测阶段必须填写有效邀请码 (如 ARC-XXXXXX)';
+          }
+          if (inviteHint) inviteHint.innerHTML = '<span style="color:#b54708; font-size:12px;">(内测特邀必填)</span>';
+        } else {
+          if (inviteInput) {
+            inviteInput.required = false;
+            inviteInput.placeholder = '选填：填入邀请码可获赠额外算力';
+          }
+          if (inviteHint) inviteHint.innerHTML = '<span style="color:var(--muted); font-size:12px;">(选填，享额外体验额度)</span>';
+        }
+      }
     }
 
     // 2. 登录图形验证码
@@ -3156,11 +3179,17 @@
     }
   }
 
+  let currentInviteCodesPage = 1;
+
   async function loadSecuritySettings() {
     const res = await request('/api/admin/settings');
     if (res.ok && res.data && res.data.data) {
       const s = res.data.data;
       if ($('setting-allow-registration')) $('setting-allow-registration').checked = !!s.allow_registration;
+      if ($('setting-registration-mode')) $('setting-registration-mode').value = s.registration_mode || (s.allow_registration ? 'open' : 'closed');
+      if ($('setting-block-disposable-email')) $('setting-block-disposable-email').checked = s.block_disposable_email !== false;
+      if ($('setting-allowed-email-domains')) $('setting-allowed-email-domains').value = s.allowed_email_domains || '';
+      if ($('setting-blocked-email-domains')) $('setting-blocked-email-domains').value = s.blocked_email_domains || '';
       if ($('setting-require-login-captcha')) $('setting-require-login-captcha').checked = !!s.require_login_captcha;
       if ($('setting-require-email-code')) $('setting-require-email-code').checked = !!s.require_email_code;
       if ($('setting-max-reg-per-ip-day')) $('setting-max-reg-per-ip-day').value = s.max_reg_per_ip_day ?? 5;
@@ -3171,7 +3200,10 @@
       if ($('setting-cf-site-key')) $('setting-cf-site-key').value = s.cf_turnstile_site_key || '';
       if ($('setting-cf-secret-key')) $('setting-cf-secret-key').value = s.cf_turnstile_secret_key || '';
     }
-    await loadIpRegistrationStats();
+    await Promise.all([
+      loadIpRegistrationStats(),
+      loadInviteCodes(1),
+    ]);
   }
 
   async function loadIpRegistrationStats() {
@@ -3324,6 +3356,290 @@
       }
     ], rows));
   }
+
+  async function loadInviteCodes(page) {
+    if (page) currentInviteCodesPage = page;
+    const slot = 'invite-codes-slot';
+    const keyword = $('invite-keyword') ? $('invite-keyword').value.trim() : '';
+    const status = $('invite-status-filter') ? $('invite-status-filter').value : 'all';
+
+    let url = '/api/admin/invite-codes?page=' + currentInviteCodesPage + '&page_size=15&status=' + encodeURIComponent(status);
+    if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+
+    fill(slot, empty('正在读取邀请码列表…'));
+
+    const res = await request(url);
+    const rows = (res.ok && res.data && Array.isArray(res.data.data)) ? res.data.data : null;
+    if (!rows) return fill(slot, empty('邀请码列表读取失败。'));
+    if (!rows.length) return fill(slot, empty('暂无邀请码记录。点击上方「+ 生成邀请码」签发新邀请码。'));
+
+    const total = res.data.total || 0;
+    const totalPages = Math.max(1, Math.ceil(total / 15));
+
+    fill(slot, table([
+      {
+        label: '邀请码',
+        fill: function (td, row) {
+          const wrap = document.createElement('div');
+          wrap.style.display = 'flex';
+          wrap.style.alignItems = 'center';
+          wrap.style.gap = '8px';
+
+          const codeSpan = document.createElement('span');
+          codeSpan.className = 'invite-code-tag';
+          codeSpan.textContent = row.code;
+
+          const copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'btn-line';
+          copyBtn.style.padding = '1px 6px';
+          copyBtn.style.fontSize = '11px';
+          copyBtn.textContent = '复制';
+          copyBtn.addEventListener('click', function () {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(row.code).then(function () {
+                showAlert('邀请码 ' + row.code + ' 已复制到剪贴板', true);
+              });
+            } else {
+              showAlert('已复制邀请码: ' + row.code, true);
+            }
+          });
+
+          wrap.append(codeSpan, copyBtn);
+          td.append(wrap);
+        }
+      },
+      {
+        label: '状态',
+        fill: function (td, row) {
+          const isExpired = row.expires_at && new Date(row.expires_at).getTime() <= Date.now();
+          const isExhausted = row.max_uses > 0 && row.used_count >= row.max_uses;
+
+          if (row.status === 'disabled') {
+            td.innerHTML = '<span class="badge badge-neutral">已禁用</span>';
+          } else if (isExpired) {
+            td.innerHTML = '<span class="badge badge-danger">已过期</span>';
+          } else if (isExhausted) {
+            td.innerHTML = '<span class="badge badge-warning">已用尽</span>';
+          } else {
+            td.innerHTML = '<span class="badge badge-success">生效中</span>';
+          }
+        }
+      },
+      {
+        label: '使用进度',
+        fill: function (td, row) {
+          const max = row.max_uses === 0 ? '不限' : row.max_uses;
+          td.innerHTML = '<strong>' + row.used_count + '</strong> / ' + max + ' 次';
+        }
+      },
+      {
+        label: '算力与套餐',
+        fill: function (td, row) {
+          const bonus = row.bonus_quota > 0 ? ('<span style="color:#0f6b45; font-weight:600;">+' + formatNumber(row.bonus_quota) + ' 点</span>') : '基础 500 点';
+          const plan = row.target_plan && row.target_plan !== 'free' ? (' / ' + planName(row.target_plan)) : '';
+          td.innerHTML = bonus + plan;
+        }
+      },
+      {
+        label: '有效期至',
+        fill: function (td, row) {
+          td.textContent = row.expires_at ? formatWhen(row.expires_at) : '永久有效';
+        }
+      },
+      {
+        label: '备注',
+        fill: function (td, row) {
+          td.textContent = row.note || '—';
+        }
+      },
+      {
+        label: '操作',
+        fill: function (td, row) {
+          const wrap = document.createElement('div');
+          wrap.style.display = 'flex';
+          wrap.style.gap = '6px';
+
+          const btnToggle = document.createElement('button');
+          btnToggle.type = 'button';
+          btnToggle.className = 'btn-line';
+          btnToggle.style.padding = '2px 8px';
+          btnToggle.style.fontSize = '12px';
+          btnToggle.textContent = row.status === 'active' ? '禁用' : '启用';
+          btnToggle.addEventListener('click', async function () {
+            const nextStatus = row.status === 'active' ? 'disabled' : 'active';
+            const res = await request('/api/admin/invite-codes/' + encodeURIComponent(row.code) + '/toggle', {
+              method: 'POST',
+              body: { status: nextStatus, reason: '管理员切换邀请码启用状态' },
+            });
+            if (!res.ok) return showAlert(errorMessage(res, '操作失败'));
+            showAlert(res.data.message || '操作成功', true);
+            loadInviteCodes(currentInviteCodesPage);
+          });
+          wrap.append(btnToggle);
+
+          if (row.used_count === 0) {
+            const btnDel = document.createElement('button');
+            btnDel.type = 'button';
+            btnDel.className = 'btn-line';
+            btnDel.style.padding = '2px 8px';
+            btnDel.style.fontSize = '12px';
+            btnDel.style.color = 'var(--danger, #b42318)';
+            btnDel.textContent = '删除';
+            btnDel.addEventListener('click', async function () {
+              const ok = await ask({
+                title: '删除未使用邀请码',
+                copy: '确定要删除邀请码 [' + row.code + '] 吗？删除后不可恢复。',
+                confirm: '确认删除',
+                modalClass: 'modal-danger',
+                reason: true,
+              });
+              if (!ok) return;
+              const res = await request('/api/admin/invite-codes/' + encodeURIComponent(row.code), {
+                method: 'DELETE',
+                body: { reason: ok.reason || '删除未使用邀请码' },
+              });
+              if (!res.ok) return showAlert(errorMessage(res, '删除失败'));
+              showAlert('邀请码已安全删除', true);
+              loadInviteCodes(currentInviteCodesPage);
+            });
+            wrap.append(btnDel);
+          }
+
+          td.append(wrap);
+        }
+      }
+    ], rows));
+
+    // 分页
+    const pagesSlot = $('invite-codes-pages');
+    if (pagesSlot) {
+      pagesSlot.replaceChildren();
+      if (totalPages > 1) {
+        const wrap = document.createElement('div');
+        wrap.className = 'pagination';
+        for (let p = 1; p <= totalPages; p++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn-line' + (p === currentInviteCodesPage ? ' is-on' : '');
+          btn.textContent = p;
+          (function (pageIndex) {
+            btn.addEventListener('click', function () {
+              loadInviteCodes(pageIndex);
+            });
+          })(p);
+          wrap.append(btn);
+        }
+        pagesSlot.append(wrap);
+      }
+    }
+  }
+
+  async function createInviteCodeModal() {
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.gap = '12px';
+    wrap.style.margin = '10px 0';
+
+    wrap.innerHTML = `
+      <div style="display:flex; gap:12px;">
+        <div style="flex:1;">
+          <label style="margin-top:0; font-size:13px; font-weight:600;">生成数量</label>
+          <input id="modal-invite-count" type="number" min="1" max="50" value="1" style="width:100%;">
+          <span style="font-size:12px; color:var(--muted);">单次最多批量生成 50 个</span>
+        </div>
+        <div style="flex:2;">
+          <label style="margin-top:0; font-size:13px; font-weight:600;">自定义邀请码 (单码可选)</label>
+          <input id="modal-invite-code" type="text" placeholder="留空自动生成 (如 ARC-XXXXXX)" maxlength="32" style="width:100%;">
+        </div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <div style="flex:1;">
+          <label style="margin-top:0; font-size:13px; font-weight:600;">可用次数上限</label>
+          <input id="modal-invite-max-uses" type="number" min="0" max="10000" value="1" style="width:100%;">
+          <span style="font-size:12px; color:var(--muted);">填 0 表示不限使用次数</span>
+        </div>
+        <div style="flex:1;">
+          <label style="margin-top:0; font-size:13px; font-weight:600;">额外赠送算力 (点)</label>
+          <input id="modal-invite-bonus-quota" type="number" min="0" max="100000" value="0" style="width:100%;">
+          <span style="font-size:12px; color:var(--muted);">在基础体验额度之上叠加</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <div style="flex:1;">
+          <label style="margin-top:0; font-size:13px; font-weight:600;">初始目标套餐</label>
+          <select id="modal-invite-plan" style="width:100%;">
+            <option value="free" selected>基础体验版 (Free)</option>
+            <option value="pro">专业创作者版 (Pro)</option>
+            <option value="team">团队工作室版 (Team)</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label style="margin-top:0; font-size:13px; font-weight:600;">有效期天数</label>
+          <input id="modal-invite-days" type="number" min="0" max="365" value="30" style="width:100%;">
+          <span style="font-size:12px; color:var(--muted);">填 0 表示永久有效</span>
+        </div>
+      </div>
+      <div>
+        <label style="margin-top:0; font-size:13px; font-weight:600;">备注说明</label>
+        <input id="modal-invite-note" type="text" placeholder="例如: 2026内测种子特邀第一期" maxlength="100" style="width:100%;">
+      </div>
+    `;
+
+    const answer = await ask({
+      title: '生成内测特邀专属邀请码',
+      extra: wrap,
+      confirm: '确认生成',
+      modalClass: 'modal-lg',
+      collect: function () {
+        const count = Math.max(1, parseInt($('modal-invite-count').value, 10) || 1);
+        const code = $('modal-invite-code').value.trim().toUpperCase();
+        const maxUses = Math.max(0, parseInt($('modal-invite-max-uses').value, 10) || 1);
+        const bonusQuota = Math.max(0, parseInt($('modal-invite-bonus-quota').value, 10) || 0);
+        const targetPlan = $('modal-invite-plan').value;
+        const days = Math.max(0, parseInt($('modal-invite-days').value, 10) || 0);
+        const note = $('modal-invite-note').value.trim();
+
+        let expiresAt = null;
+        if (days > 0) {
+          const d = new Date();
+          d.setDate(d.getDate() + days);
+          expiresAt = d.toISOString();
+        }
+
+        return {
+          count,
+          code,
+          max_uses: maxUses,
+          bonus_quota: bonusQuota,
+          target_plan: targetPlan,
+          expires_at: expiresAt,
+          note,
+        };
+      },
+    });
+
+    if (!answer) return;
+
+    const res = await request('/api/admin/invite-codes/create', {
+      method: 'POST',
+      body: {
+        count: answer.count,
+        code: answer.code,
+        max_uses: answer.max_uses,
+        bonus_quota: answer.bonus_quota,
+        target_plan: answer.target_plan,
+        expires_at: answer.expires_at,
+        note: answer.note,
+        reason: answer.reason || '管理员生成注册邀请码',
+      },
+    });
+
+    if (!res.ok) return showAlert(errorMessage(res, '生成邀请码失败'));
+    showAlert(res.data.message || '邀请码创建成功', true);
+    loadInviteCodes(1);
+  }
   function gatewayLabel(gateway) {
     if (!gateway || !gateway.configured) return '待接入';
     if (gateway.status === 'connected') return '已连通';
@@ -3429,6 +3745,17 @@
     currentUser = result.data.user;
     await loadPlans();
     showApp();
+
+    const alertBox = $('user-security-alert-box');
+    const alertDesc = $('user-security-alert-desc');
+    if (alertBox && alertDesc) {
+      if (currentUser.security_alert && currentUser.security_alert.is_cross_region) {
+        alertBox.hidden = false;
+        alertDesc.textContent = currentUser.security_alert.message || '检测到近期存在异地登录变动，若非本人操作请立即前往修改密码。';
+      } else {
+        alertBox.hidden = true;
+      }
+    }
   }
 
   loginForm.addEventListener('submit', function (event) {
@@ -3469,8 +3796,14 @@
       return showAlert('系统当前已开启邮箱安全校验，请使用邮箱地址进行注册');
     }
 
+    const inviteCode = $('register-invite-code') ? $('register-invite-code').value.trim().toUpperCase() : '';
+    if (publicAuthConfig.registration_mode === 'invite_only' && !inviteCode) {
+      return showAlert('当前系统处于内测邀请阶段，请先输入有效的内测邀请码');
+    }
+
     const body = { password: password };
     if (nickname) body.nickname = nickname;
+    if (inviteCode) body.invite_code = inviteCode;
     if (account.indexOf('@') >= 0) {
       body.email = account;
       if (publicAuthConfig.require_email_code) {
@@ -3944,8 +4277,13 @@
       const btn = $('btn-save-security-settings');
       btn.disabled = true;
       try {
+        const regMode = $('setting-registration-mode') ? $('setting-registration-mode').value : 'open';
         const body = {
-          allow_registration: $('setting-allow-registration') ? $('setting-allow-registration').checked : true,
+          allow_registration: regMode !== 'closed',
+          registration_mode: regMode,
+          block_disposable_email: $('setting-block-disposable-email') ? $('setting-block-disposable-email').checked : true,
+          allowed_email_domains: $('setting-allowed-email-domains') ? $('setting-allowed-email-domains').value.trim() : '',
+          blocked_email_domains: $('setting-blocked-email-domains') ? $('setting-blocked-email-domains').value.trim() : '',
           require_login_captcha: $('setting-require-login-captcha') ? $('setting-require-login-captcha').checked : true,
           require_email_code: $('setting-require-email-code') ? $('setting-require-email-code').checked : false,
           max_reg_per_ip_day: $('setting-max-reg-per-ip-day') ? Math.max(0, parseInt($('setting-max-reg-per-ip-day').value, 10) || 0) : 5,
@@ -3967,6 +4305,36 @@
       } finally {
         btn.disabled = false;
       }
+    });
+  }
+
+  // 邀请码管理事件绑定
+  if ($('btn-create-invite-code')) {
+    $('btn-create-invite-code').addEventListener('click', function () {
+      createInviteCodeModal();
+    });
+  }
+  if ($('invite-codes-search')) {
+    $('invite-codes-search').addEventListener('submit', function (e) {
+      e.preventDefault();
+      loadInviteCodes(1);
+    });
+  }
+  if ($('invite-status-filter')) {
+    $('invite-status-filter').addEventListener('change', function () {
+      loadInviteCodes(1);
+    });
+  }
+
+  // 异地登录提醒横幅事件
+  if ($('btn-alert-goto-security')) {
+    $('btn-alert-goto-security').addEventListener('click', function () {
+      showView('security');
+    });
+  }
+  if ($('btn-alert-dismiss')) {
+    $('btn-alert-dismiss').addEventListener('click', function () {
+      if ($('user-security-alert-box')) $('user-security-alert-box').hidden = true;
     });
   }
 

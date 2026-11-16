@@ -8,6 +8,10 @@ import { query } from '../db.js';
 
 export interface SystemSecuritySettings {
   allow_registration: boolean;
+  registration_mode: 'open' | 'invite_only' | 'closed';
+  block_disposable_email: boolean;
+  allowed_email_domains: string;
+  blocked_email_domains: string;
   require_login_captcha: boolean;
   require_email_code: boolean;
   max_reg_per_ip_day: number;
@@ -18,6 +22,10 @@ export interface SystemSecuritySettings {
 
 const DEFAULT_SETTINGS: SystemSecuritySettings = {
   allow_registration: true,
+  registration_mode: 'open',
+  block_disposable_email: true,
+  allowed_email_domains: '',
+  blocked_email_domains: '',
   require_login_captcha: true,
   require_email_code: false,
   max_reg_per_ip_day: 5,
@@ -74,10 +82,15 @@ export async function getSystemSecuritySettings(): Promise<SystemSecuritySetting
 
 export async function getPublicAuthConfig() {
   const settings = await getSystemSecuritySettings();
+  const regMode = settings.registration_mode || (settings.allow_registration ? 'open' : 'closed');
+  const allowReg = regMode !== 'closed' && Boolean(settings.allow_registration);
+
   return {
-    allow_registration: Boolean(settings.allow_registration),
+    allow_registration: allowReg,
+    registration_mode: regMode,
     require_login_captcha: Boolean(settings.require_login_captcha),
     require_email_code: Boolean(settings.require_email_code),
+    block_disposable_email: Boolean(settings.block_disposable_email),
     cf_turnstile_enabled: Boolean(settings.cf_turnstile_enabled && settings.cf_turnstile_site_key),
     cf_turnstile_site_key: settings.cf_turnstile_site_key || '',
   };

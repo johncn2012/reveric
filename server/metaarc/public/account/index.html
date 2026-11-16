@@ -95,6 +95,10 @@
       <div id="register-fields">
         <label for="register-account">邮箱或手机号</label>
         <input id="register-account" name="account" type="text" autocomplete="username" required>
+        <div id="register-invite-code-row" class="invite-code-row" hidden>
+          <label for="register-invite-code">邀请码 <span id="register-invite-code-hint" class="field-hint"></span></label>
+          <input id="register-invite-code" name="invite_code" type="text" autocomplete="off" placeholder="选填：填入邀请码可获赠额外算力" maxlength="32">
+        </div>
         <div id="register-email-code-row" class="email-code-row" hidden>
           <label for="register-email-code">邮箱验证码</label>
           <div class="code-input-group">
@@ -180,6 +184,18 @@
         <button id="btn-logout" type="button">退出</button>
       </div>
     </header>
+
+    <div id="user-security-alert-box" class="warning-banner" hidden>
+      <div class="warning-banner-icon">⚠️</div>
+      <div class="warning-banner-content">
+        <strong id="user-security-alert-title">异地登录安全提醒</strong>
+        <p id="user-security-alert-desc"></p>
+      </div>
+      <div class="warning-banner-actions">
+        <button class="btn btn-line btn-sm" id="btn-alert-goto-security" type="button">前往修改密码</button>
+        <button class="btn-close-alert" id="btn-alert-dismiss" type="button" title="关闭提醒">×</button>
+      </div>
+    </div>
 
     <section data-panel="overview">
       <p class="lead" id="hello-line">故事从这里继续，账号事务清楚有序。</p>
@@ -437,15 +453,46 @@
         <p class="fine">配置新用户注册准入机制、登录验证码防护、邮箱真实验证与 Cloudflare Turnstile 人机交互校验。</p>
 
         <form id="form-security-settings" class="policy-card">
+          <div class="policy-item" style="align-items:flex-start;">
+            <div class="policy-info" style="flex:1;">
+              <h4>用户注册准入模式</h4>
+              <p>控制系统的新用户接纳方式：<strong>自由开放</strong>（任何人可注册）、<strong>仅限邀请码</strong>（仅持有效邀请码可注册）、<strong>暂停注册</strong>（全局关闭注册表单）。</p>
+            </div>
+            <div style="width:160px;">
+              <select id="setting-registration-mode" style="width:100%;">
+                <option value="open">自由开放注册</option>
+                <option value="invite_only">仅限邀请码准入</option>
+                <option value="closed">暂停新用户注册</option>
+              </select>
+            </div>
+          </div>
+
           <div class="policy-item">
             <div class="policy-info">
-              <h4>开放新用户自主注册</h4>
-              <p>关闭后，新用户无法在官网自主注册，注册表单将友好提示并暂停服务。</p>
+              <h4>拦截临时/匿名一次性邮箱 (Disposable Email Shield)</h4>
+              <p>智能识别并拒绝 60+ 常见一次性匿名临时邮箱域名（如 tempmail、mailinator、guerrillamail 等），阻断羊毛党自动化批量生成小号。</p>
             </div>
             <label class="toggle-switch">
-              <input id="setting-allow-registration" type="checkbox" checked>
+              <input id="setting-block-disposable-email" type="checkbox" checked>
               <span class="toggle-slider"></span>
             </label>
+          </div>
+
+          <div class="policy-item" style="flex-direction:column; align-items:stretch; gap:12px;">
+            <div class="policy-info">
+              <h4>邮箱域名后缀准入控制 (Domain Allow/Blocklist)</h4>
+              <p>针对企业内测、高校合作或特定群体定制准入范围。逗号分隔多个域名后缀，留空表示不限制。</p>
+            </div>
+            <div style="display:flex; gap:12px; margin-top:4px;">
+              <div style="flex:1;">
+                <label for="setting-allowed-email-domains" style="margin-top:0;">允许注册的域名白名单 (留空不限制)</label>
+                <input id="setting-allowed-email-domains" type="text" placeholder="例如: metaarc.com.cn, pku.edu.cn" autocomplete="off">
+              </div>
+              <div style="flex:1;">
+                <label for="setting-blocked-email-domains" style="margin-top:0;">禁止注册的域名黑名单</label>
+                <input id="setting-blocked-email-domains" type="text" placeholder="例如: spamdomain.com, badmail.net" autocomplete="off">
+              </div>
+            </div>
           </div>
 
           <div class="policy-item">
@@ -522,6 +569,29 @@
           <button class="btn btn-line" type="submit">筛选</button>
         </form>
         <div id="ip-reg-stats-slot"><p class="empty">正在读取聚类统计…</p></div>
+      </article>
+
+      <article class="card" id="invite-codes-card" style="margin-top:24px;">
+        <div class="row">
+          <h2>内测与特邀专属邀请码</h2>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-line" id="btn-create-invite-code" type="button">+ 生成邀请码</button>
+          </div>
+        </div>
+        <p class="fine">为内测用户、合作伙伴或企业团队批量签发注册邀请码，支持单码多次使用、额外体验额度奖励与到期自动失效。</p>
+        <form id="invite-codes-search" class="search-row">
+          <input id="invite-keyword" type="search" placeholder="搜索邀请码或备注说明" autocomplete="off">
+          <select id="invite-status-filter">
+            <option value="all">全部状态</option>
+            <option value="active" selected>生效中</option>
+            <option value="disabled">已禁用</option>
+            <option value="exhausted">已耗尽</option>
+            <option value="expired">已过期</option>
+          </select>
+          <button class="btn btn-line" type="submit">筛选</button>
+        </form>
+        <div id="invite-codes-slot"><p class="empty">正在读取邀请码列表…</p></div>
+        <div id="invite-codes-pages"></div>
       </article>
     </section>
 

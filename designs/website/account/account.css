@@ -608,6 +608,80 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
   background: rgba(220, 38, 38, 0.12) !important;
 }
 
+/* 异地登录安全警报横幅 */
+.warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 12px 18px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.warning-banner-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.warning-banner-content {
+  flex: 1;
+  font-size: 13px;
+  color: #92400e;
+}
+.warning-banner-content strong {
+  display: block;
+  font-size: 14px;
+  color: #78350f;
+  margin-bottom: 2px;
+}
+.warning-banner-content p {
+  margin: 0;
+  line-height: 1.4;
+}
+.warning-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.btn-close-alert {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: #b45309;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.btn-close-alert:hover {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+/* 邀请码排版样式 */
+.invite-code-tag {
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #0f172a;
+}
+.invite-code-row {
+  margin-top: 10px;
+}
+.field-hint {
+  font-weight: normal;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
 @media (max-width: 860px) {
   .gate-bar, .gate-layout { width: min(1240px, calc(100% - 32px)); }
   .gate-layout { grid-template-columns: 1fr; gap: 20px; padding-top: 8px; }
