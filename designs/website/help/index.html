@@ -28,23 +28,65 @@
 <meta name="twitter:description" content="MetaArc 元弧官方帮助中心。提供客户端安装下载、账号注册登录、套餐配额与使用诊断说明。">
 <meta name="twitter:image" content="https://metaarc.com.cn/assets/story-ridge.jpg">
 
-<!-- Schema.org 面包屑结构化数据 -->
+<!-- Schema.org 结构化数据 (面包屑与常见问答) -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
+  "@graph": [
     {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "首页",
-      "item": "https://metaarc.com.cn/"
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "首页",
+          "item": "https://metaarc.com.cn/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "帮助中心",
+          "item": "https://metaarc.com.cn/help/"
+        }
+      ]
     },
     {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "帮助中心",
-      "item": "https://metaarc.com.cn/help/"
+      "@type": "FAQPage",
+      "@id": "https://metaarc.com.cn/help/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "MetaArc 支持哪些操作系统？如何下载安装？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "MetaArc 官方适配 Windows 10/11 64位系统、针对 Apple Silicon（M系列芯片）深度优化的 macOS，以及 Android 10+ 移动设备。创作者可直接在官网下载安装。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "如何注册 MetaArc 账号？支持找回密码吗？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "创作者可在用户中心通过手机号或常用邮箱快捷注册与登录。若遗忘密码，可使用注册邮箱向 contact@metaarc.com.cn 发送重置申请，官方协助核验后即可重置。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "MetaArc 的套餐与算力点数如何计费？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "MetaArc 采用透明算力点数机制。新用户注册即赠送 500 点数与 500MB 云端存储体验。创作者版与专业版可解锁更高并发、高速 CDN 独享存储及优先任务调度，支持企业对公转账订购与专票开具。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "MetaArc 开放 API 如何接入第三方客户端？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "平台完全兼容 OpenAI 标准协议接口（如 /v1/chat/completions 与图像生成）。创作者可在用户中心生成 sk-metaarc-... 专属密钥，并接入 Cherry Studio、NextChat、Chatbox 等主流工具使用。"
+          }
+        }
+      ]
     }
   ]
 }
