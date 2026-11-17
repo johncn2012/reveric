@@ -154,6 +154,18 @@ export function createApp() {
   app.use('/api', adminRouter);
   app.use('/v1', gatewayRouter);
 
+  // 404 处理：对网页访问返回品牌 404 页面，对 API/网关返回 JSON
+  const notFoundPage = path.join(websiteDist, '404.html');
+  app.use((req: express.Request, res: express.Response) => {
+    if (req.accepts('html') && !req.originalUrl.startsWith('/api') && !req.originalUrl.startsWith('/v1')) {
+      if (fs.existsSync(notFoundPage)) {
+        res.status(404).sendFile(notFoundPage);
+        return;
+      }
+    }
+    res.status(404).json({ error: 'not_found', message: '请求的资源不存在' });
+  });
+
   // 全局未捕获异常处理中间件
   app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error('[Unhandled Server Error]', err);
