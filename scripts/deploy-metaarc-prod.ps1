@@ -45,6 +45,7 @@ $RemoteScript = @"
 set -e
 tar -xzf /tmp/server-deploy.tar.gz -C /opt/metaarc/server
 rm -f /opt/metaarc/server/public/assets/qq-group.jpg
+rm -f /opt/metaarc/server/public/BRAND_RESIDUAL_AUDIT.md
 echo "$Commit" > /opt/metaarc/server/.deployed-commit
 date -u '+%Y-%m-%dT%H:%M:%SZ' > /opt/metaarc/server/.deployed-at
 rm -f /tmp/server-deploy.tar.gz
