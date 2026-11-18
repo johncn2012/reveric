@@ -167,12 +167,19 @@ class BrandLoader extends HookWidget {
                         height: wordRect.height,
                         child: Opacity(
                           opacity: word,
-                          child: Image.asset(
-                            'assets/logo/reveric_wordmark.png',
-                            color: palette.word,
-                            colorBlendMode: BlendMode.srcIn,
-                            fit: BoxFit.fill,
-                            filterQuality: FilterQuality.medium,
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.contain,
+                              child: Text(
+                                'MetaArc',
+                                style: TextStyle(
+                                  color: palette.word,
+                                  fontSize: 88,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 4.0,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),

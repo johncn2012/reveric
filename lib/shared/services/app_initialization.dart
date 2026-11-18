@@ -55,12 +55,20 @@ List<AppInitializationTask> defaultAppInitializationTasks() {
       id: 'default_ai_shortcut_actions_v1',
       run: seedDefaultAiShortcutActions,
     ),
-    AppInitializationTask(id: 'demo_works_v1', run: _seedDemoWorks),
+    AppInitializationTask(id: 'demo_works_v2', run: _seedDemoWorks),
   ];
 }
 
 /// 示例小说与示例剧本作为一项初始化任务写入；两者各自按标题去重。
 Future<void> _seedDemoWorks(AppDatabase database) async {
+  // 1. 软删除历史旧版示例（若存在）
+  final oldNovels = await (database.select(database.novels)
+        ..where((t) => t.title.equals('潮汐邮局') | t.title.equals('末班船的证人')))
+      .get();
+  for (final old in oldNovels) {
+    await database.novelDao.softDelete(old.id);
+  }
+  // 2. 注入全新高质量示范作品（1部科幻长篇小说 + 1部悬疑标准剧本）
   await createDemoNovel(database);
   await seedDemoScreenplay(database);
 }

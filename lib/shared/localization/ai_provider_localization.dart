@@ -27,6 +27,7 @@ String localizedBuiltinAiProviderName(
   required String fallbackName,
 }) {
   final key = switch (providerId) {
+    'metaarc_ai_hub' => LocaleKeys.settingsBuiltinProviderMetaArc,
     'metaso' => LocaleKeys.settingsBuiltinProviderMetaso,
     'deepseek' => LocaleKeys.settingsBuiltinProviderDeepseek,
     'doubao' => LocaleKeys.settingsBuiltinProviderDoubao,
@@ -56,6 +57,7 @@ String localizedProviderTypeDescription(
   AiProviderType type,
 ) {
   final key = switch (type) {
+    AiProviderType.metaapi => LocaleKeys.settingsProviderDescriptionMetaArc,
     AiProviderType.openai => LocaleKeys.settingsProviderDescriptionOpenai,
     AiProviderType.codex => LocaleKeys.settingsProviderDescriptionCodex,
     AiProviderType.openai_compatible =>

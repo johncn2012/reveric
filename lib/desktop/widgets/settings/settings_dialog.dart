@@ -32,6 +32,7 @@ import '../../../shared/localization/locale_keys.dart';
 import '../../../shared/providers/settings_providers.dart';
 import '../../../shared/theme/theme.dart';
 import '../../../shared/widgets/settings/about_settings_section.dart';
+import '../../../shared/widgets/settings/account_subscription_section.dart';
 import '../../../shared/widgets/settings/ai_agents_settings_section.dart';
 import '../../../shared/widgets/settings/ai_providers_section.dart';
 import '../../../shared/widgets/settings/appearance_settings_section.dart';
@@ -95,6 +96,11 @@ class SettingsDialog extends HookConsumerWidget {
 
   static const _baseNavItems = [
     _SettingsNavItem(
+      id: 'account',
+      labelKey: LocaleKeys.settingsAccountSubscription,
+      icon: RevericIcons.person_outline,
+    ),
+    _SettingsNavItem(
       id: 'general',
       labelKey: LocaleKeys.settingsGeneral,
       icon: RevericIcons.settings_outlined,
@@ -148,11 +154,6 @@ class SettingsDialog extends HookConsumerWidget {
       id: 'storage',
       labelKey: LocaleKeys.settingsStorage,
       icon: RevericIcons.cloud,
-    ),
-    _SettingsNavItem(
-      id: 'backup',
-      labelKey: LocaleKeys.settingsBackup,
-      icon: RevericIcons.archive_outlined,
     ),
     _SettingsNavItem(
       id: 'about',
@@ -390,6 +391,7 @@ class SettingsDialog extends HookConsumerWidget {
     VoidCallback onCloseDebugSection,
   ) {
     return switch (selectedId) {
+      'account' => const AccountSubscriptionSection(),
       'general' => const _GeneralSettingsSection(),
       'appearance' => const _AppearanceSettingsSection(),
       'providers' => _AiProvidersSection(),
@@ -401,7 +403,6 @@ class SettingsDialog extends HookConsumerWidget {
       'editor' => const _EditorSettingsSection(),
       'reading' => const _ReadingSettingsSection(),
       'storage' => const StorageSettingsSection(),
-      'backup' => const _BackupSettingsSection(),
       'about' => const _AboutSettingsSection(),
       'debug' => _DebugSettingsSection(onClose: onCloseDebugSection),
       _ => const SizedBox.shrink(),

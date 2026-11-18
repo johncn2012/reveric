@@ -10,7 +10,7 @@
 /// 应用版本号。
 /// 与 pubspec.yaml 的 version 字段保持同步，由 release.sh 一同更新。
 /// 供需要同步获取版本号的场景使用（如匿名上报），避免 PackageInfo 异步调用。
-const appVersion = '0.6.3';
+const appVersion = '0.6.4';
 
 /// 窗口、托盘、引导页、通知和系统显示名使用的产品名。
 /// 关于页仍展示 [revericAttribution]，不把修改版写成没有上游。

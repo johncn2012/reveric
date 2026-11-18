@@ -4048,7 +4048,12 @@ abstract final class LocaleKeys {
   static const settingsAiAgents = 'settings.ai_agents';
   static const settingsAiAgentsDescription = 'settings.ai_agents_description';
   static const settingsAiAgentsSection = 'settings.ai_agents_section';
+  static const settingsAccountSubscription = 'settings.account_subscription';
   static const settingsAiApiKey = 'settings.ai_api_key';
+  static const settingsBuiltinProviderMetaArc =
+      'settings.builtin_provider_metaarc';
+  static const settingsProviderDescriptionMetaArc =
+      'settings.provider_description_metaarc';
   static const settingsBuiltinProviderMetaso =
       'settings.builtin_provider_metaso';
   static const settingsProviderDescriptionMetaso =

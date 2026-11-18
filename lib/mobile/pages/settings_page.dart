@@ -375,15 +375,6 @@ class SettingsPage extends HookConsumerWidget {
                 label: context.t(_usageItem.labelKey),
                 onTap: () => handleTap(_usageItem),
               ),
-              _valueRow(
-                context,
-                colors,
-                typo,
-                icon: _backupItem.icon,
-                tint: colors.success,
-                label: context.t(_backupItem.labelKey),
-                onTap: () => handleTap(_backupItem),
-              ),
             ]),
             const SizedBox(height: RevericSpacing.x2l),
             _buildGroup(context, colors, typo, LocaleKeys.settingsGroupSystem, [

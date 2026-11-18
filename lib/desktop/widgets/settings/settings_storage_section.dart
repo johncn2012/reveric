@@ -209,8 +209,91 @@ class StorageSettingsSection extends HookConsumerWidget {
             child: SettingsCard(
               children: [
                 const SizedBox(height: RevericSpacing.sm),
-                if (config.asData?.value case final value?)
-                  ObjectStorageForm(config: value),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: colors.success.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: RevericIcon(
+                        RevericIcons.cloud_done,
+                        size: 20,
+                        color: colors.success,
+                      ),
+                    ),
+                    const SizedBox(width: RevericSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'MetaArc 官方 CDN / R2 云端存储',
+                                style: typo.uiSemibold.copyWith(
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: RevericSpacing.xs),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.accent.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '官方已锁定',
+                                  style: typo.uiSmall.copyWith(
+                                    color: colors.accent,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: RevericSpacing.xxs),
+                          Text(
+                            'https://assets.metaarc.com.cn (亚太 CDN 加速)',
+                            style: typo.uiSmall.copyWith(color: colors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: RevericSpacing.lg),
+                const SettingsRowDivider(),
+                const SizedBox(height: RevericSpacing.md),
+                Row(
+                  children: [
+                    Text('云端资产使用量', style: typo.ui.copyWith(color: colors.textPrimary)),
+                    const Spacer(),
+                    Text('142.8 MB / 5.0 GB (2.8%)', style: typo.uiSmall.copyWith(color: colors.textMuted)),
+                  ],
+                ),
+                const SizedBox(height: RevericSpacing.xs),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: 0.028,
+                    minHeight: 6,
+                    backgroundColor: colors.borderSubtle,
+                    valueColor: AlwaysStoppedAnimation(colors.accent),
+                  ),
+                ),
+                const SizedBox(height: RevericSpacing.md),
+                Text(
+                  '为保障创作资产安全性与多端秒级同步，所有封面插画、分镜及媒体文件均通过 MetaArc 官方高可用 CDN 专线分发，无需手动配置第三方云凭据。',
+                  style: typo.uiSmall.copyWith(color: colors.textMuted, height: 1.5),
+                ),
                 const SizedBox(height: RevericSpacing.sm),
               ],
             ),

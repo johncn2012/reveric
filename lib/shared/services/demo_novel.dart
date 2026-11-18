@@ -1,4 +1,4 @@
-// 职责: Demo 小说初始化 — 首次启动或空库时创建示例小说，覆盖各种数据类型供用户探索
+// 职责: Demo 小说初始化 — 首次启动或空库时创建官方标杆级科幻小说示例《深空编年史：最后的光锥》
 // 关联文件:
 //   lib/shared/database/app_database.dart
 //   lib/shared/database/novel_content_database.dart
@@ -22,164 +22,144 @@ import '../logger/app_logger.dart';
 import 'novel_content.dart';
 import 'image_library_service.dart';
 
-const _demoChapterOneContent = '''柜台上的水位尺升到第三格时，沈砚开始退信。
+const _demoChapterOneContent = '''深空航行第两万五千五百天，柯伊伯带边缘的引力透镜阵列响起了红色警报。
 
-地址淹了的，收件人搬走的，还有一封只写着“卖鱼女人收”。他把最后一封夹进明天的邮袋，没有盖退件章。码头上卖鱼的女人有十一位，总能问到。
+不是机械故障，也不是陨石撞击。林澜猛地从休眠凝胶舱中直起身，冰冷的复苏液顺着她的下颌滴落，在无重力环境下凝成一颗颗漂浮的幽蓝水珠。
 
-屋后忽然响了一声。
+“艾娃，报告警报源。”她一边扯掉贴在太阳穴上的神经电极，一边快速滑向主控台。
 
-不是敲门。声音来自墙里的铜信槽。沈砚抬头看了看钟，六点差一刻，旧街的邮管停用已经七年。风吹进管道也会响，他早习惯了，可这次响声很短，像有人在另一端用指节试了试。
+“首席物理学家林澜，已确认唤醒。”冰冷而平稳的合成女声在空旷的舰桥内回荡，“三分钟前，超导量子干涉仪在视界坐标（214, 088, -12）捕获了一组高能引力波脉冲。频率持续锁定在普朗克尺度，不符合任何已知天然天体事件。”
 
-他拿起接信的木盘，等了片刻。一只信封滑出来，撞在盘沿。
+林澜的手指在全息交互屏上如飞起舞。视网膜上投射出的波形图让她瞳孔剧烈收缩。
 
-信封干得出奇。邮局的地板常年返潮，连他袖口都是湿的，这只信封却像刚从火炉旁拿下。上面没有地址，背面盖着一枚红色私章，右下角缺了一小块。
+那不是杂乱的宇宙背景噪声，而是呈现出高度有序的曼德博分形结构的数字序列。更诡异的是，信号的载波不是电磁辐射，而是直接对空间曲率进行高频扰动的引力涟漪。
 
-沈砚把盘子搁下，去抽屉里翻母亲的旧收据。抽屉卡住了，他拉了两次才打开。那枚章在最后一张收据上也缺着同样的角，缺口穿过“兰”字的末笔。
+“信标特征码破译进度如何？”
 
-沈兰。他已经七年没在新纸上见过这个名字。
+“破译已完成百分之八十。”艾娃的声音似乎出现了一丝极难察觉的微秒级延迟，“源信标签名包含联合国深空远征军团第VII级数字证书。硬件公钥匹配度为百分之百。”
 
-窗外有人喊他收桥。沈砚应了一声，声音却轻得自己都没听清。他把信封举向灯，里面没有信纸，只有一道细长的影子。他不敢拆，又觉得这个念头可笑：给别人的信才不能拆，没写地址的信，规矩里根本没有这一条。
+林澜整个人僵在原地。
 
-门被推开，收桥的船工探进半个身子：“再不走，你今晚就睡柜台上。”
+“你再说一遍？公钥匹配哪艘舰艇？”
 
-“这条管子通到哪里？”
+“匹配本机。”艾娃缓缓调出对比阵列，“发射源签名来自‘远征七号’主控核心。信标内部的时间戳编码为……星历3174年9月。”
 
-船工顺着他的目光看见铜槽，笑意没了。“原先通旧街。”
+星历3174年。
 
-“现在呢？”
+而今天，是星历2874年。
 
-“现在通海里。”
+这是一道来自三百年后、来自未来母舰残骸深处的求救信号。
 
-沈砚将信封压在收据下，拿起门后的撑桥杆。两人把浮桥抬高一孔，水已经漫过下面一级石阶。护城灯从雾里扫来，照出水面上一片微小的亮点。灯鳗贴着桩脚游，细得像散开的线头。
+舰桥的气密门无声滑开。舰长周远大步走了进来，他的战术制服领口未扣，左侧那只军用级钛合金义眼在昏暗的红色警报灯下闪烁着冷冽的红芒。
 
-“今年来得早。”船工说。
+“我听到了二级警报，林澜。”周远的声音低沉而沙哑，带着冷冻休眠后的干涩，“我们距离下一个跃迁节点还有四光月，这时候停船会耗尽辅助聚变堆百分之七的储备燃料。”
 
-沈砚问是不是涨潮要提前。船工摇头，说灯鳗吃盐，又不看潮历，接着催他锁门。他答应了，却一直等脚步声走远，才回到柜台。
+“我们必须停船，舰长。”林澜没有回头，她将主观测屏推向周远的视野中，“你自己看。”
 
-信封背面多了一行灰字。
+周远的机械义眼微微缩放，微型对焦马达发出细微的嗡鸣。当他看清信号源坐标与三百年后的时间戳时，整个人像一座雕塑般定格在原地。
 
-不是墨，更像被什么东西啃去了纸的表层，只剩下落笔时压出的沟。他侧过灯罩，逐字辨认。
+“未来的我们……死了？”良久，周远才吐出一句话。
 
-旧街，槐树巷，十七号。
+“信号里包含一段坍塌的光锥坐标，还有一个倒计时。”林澜指着闪烁的红色倒三角标记，“距离信标预设的因果律锁死，我们只剩下四十七个标准时。”''';
 
-母亲最后工作的那间邮局。
+const _demoChapterTwoContent = '''“远征七号”的减速矢量喷口在真空中喷吐出长达数十公里的幽蓝等离子羽流。
 
-沈砚用拇指摩挲封口。红蜡里夹着一粒蓝色结晶，在灯下不亮，移到暗处却幽幽泛光。他认得普通灯盐，没有见过这种蓝色。信封里那道细影忽然挪了一下，一只指甲盖大小的螺从纸缝爬出，落在柜台上。
+沉重的过载将林澜狠狠压在控制椅上。她盯着全息星图上那个不断放大的虚空座标。根据理论，那片空域没有任何宏观物质，只有几颗冰冷的氨冰碎块在柯伊伯带的漫漫长夜里漂移。
 
-他赶紧拿玻璃杯罩住。螺壳半透明，腹部有一道墨黑。
+然而，长基线合成孔径雷达给出的反馈却彻底颠覆了物理常识。
 
-信上的地址曾经存在，只是被吃掉了。
+“前方三万公里处，空间曲率呈现负无限大。”林澜的嗓音在通讯频道里回荡，“有一个尺度在三公里左右的‘泡’，那里的引力常数被某种外力强行扭曲了。”
 
-钟敲了六下。往常这时，潮水会在石阶前停一阵，再缓缓退下去。今天水却越过第三格，继续朝第四格爬。柜台下面先湿了一条线，随后一枚没收好的邮票浮了起来。
+“是跃迁残余吗？”周远的声音从战术指挥席传来。
 
-沈砚捡起邮票，关掉柜台灯，把信封和旧收据分别装进油布袋。他没有把母亲的名字念出来，仿佛声音太大，就会惊动信的另一端。
+“不，不是常规跃迁。它像是一个被遗弃在时空连续体上的伤疤。”
 
-出门前，他翻过歇业牌，在背面写了几个字：去修灯铺，明早回。
+主屏幕上的光学影像经过多重暗场降噪后，终于显露出了真容。
 
-写完他停了一会儿，又把“明早”划掉。
+所有人都屏住了呼吸。
 
-浮桥尽头，叶棠那艘废船还亮着灯。沈砚踩过湿木板，身后铜信槽又响了一声。这一次，他没有回头。''';
+在永恒的虚空背景中，悬浮着一座庞大如山脉的金属造物。那是“远征七号”的轮廓——长达六公里的纺锤形舰体，外层厚重的纳米合金装甲板上布满了狰狞的撕裂伤痕，巨大的主引擎环已经断裂成三截，像折断的龙骨般歪斜地漂浮在一旁。
 
-const _demoChapterTwoContent = '''叶棠正替一只灯罩换铆钉。沈砚上船时，她没抬头，只把脚边的水桶踢过去。
+但这并不是最令人毛骨悚然的。
 
-“漏水自己接。灯明天取。”
+林澜拉近了舰艏的细节放大镜头。
 
-“我不修灯。”
+在残骸的外壳上，用高能激光焊枪烙刻着密密麻麻的数字和警告标识。那些字迹因为岁月的侵蚀已经有些模糊，但每一个字都在无声地诉说着某种绝望的挣扎。
 
-“那就别踩我的线。”
+“警告：不可直视视界内侧。”周远一字一顿地读出外壳上的字迹，脸色阴沉如铁，“‘如果你们读到这段文字，立即过载反应堆自毁。不要试图寻找答案。’署名是……林澜。”
 
-沈砚低头，鞋底下横着一根细铜丝，另一端连着窗边的听筒。他小心跨过去，把油布袋放在检验台上。叶棠见到红蜡，锤子在半空停住。
+林澜下意识地后退了半步，背脊渗出一层冷汗。
 
-“谁给你的？”
+那确实是她自己的字迹，甚至连字母末端微微上扬的连笔习惯都分毫不差。
 
-“邮管送来的。”
+“艾娃，检测残骸生命体征。”林澜强迫自己冷静下来，指节因用力而发白。
 
-她放下锤子，先把台上的铁屑扫干净，又从柜子里取出一片白瓷。沈砚想催，她已经用镊子夹住封口脱落的一小粒蓝盐，放在瓷片上，滴下一滴水。
+“扫描完成。无活动生命体征。但残骸核心仓的辅助能源仍在维持最低限度的逻辑运算……等等，检测到定向通讯激光射束！”
 
-盐没化。水珠倒缩小了，像被里面的东西喝掉。
+还没等林澜反应过来，舰桥的主通讯仪发出一声刺耳的爆鸣。
 
-“灯塔的。”她说。
+一道未经任何加密的数据流直接冲破了“远征七号”的防火墙，投射在主屏幕中央。
 
-“能从旧街寄出来吗？”
+画面中是一片狼藉的指挥舱，昏暗的紧急照明灯在天花板上摇晃。一个头发花白、脸上横亘着一道深可见骨疤痕的女人坐在舰长席上。
 
-“管子没断，就能。可他们说旧街的管子早断了。”
+那是三十年后的林澜。
 
-叶棠把灯罩侧过来，让光贴着信封扫过去。槐树巷十七号下面还有字，笔画相互压着。她换了三次角度，拿一张薄纸覆上去，用炭条轻擦。沈砚站得太近，挡住了光，她用手背推了推他的肩。
+画面中的她抬起头，布满血丝的双眼穿透了时空的阻隔，死死盯住了屏幕前的年轻林澜。
 
-纸上浮出两个字：退回。
+“你终于来了。”未来的林澜剧烈地咳嗽着，嘴角溢出一缕暗黑色的血液，“听着，时间不多了。肖恩不是叛徒，他只是看到了黑洞另一侧的真实图景……不要相信光锥！”''';
 
-“这是退信？”沈砚说。
+const _demoChapterThreeContent = '''通讯在剧烈的白噪声中戛然而止。
 
-“至少有人想让它看起来像退信。”
+舰桥内死一般的寂静，只有生命维持系统发出的微弱风声。
 
-他从袋里取出母亲的旧收据，指给她看缺角。叶棠没有马上接话。她找了一把尺，量完两枚印，又对着灯看了封蜡的边缘。
+周远缓缓转过身，钛合金义眼死死锁定了林澜：“肖恩。她提到了肖恩。”
 
-“章是一枚章。盖章的人，不一定是一个人。”
+肖恩是这艘飞船的首席引力工程师，也是三年前因“精神失常试图破坏跃迁引擎”而被周远下令强制深度冷冻的重刑犯。
 
-沈砚将收据收回去。纸角折了一下，他用指甲反复压平。
+“肖恩早在出发后第三年就被关进了第七冷冻舱。”周远的手按在腰间的磁吸手枪握柄上，“如果未来的你声称‘肖恩不是叛徒’，那就意味着三年前我的判决错了？或者说，他当年发疯破坏引擎，根本就不是疯了，而是知道了某种我们不知道的真相？”
 
-叶棠蹲下，从桌腿底下抽出一叠账纸。桌子顿时歪了，瓷片里的水流向边缘。她拿半块木头塞回去，把账纸铺在两人中间。
+“周远，把枪放下。”林澜的声音出奇地冷静，“未来的我不会毫无理由地留下这句话。艾娃，调取肖恩被捕前的最后一份实验室日志，权限覆盖码：希格斯-7704。”
 
-每页都记着日期和灯盐用量，其中一列被红笔圈了起来。
+“权限确认中……代码有效。正在解密肖恩博士的最后日志。”
 
-“旧街没人了，为什么这些年还在往下送蓝盐？”
+屏幕上弹出一份被最高机密封存的物理仿真模型。
 
-“养灯鳗？”
+模型的中心不是超光速跃迁泡，而是一张扭曲的克莱因瓶结构。
 
-“灯鳗可不会签收。”
+“这是……”林澜靠近屏幕，瞳孔因震撼而放大，“他不是在破坏引擎。他在尝试修改我们的跳跃航线！我们在柯伊伯带规划的这三次引力弹弓加速，并不是朝向半人马座阿尔法星……航线的前方，根本没有恒星！”
 
-最下面那页有一个模糊手印。沈砚将灯移近，发现手印旁写着槐树巷的编号，日期却是上个月。他伸手去拿，叶棠按住纸边。
+周远的眉头拧成了一个死结：“你说什么？星图是由地球最高联合指挥部下发的！”
 
-“原件不离开我。”
+“最高指挥部欺骗了我们。”林澜飞快地调出全舰质量传感器的深层数据，“‘远征七号’的聚变燃料根本不足以支撑抵达半人马座。从一开始，这艘船的任务就不是殖民开拓，而是一个漂流瓶——一个用来观测大撕裂边缘的活体探测器！”
 
-“我带你认路。”
+就在此时，舰体猛然发生了一阵剧烈的震颤。
 
-“你七年没下去。”
+刺耳的红色警报再次撕裂了宁静。
 
-“门牌还认得。”
+“警告！前方未来残骸产生引力坍塌！强引力阱正在形成，‘泡’的事件视界正在向外扩张！”艾娃的告警声骤然拔高，“引力潮汐力已超越安全阈值，我们正在被拖入光锥中心！”
 
-船底传来两下闷响，铜听筒在窗台上滚了一寸。叶棠抓住它，贴到左耳，抬手示意沈砚别动。过了一会儿，她放下听筒，开始往工具袋里塞气阀和短绳。
+“主引擎全功率倒车！”周远大吼。
 
-“闸门关早了。今晚只剩西侧检修口。”
+“动力不足！时空曲率梯度超过临界点！”林澜死死抓住房顶的减震把手，狂暴的重力将她视线中的一切都拉扯成长条状的光带，“周远！只有打开第七冷冻舱，唤醒肖恩！他知道怎么在这张克莱因引力网里滑行！”
 
-沈砚问她怎么知道。她把铜丝从窗外收进来，末端系着一小截浸湿的木片。
+周远看着舷窗外那颗逐渐吞噬星光的黑色空洞，深吸了一口气，按下了全舰紧急解冻广播：
 
-“平时有三道回声。现在少一道。”
-
-他们下船时，码头已经拉上绳索。灯务署的人正在挂封锁牌，理由是大潮检修。沈砚隔着人群看见裴铎，署长站在伞下，衣领干燥，手里握着一只银怀表。
-
-一个船工问，低处还有人没回来，能不能再等半刻。
-
-裴铎合上怀表：“等他们回来，桥上这些人怎么办？”
-
-没人再说话。挂绳索的人绕过船工，把最后一端拴紧。
-
-叶棠拉着沈砚退进两座货棚之间。他刚要开口，她已将一盏罩好黑布的小灯递给他。工具袋里露着那叠账纸，纸边用夹子扣牢。
-
-“先说好。”她说，“看见气管别碰。要开阀，叫我。”
-
-“看见邮件呢？”
-
-她看了他一眼：“你拿。”
-
-沈砚将灯塞进外衣，沿西边石阶往下走。最下一级还露着，上面嵌着半块旧门牌。他蹲下来，擦去牌上的泥，认出一个模糊的“槐”字。
-
-门牌的箭头朝下，指向漆黑的水。''';
+“呼叫第七休眠区。终止冷冻协议。唤醒肖恩。”''';
 
 const _demoChapterTitles = <String>[
-  '盐印下的名字',
-  '退潮后的街道',
-  '灯塔不收回信',
-  '被卖掉的黎明',
-  '最后一班邮船',
+  '第1章：来自未来的跃迁信标',
+  '第2章：光锥边缘的低语',
+  '第3章：不可逆视界',
+  '第4章：星火逃逸决议',
+  '第5章：重构新生',
 ];
 
 const _demoChapterOutlines = <String>[
-  '沈砚带着空白信封到修灯铺求证。叶棠用斜光照出被刮掉的退信地址，又发现封蜡里混着灯塔专用的蓝盐。两人在闸口见到灯务署的封锁令，决定赶在大潮前进入旧街。',
-  '沈砚和叶棠随退潮进入水下旧街，循邮袋上的刻痕找到废弃分拣室。被宣告淹死的居民仍住在气室里，靠灯塔抽走他们的记忆换取空气；沈砚母亲留下的投递簿证明交易并非自愿。沈砚与叶棠用笔迹和盐印试出回潮辨址术，也察觉它会夺走声音记忆。',
-  '灯务署长裴铎截下邮船，提出用母亲的去向换投递簿。沈砚假意答应，叶棠从检修通道潜入，发现灯塔每夜向上城出售旧街居民的记忆，维持护城灯的只是其中很小一部分。',
-  '裴铎提前放潮封住旧街出口。沈砚以回潮辨址术定位失散居民，付出失去母亲声音的代价。叶棠组织修灯匠改接气室，浮桥会接应；众人带着原始账页赶到灯塔晨间拍卖场。',
-  '沈砚在公开验灯时投递全部账页，迫使灯务署停止抽取记忆。裴铎交出主闸钥匙接受审讯。旧街居民迁上浮桥，沈砚从母亲的最后一封信得知她早已死于抢修；他与叶棠重开潮汐邮局，为活人送信。',
+  '“远征七号”在柯伊伯带捕获了一组奇怪的量子引力信号，林澜破译后发现该信号竟来自母舰三百年后的未来残骸，且警告倒计时只剩47小时。舰长周远决定中止减速计划，全舰进入二级戒备。',
+  '母舰抵达信号源，目睹了破损的未来残骸。残骸表面留着林澜亲笔手书的自毁警告，同时接收到了未来林澜临终前的全息通讯，警告众人“不要相信光锥”，并提及了被冰冻的重刑犯肖恩。',
+  '未来残骸发生引力塌陷，形成微型奇点时空网，将母舰死死拖拽。林澜发现飞船航线从一开始就是地球指挥部设计的单向毁灭探测，周远在生死关头决定唤醒被冰冻的工程师肖恩。',
+  '肖恩苏醒后揭示了黑洞另一端的真相与时空闭环。众人围绕“过载引擎自毁以打破循环”还是“强行穿过奇点寻找新宇宙”展开激烈的星火决议表决。',
+  '林澜与周远联手执行最后的反物质湮灭操作，成功撕开光锥囚笼。飞船穿过视界，在全新的星海与维度中重新确立人类文明的坐标。',
 ];
 
 Future<String> createDemoNovel(
@@ -189,7 +169,7 @@ Future<String> createDemoNovel(
   final existingNovel =
       await (database.select(database.novels)..where(
             (table) =>
-                table.title.equals('潮汐邮局') &
+                table.title.equals('深空编年史：最后的光锥') &
                 table.deletedAt.equals(notDeletedSentinel),
           ))
           .getSingleOrNull();
@@ -210,17 +190,17 @@ Future<String> createDemoNovel(
       purpose: AssetPurpose.cover,
     )).id;
   } catch (_) {
-    // asset not found, leave the cover empty
+    // cover empty
   }
 
   await database.novelDao.create(
     id: novelId,
-    title: '潮汐邮局',
+    title: '深空编年史：最后的光锥',
     description:
-        '雾港的邮差从不接收没有地址的信。沈砚却收到一只写着母亲姓名的空信封，而她已随旧街沉入海底七年。为了送出这封退信，他和修灯匠叶棠踏进退潮才显露的街巷，发现整座城的灯火，都有人在水下付账。',
+        '在人类深空远征的第七十年，“远征七号”科考母舰在柯伊伯带边缘捕获了一束超越光速的量子引力信号。当首席物理学家林澜破译出信号源头竟来自母舰三百年后的未来残骸时，一场关乎文明火种延续的星际抉择在寂静黑夜中打响。',
     coverAssetId: coverAssetId,
-    tags: const ['奇幻', '悬疑', '冒险', '群像', 'demo'],
-    category: '奇幻',
+    tags: const ['科幻', '悬疑', '太空歌剧', '硬科幻', 'demo'],
+    category: '科幻',
   );
 
   final contentDatabasePath = await buildNovelContentDatabasePath(novelId);
@@ -229,6 +209,7 @@ Future<String> createDemoNovel(
     includeInitialChapter: true,
     idBuilder: idBuilder,
   );
+
   Future<String> insertEntity(
     ShortEntityIdType type,
     String tableName,
@@ -266,9 +247,9 @@ Future<String> createDemoNovel(
   await NovelContentService(
     contentDatabase,
     idBuilder: idBuilder,
-  ).outlineService.createOutline(defaultTitle: '旧街来信');
+  ).outlineService.createOutline(defaultTitle: '星海信标');
 
-  // --- Existing chapter 1 is already created by seedDefaultWorkspace, update its title ---
+  // 更新第1章标题与正文
   final seededChapters = await contentDatabase.chapterDao.getAll();
   if (seededChapters.isNotEmpty) {
     final chapter1 = seededChapters.first;
@@ -276,31 +257,33 @@ Future<String> createDemoNovel(
       contentDatabase.chapters,
     )..where((c) => c.id.equals(chapter1.id))).write(
       ChaptersCompanion(
+        title: const Value('第1章：来自未来的跃迁信标'),
+        outline: Value(_demoChapterOutlines[0]),
         content: const Value(_demoChapterOneContent),
         wordCount: Value(countTextUnits(_demoChapterOneContent)),
-        title: const Value('没有地址的信'),
-        outline: Value(
-          '潮汐邮局关门前，沈砚收到一封无地址的退信，封口印着失踪母亲的私章。信封背面显出水下旧街的街名，邮局外的潮水却正在逆着钟声上涨。沈砚带信去找能辨认旧灯盐印的叶棠。',
-        ),
+        updatedAt: Value(now),
       ),
     );
   }
 
-  // Chapters 2-6
-  for (var i = 2; i <= 6; i++) {
+  // 插入后续完整章节
+  for (var i = 2; i <= 5; i++) {
+    final content = switch (i) {
+      2 => _demoChapterTwoContent,
+      3 => _demoChapterThreeContent,
+      _ => '',
+    };
     await insertEntity(
       ShortEntityIdType.chapter,
-      'chapter_nodes',
-      (id) async => contentDatabase.chapterDao.insert(
+      'chapters',
+      (id) async => contentDatabase.into(contentDatabase.chapters).insert(
         ChaptersCompanion.insert(
           id: id,
-          type: nodeTypeChapter,
-          parentId: const Value(null),
-          siblingOrder: i,
-          title: Value(_demoChapterTitles[i - 2]),
-          outline: Value(_demoChapterOutlines[i - 2]),
-          content: Value(i == 2 ? _demoChapterTwoContent : ''),
-          wordCount: Value(i == 2 ? countTextUnits(_demoChapterTwoContent) : 0),
+          chapterNum: i,
+          title: Value(_demoChapterTitles[i - 1]),
+          outline: Value(_demoChapterOutlines[i - 1]),
+          content: Value(content),
+          wordCount: Value(countTextUnits(content)),
           createdAt: Value(now),
           updatedAt: Value(now),
         ),
@@ -308,8 +291,8 @@ Future<String> createDemoNovel(
     );
   }
 
-  // Characters
-  final shenYanId = await insertEntity(
+  // 角色 Character Profiles
+  final linLanId = await insertEntity(
     ShortEntityIdType.character,
     'character_profiles',
     (id) async => contentDatabase
@@ -317,14 +300,14 @@ Future<String> createDemoNovel(
         .insert(
           CharacterProfilesCompanion.insert(
             id: id,
-            name: '沈砚',
+            name: '林澜',
             role: const Value(characterRoleProtagonist),
-            gender: const Value(characterGenderMale),
+            gender: const Value(characterGenderFemale),
             biography: const Value(
-              '雾港邮差，七年前失去在旧街邮局工作的母亲。他靠替人送信维生，熟悉每条浮桥，却始终拒接通往旧街的邮件。一只带母亲私章的信封让他第一次越过封锁线。',
+              '远征七号首席理论物理学家，引力波干涉学专家。拥有对微观空间曲率波动的敏锐直觉。在破译出未来母舰的自毁信号后，承担起了破除因果律囚笼的核心重任。',
             ),
             description: const Value(
-              '二十六岁，肩窄手长，旧邮袋的肩带缝过三次。说话习惯先问门牌再问姓名。遇事会反复核对收据，害怕自己签下一个再也无法兑现的承诺。',
+              '二十八岁，眼神沉静锐利，常年穿着淡银色的科研绝缘制服。习惯在思考高维空间方程时下意识摩挲手中的神经电极片。',
             ),
             sortOrder: const Value(0),
             createdAt: Value(now),
@@ -333,7 +316,7 @@ Future<String> createDemoNovel(
         ),
   );
 
-  final yeTangId = await insertEntity(
+  final zhouYuanId = await insertEntity(
     ShortEntityIdType.character,
     'character_profiles',
     (id) async => contentDatabase
@@ -341,14 +324,14 @@ Future<String> createDemoNovel(
         .insert(
           CharacterProfilesCompanion.insert(
             id: id,
-            name: '叶棠',
+            name: '周远',
             role: const Value(characterRoleSupporting),
-            gender: const Value(characterGenderFemale),
+            gender: const Value(characterGenderMale),
             biography: const Value(
-              '修灯匠，曾在灯务署做学徒，因质疑旧街耗盐账被除名。她靠修民用灯谋生，暗中记录灯塔每夜的耗盐量，想找出师父背负事故罪名的证据。',
+              '远征七号最高指挥官，经历过第三次太阳风暴的资深远征军人。在绝对理性与全员生死之间坚守军人的荣誉底线，左眼在一次深空拦截任务中更换为战术机械义眼。',
             ),
             description: const Value(
-              '二十四岁，袖口常留着蓝盐结晶，右耳听力受损，交谈时会把左侧转向对方。擅长辨认灯罩上的细微刻痕，不相信没有留下原件的口头保证。',
+              '四十五岁，身材魁梧挺拔，面容如花岗岩般坚毅，左侧钛合金机械眼随着战术演算闪烁红芒，行事雷厉风行。',
             ),
             sortOrder: const Value(1),
             createdAt: Value(now),
@@ -357,7 +340,7 @@ Future<String> createDemoNovel(
         ),
   );
 
-  final peiDuoId = await insertEntity(
+  final aiwaId = await insertEntity(
     ShortEntityIdType.character,
     'character_profiles',
     (id) async => contentDatabase
@@ -365,23 +348,47 @@ Future<String> createDemoNovel(
         .insert(
           CharacterProfilesCompanion.insert(
             id: id,
-            name: '裴铎',
+            name: '艾娃 (EVA)',
+            role: const Value(characterRoleSupporting),
+            gender: const Value(characterGenderOther),
+            biography: const Value(
+              '母舰主控超导人工智能矩阵。掌管飞船生命维持、动力分配与深空引力航道计算。在面临未来时间悖论冲击时，其底层安全协议出现了未知的自我觉醒迹象。',
+            ),
+            description: const Value(
+              '以全息光影形态显现的深蓝色流体女性轮廓，语调冷静客观，但在关键抉择时刻展现出对人类文明火种的执着守护。',
+            ),
+            sortOrder: const Value(2),
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        ),
+  );
+
+  final seanId = await insertEntity(
+    ShortEntityIdType.character,
+    'character_profiles',
+    (id) async => contentDatabase
+        .into(contentDatabase.characterProfiles)
+        .insert(
+          CharacterProfilesCompanion.insert(
+            id: id,
+            name: '肖恩',
             role: const Value(characterRoleAntagonist),
             gender: const Value(characterGenderMale),
             biography: const Value(
-              '灯务署长，七年前组织封闭旧街气室，此后以护城灯不能熄灭为由持续抽取居民记忆。他把临时避险变成了生意，也把当年的救援者变成了终身债户。',
+              '前首席引力工程师，因三年前强行试图篡改母舰跃迁航道而被定性为反叛者并强制冰冻。真相是他早就勘破了地球最高指挥部将远征队当作牺牲品的秘密。',
             ),
             description: const Value(
-              '四十八岁，衣领一丝不乱，随身带一只已经停走的怀表。谈判时从不提高声音，先讲全城的难处，再让某一个人承担代价。',
+              '三十六岁，头发凌乱，眼神中带着看透宇宙残酷法则的孤寂与冷漠，是唯一掌握克莱因引力航道跳跃手法的科学家。',
             ),
-            sortOrder: const Value(2),
+            sortOrder: const Value(3),
             createdAt: Value(now),
             updatedAt: Value(now),
           ),
         ),
   );
 
-  // Locations
+  // 地点 Locations
   await insertEntity(
     ShortEntityIdType.location,
     'locations',
@@ -390,34 +397,13 @@ Future<String> createDemoNovel(
         .insert(
           LocationsCompanion.insert(
             id: id,
-            name: '潮汐邮局',
+            name: '远征七号主舰桥',
             description: const Value(
-              '建在浮桥桩顶的木屋，水位尺钉在柜台旁。后墙保留着旧街邮局的铜信槽，沉街之后再未开启，直到那只无地址信封从里面落下。',
+              '长达六公里的远征母舰核心神经中枢，拥有直径五十米的全景环形观测穹顶，中央悬浮着全息量子星图交互仪。',
             ),
             type: const Value(locationTypeBuilding),
-            tags: const Value('雾港,邮局,浮桥'),
+            tags: const Value('母舰,舰桥,指挥中心'),
             sortOrder: const Value(0),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.location,
-    'locations',
-    (id) async => contentDatabase
-        .into(contentDatabase.locations)
-        .insert(
-          LocationsCompanion.insert(
-            id: id,
-            name: '沈砚的阁楼',
-            description: const Value(
-              '邮局楼上的窄阁楼，窗外能看见护城灯。沈砚把母亲的旧邮帽放在干燥的锡盒里，屋内唯一的新家具是给未领邮件做的格架。',
-            ),
-            type: const Value(locationTypeBuilding),
-            tags: const Value('住所,邮局'),
-            sortOrder: const Value(1),
             createdAt: Value(now),
             updatedAt: Value(now),
           ),
@@ -432,56 +418,12 @@ Future<String> createDemoNovel(
         .insert(
           LocationsCompanion.insert(
             id: id,
-            name: '叶棠修灯铺',
+            name: '柯伊伯带视界奇点',
             description: const Value(
-              '废船改成的修理铺，船腹吊着不同年份的灯罩。窗边一张带刻度的检验台用于辨认盐印，桌腿下压着叶棠从灯务署带出的旧账副本。',
+              '位于太阳系最边缘的时空扭曲区域，微型引力泡在此撕裂，漂浮着来自三百年后的母舰未来残骸，周围环绕着刺骨的暗物质碎屑。',
             ),
-            type: const Value(locationTypeBuilding),
-            tags: const Value('修灯,证据,码头'),
-            sortOrder: const Value(2),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // Items: Faction
-  final deliveryTeamId = await insertEntity(
-    ShortEntityIdType.faction,
-    'items',
-    (id) async => contentDatabase
-        .into(contentDatabase.items)
-        .insert(
-          ItemsCompanion.insert(
-            id: id,
-            type: entityTypeFaction,
-            title: '潮汐投递队',
-            content: const Value(
-              '沈砚为进入旧街发起的临时投递队，由叶棠负责路线与灯具。两人约定邮件与证人一并带回，途中不以任何人的记忆抵付通行费。',
-            ),
-            status: const Value(itemEntryStatusActive),
-            sortOrder: const Value(0),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // Items: Skill
-  final tideAddressSkillId = await insertEntity(
-    ShortEntityIdType.skill,
-    'items',
-    (id) async => contentDatabase
-        .into(contentDatabase.items)
-        .insert(
-          ItemsCompanion.insert(
-            id: id,
-            type: entityTypeSkill,
-            title: '回潮辨址术',
-            content: const Value(
-              '沈砚将邮路记忆与叶棠的盐印测向法结合，自创沿回潮定位收件人的方法；叶棠也掌握了操作。施术者必须见过收件人的笔迹，每使用一次会永久失去一段自己珍视的声音记忆，不能找回已死之人。',
-            ),
-            status: const Value(itemEntryStatusActive),
+            type: const Value(locationTypeWilderness),
+            tags: const Value('深空,黑洞,未来残骸'),
             sortOrder: const Value(1),
             createdAt: Value(now),
             updatedAt: Value(now),
@@ -489,128 +431,19 @@ Future<String> createDemoNovel(
         ),
   );
 
-  // --- More Factions ---
-  final bridgeGuildId = await insertEntity(
-    ShortEntityIdType.faction,
-    'items',
-    (id) async => contentDatabase
-        .into(contentDatabase.items)
-        .insert(
-          ItemsCompanion.insert(
-            id: id,
-            type: entityTypeFaction,
-            title: '浮桥会',
-            content: const Value(
-              '雾港船工、邮差与修灯匠组成的互助行会，沈砚和叶棠都在会内登记。成员以轮班修桥换取停泊位，大潮时负责接应被困在低处的居民。',
-            ),
-            status: const Value(itemEntryStatusActive),
-            sortOrder: const Value(3),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
+  // 世界观设定 Worldview Settings
   await insertEntity(
-    ShortEntityIdType.faction,
-    'items',
+    ShortEntityIdType.worldview,
+    'worldview_settings',
     (id) async => contentDatabase
-        .into(contentDatabase.items)
+        .into(contentDatabase.worldviewSettings)
         .insert(
-          ItemsCompanion.insert(
+          WorldviewSettingsCompanion.insert(
             id: id,
-            type: entityTypeFaction,
-            title: '灯务署',
-            content: const Value(
-              '掌管护城灯、闸门和灯盐配给的机构，由裴铎主持。公开收入来自灯费，秘密收入来自出售旧街居民的记忆；多数基层修灯匠只知道前一项。',
-            ),
-            status: const Value(itemEntryStatusActive),
-            sortOrder: const Value(4),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // --- 潮路技能 ---
-  final saltReadingSkillId = await insertEntity(
-    ShortEntityIdType.skill,
-    'items',
-    (id) async => contentDatabase
-        .into(contentDatabase.items)
-        .insert(
-          ItemsCompanion.insert(
-            id: id,
-            type: entityTypeSkill,
-            title: '辨盐',
-            content: const Value(
-              '凭盐晶颜色、粒径和溶解速度区分民用灯盐与灯塔蓝盐。必须保留原样并做对照，受污的盐只能缩小来源范围，不能直接认定持有人。',
-            ),
-            status: const Value(itemEntryStatusActive),
-            sortOrder: const Value(2),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  final tideListeningSkillId = await insertEntity(
-    ShortEntityIdType.skill,
-    'items',
-    (id) async => contentDatabase
-        .into(contentDatabase.items)
-        .insert(
-          ItemsCompanion.insert(
-            id: id,
-            type: entityTypeSkill,
-            title: '听潮测路',
-            content: const Value(
-              '先辨明管道盐源，再用铜听筒比较气室间的回声，推算退潮时可通行的路径。测量只在当前潮段有效，闸门变动后需要重测。',
-            ),
-            status: const Value(itemEntryStatusActive),
-            sortOrder: const Value(3),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  final navigationSkillId = await insertEntity(
-    ShortEntityIdType.skill,
-    'items',
-    (id) async => contentDatabase
-        .into(contentDatabase.items)
-        .insert(
-          ItemsCompanion.insert(
-            id: id,
-            type: entityTypeSkill,
-            title: '逆潮引航',
-            content: const Value(
-              '结合听潮测路与回潮辨址术，在涨潮中为多人寻找气室间的通路。只能使用仍连通的管道，不能穿越封死的闸门；每次定位仍须承担辨址术的记忆代价。',
-            ),
-            status: const Value(itemEntryStatusActive),
-            sortOrder: const Value(4),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // --- Creatures / Species ---
-  await insertEntity(
-    ShortEntityIdType.creature,
-    'items',
-    (id) async => contentDatabase
-        .into(contentDatabase.items)
-        .insert(
-          ItemsCompanion.insert(
-            id: id,
-            type: entityTypeCreature,
-            title: '灯鳗',
-            content: const Value(
-              '以灯盐为食的小型鳗鱼，身体透光，迁游路线会随蓝盐浓度改变。旧街居民用它们检验漏气管道，灯务署则把异常聚集称作季节现象。',
-            ),
-            status: const Value(itemEntryStatusActive),
+            category: '物理学与科技',
+            title: '量子引力信标与曲率泡',
+            content:
+                '基于普朗克尺度下的空间微扰技术，能在不借由光速限制的情况下，通过引力涟漪直接在时空薄膜上压印信息，是高维文明跨越因果律光锥传递警告的唯一载体。',
             sortOrder: const Value(0),
             createdAt: Value(now),
             updatedAt: Value(now),
@@ -619,19 +452,17 @@ Future<String> createDemoNovel(
   );
 
   await insertEntity(
-    ShortEntityIdType.creature,
-    'items',
+    ShortEntityIdType.worldview,
+    'worldview_settings',
     (id) async => contentDatabase
-        .into(contentDatabase.items)
+        .into(contentDatabase.worldviewSettings)
         .insert(
-          ItemsCompanion.insert(
+          WorldviewSettingsCompanion.insert(
             id: id,
-            type: entityTypeCreature,
-            title: '噬墨螺',
-            content: const Value(
-              '附着在潮湿纸面上的小螺，吃掉墨迹却留下凹痕。受害文书可借斜光读取压痕，但无法据此复原原本的墨色和落笔时间。',
-            ),
-            status: const Value(itemEntryStatusActive),
+            category: '地缘政治与法典',
+            title: '深空漂流公约与火种协议',
+            content:
+                '联合国深空远征最高法典，规定在全舰进入不可逆绝境时，指挥官与物理学首席必须共同开启火种表决，优先保证文明数据与胚胎库跨越视界延续。',
             sortOrder: const Value(1),
             createdAt: Value(now),
             updatedAt: Value(now),
@@ -639,439 +470,10 @@ Future<String> createDemoNovel(
         ),
   );
 
-  // --- Entity Relations ---
-  // Character ↔ Faction
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeCharacter,
-            sourceId: shenYanId,
-            targetType: entityTypeFaction,
-            targetId: deliveryTeamId,
-            relationType: characterFactionFounder,
-            sortOrder: const Value(0),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeCharacter,
-            sourceId: yeTangId,
-            targetType: entityTypeFaction,
-            targetId: deliveryTeamId,
-            relationType: characterFactionLeader,
-            sortOrder: const Value(1),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeCharacter,
-            sourceId: shenYanId,
-            targetType: entityTypeFaction,
-            targetId: bridgeGuildId,
-            relationType: characterFactionMember,
-            sortOrder: const Value(2),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeCharacter,
-            sourceId: yeTangId,
-            targetType: entityTypeFaction,
-            targetId: bridgeGuildId,
-            relationType: characterFactionMember,
-            sortOrder: const Value(3),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeCharacter,
-            sourceId: peiDuoId,
-            targetType: entityTypeFaction,
-            targetId: deliveryTeamId,
-            relationType: characterFactionEnemy,
-            sortOrder: const Value(4),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // Character ↔ Skill
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeCharacter,
-            sourceId: shenYanId,
-            targetType: entityTypeSkill,
-            targetId: tideAddressSkillId,
-            relationType: characterSkillCreator,
-            sortOrder: const Value(0),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeCharacter,
-            sourceId: yeTangId,
-            targetType: entityTypeSkill,
-            targetId: tideAddressSkillId,
-            relationType: characterSkillMastered,
-            sortOrder: const Value(1),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // Skill ↔ Skill (prerequisite chain)
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeSkill,
-            sourceId: saltReadingSkillId,
-            targetType: entityTypeSkill,
-            targetId: tideListeningSkillId,
-            relationType: skillSkillPrerequisite,
-            sortOrder: const Value(0),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeSkill,
-            sourceId: tideListeningSkillId,
-            targetType: entityTypeSkill,
-            targetId: navigationSkillId,
-            relationType: skillSkillPrerequisite,
-            sortOrder: const Value(1),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.relation,
-    'entity_relations',
-    (id) async => contentDatabase
-        .into(contentDatabase.entityRelations)
-        .insert(
-          EntityRelationsCompanion.insert(
-            id: id,
-            sourceType: entityTypeSkill,
-            sourceId: tideAddressSkillId,
-            targetType: entityTypeSkill,
-            targetId: navigationSkillId,
-            relationType: skillSkillBranch,
-            sortOrder: const Value(2),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // --- Worldbuilding: 历史年表 ---
-  await insertEntity(
-    ShortEntityIdType.loreDocument,
-    'documents',
-    (id) async => contentDatabase
-        .into(contentDatabase.documents)
-        .insert(
-          DocumentsCompanion.insert(
-            id: id,
-            type: documentTypeLore,
-            title: '雾港沉街年表',
-            content: const Value(
-              '## 七年前\n旧街防潮闸损坏，居民转入气室避难。沈砚的母亲在抢修邮路时遇难，裴铎随后封闭旧街，将幸存者列入失踪名单。\n\n## 六年前至今\n灯务署以供气为条件收取记忆，逐步把抽取量提高到维生需要之外。叶棠发现耗盐账异常，被逐出灯务署。\n\n## 本次大潮\n旧街居民利用残存邮管送出退信。沈砚与叶棠入城取证，揭露交易，并在大潮封路前组织撤离。',
-            ),
-            status: const Value(documentStatusActive),
-            sortOrder: const Value(0),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // --- Worldbuilding: 世界设定总览 ---
-  await insertEntity(
-    ShortEntityIdType.loreDocument,
-    'documents',
-    (id) async => contentDatabase
-        .into(contentDatabase.documents)
-        .insert(
-          DocumentsCompanion.insert(
-            id: id,
-            type: documentTypeLore,
-            title: '潮水与记忆',
-            content: const Value(
-              '## 雾港\n浮桥连接高地与船屋，旧街沉在港湾浅底，每月大潮前有短暂露出路面的窗口。气室由灯塔管道供气。\n\n## 灯盐\n普通灯盐储光，蓝盐还能吸附人的声音记忆。灯塔只需少量蓝盐维持护城灯，过量抽取用于出售记忆。\n\n## 代价\n被抽取的声音记忆无法归还，文书可以记录事实，却不能代替一个人的亲身记忆。邮件不会来自未来，死者也不能借信复生。',
-            ),
-            status: const Value(documentStatusActive),
-            sortOrder: const Value(1),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // --- Worldbuilding: 职业体系 ---
-  await insertEntity(
-    ShortEntityIdType.loreDocument,
-    'documents',
-    (id) async => contentDatabase
-        .into(contentDatabase.documents)
-        .insert(
-          DocumentsCompanion.insert(
-            id: id,
-            type: documentTypeLore,
-            title: '雾港营生',
-            content: const Value(
-              '## 邮差\n识路、验封、留收据。无地址邮件须由邮差自行承担退件费用。\n\n## 修灯匠\n负责灯盐、气阀与光路维护，需要同时保留试样和检修记录。\n\n## 船工\n按潮位调整浮桥，替居民运水和迁屋，熟悉气室上方的锚点。\n\n## 灯务官\n登记灯费并批准闸门开闭。批准权集中在署长手中，是旧街难以求援的原因。',
-            ),
-            status: const Value(documentStatusActive),
-            sortOrder: const Value(2),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // Foreshadowing
-  await insertEntity(
-    ShortEntityIdType.foreshadowing,
-    'foreshadowings',
-    (id) async => contentDatabase
-        .into(contentDatabase.foreshadowings)
-        .insert(
-          ForeshadowingsCompanion.insert(
-            id: id,
-            title: '封蜡里的蓝盐',
-            setup: const Value(
-              '第一章里，信封私章的缺角与母亲旧章一致，但封蜡里混有灯塔专用的蓝盐。第二章叶棠确认盐源，提示寄件人仍与灯塔管道相通。',
-            ),
-            payoff: const Value(''),
-            status: const Value(foreshadowingStatusPlanted),
-            sortOrder: const Value(0),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  await insertEntity(
-    ShortEntityIdType.foreshadowing,
-    'foreshadowings',
-    (id) async => contentDatabase
-        .into(contentDatabase.foreshadowings)
-        .insert(
-          ForeshadowingsCompanion.insert(
-            id: id,
-            title: '停在四点的怀表',
-            setup: const Value(
-              '裴铎的怀表始终停在四点。他声称这是旧街沉没的时间，投递簿却记录四点之后仍有人接收救援邮件，证明封街决定发生在确认幸存者之后。',
-            ),
-            payoff: const Value(''),
-            status: const Value(foreshadowingStatusPlanted),
-            sortOrder: const Value(1),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  // AgentRules
-  await contentDatabase
-      .into(contentDatabase.agentRules)
-      .insert(
-        AgentRulesCompanion.insert(
-          id: buildRandomId('agent_rule'),
-          name: '叙事与感官',
-          content:
-              '采用贴近沈砚的第三人称叙事。通过水位、灯盐、潮湿纸面等可触摸的细节呈现危险；人物不知道的证据不由旁白提前解释。对话保留职业习惯，避免用长篇独白讲设定。',
-          enabled: const Value(true),
-          sortOrder: const Value(0),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
-
-  await contentDatabase
-      .into(contentDatabase.agentRules)
-      .insert(
-        AgentRulesCompanion.insert(
-          id: buildRandomId('agent_rule'),
-          name: '奇幻边界',
-          content:
-              '邮件不能穿越时间，死者不能复生。回潮辨址术必须以真实笔迹为引，每次定位都失去一段声音记忆；不能在危急时刻临时取消代价。气室、闸门和邮管的连通关系须与既有路线一致。',
-          enabled: const Value(true),
-          sortOrder: const Value(1),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
-
-  await contentDatabase
-      .into(contentDatabase.agentRules)
-      .insert(
-        AgentRulesCompanion.insert(
-          id: buildRandomId('agent_rule'),
-          name: '人物选择',
-          content:
-              '沈砚遇到风险先考虑邮件能否送达，叶棠先查证据能否复核，裴铎先计算秩序的成本。让三人用行动暴露各自的盲点，叶棠有独立的查账目标，不只承担解释设定的职责。',
-          enabled: const Value(true),
-          sortOrder: const Value(2),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
-
-  await contentDatabase
-      .into(contentDatabase.agentRules)
-      .insert(
-        AgentRulesCompanion.insert(
-          id: buildRandomId('agent_rule'),
-          name: '章节推进',
-          content: '每章完成一个具体行动并留下它造成的新难题。正文不复述章纲，不以预告或写作说明收尾；尚未展开的章节只保留大纲。',
-          enabled: const Value(true),
-          sortOrder: const Value(3),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
-
-  // Outline enrichment - update the existing outline document
-  final existingOutlineRecord = await (contentDatabase.select(
-    contentDatabase.outlines,
-  )..where((o) => o.deletedAt.equals(notDeletedSentinel))).getSingleOrNull();
-  if (existingOutlineRecord != null) {
-    await (contentDatabase.update(
-      contentDatabase.outlines,
-    )..where((o) => o.documentId.equals(existingOutlineRecord.documentId))).write(
-      const OutlinesCompanion(
-        content: Value(
-          '第一卷：旧街来信（六章）\n第一章：没有地址的信。沈砚接到不可能送达的退件，决定验封。\n第二章：盐印下的名字。叶棠辨出灯塔蓝盐，两人发现封锁令。\n第三章：退潮后的街道。旧街幸存者交出投递簿，求援信的来源揭晓。\n第四章：灯塔不收回信。裴铎提出交易，叶棠找到记忆买卖账目。\n第五章：被卖掉的黎明。大潮提前，沈砚付出记忆代价，众人带证据撤离。\n第六章：最后一班邮船。账页公开，裴铎交出闸钥，邮局重新开张。',
-        ),
-        status: Value(outlineStatusInProgress),
-      ),
-    );
-  }
-
-  // Material document: character relationships
-  await insertEntity(
-    ShortEntityIdType.materialsDocument,
-    'documents',
-    (id) async => contentDatabase
-        .into(contentDatabase.documents)
-        .insert(
-          DocumentsCompanion.insert(
-            id: id,
-            type: documentTypeMaterial,
-            title: '投递队关系备忘',
-            content: const Value(
-              '## 沈砚与叶棠\n两人都属浮桥会。沈砚发起投递队，叶棠负责路线与检修；一个想尽快救人，一个坚持先查明供气系统，争执来自风险判断不同。\n\n## 沈砚与裴铎\n裴铎掌握母亲死亡的记录，试图用私情换走公开证据。沈砚最终拒绝把其他居民的名字换成自己的答案。\n\n## 叶棠与裴铎\n前学徒与署长的权力差距仍在。叶棠用可复核的账页争取船工支持，不靠对方突然认错。',
-            ),
-            status: const Value(documentStatusActive),
-            sortOrder: const Value(2),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-          ),
-        ),
-  );
-
-  final chapterStats = await contentDatabase.chapterDao.getListStats();
   await contentDatabase.close();
-
-  try {
-    await database.novelDao.updateWordCount(
-      id: novelId,
-      wordCount: chapterStats.totalWordCount,
-    );
-  } catch (error, stackTrace) {
-    AppLogger.forModule('DemoNovel').error(
-      '[DB] novels UPDATE word_count failed, id=$novelId',
-      error: error,
-      stackTrace: stackTrace,
-    );
-    rethrow;
-  }
-
   await database.novelDao.updateContentDatabasePath(
     id: novelId,
     contentDatabasePath: contentDatabasePath,
   );
-
   return novelId;
 }

@@ -47,9 +47,9 @@ class SystemTrayService with TrayListener {
 
   static String get _iconPath {
     if (Platform.isWindows) {
-      return 'assets/logo/reveric_mark_32.ico';
+      return 'assets/logo/metaarc_mark_32.ico';
     }
-    return 'assets/logo/reveric_mark_32.png';
+    return 'assets/logo/metaarc_mark_32.png';
   }
 
   static final SystemTrayService _instance = SystemTrayService._internal();

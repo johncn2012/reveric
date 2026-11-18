@@ -3,11 +3,11 @@
 //   lib/shared/services/initialization/demo_screenplay.dart
 //   lib/shared/models/screenplay_element.dart
 
-const demoScreenplayTitle = "末班船的证人";
-const demoScreenplaySeasonTitle = "末班船的证人·第一季";
+const demoScreenplayTitle = "雨夜迷局：重构之眼";
+const demoScreenplaySeasonTitle = "雨夜迷局：重构之眼·第一季";
 const demoScreenplayDescription =
-    "旧渡轮将在两天后拖走拆解。修船工许知夏清理机舱时，发现一块被磨掉编号的水泵铭牌，牵出六年前父亲背负的事故责任。她要在船离港前找到原始维修记录，而唯一知道记录下落的老船长，正是当年签字指认父亲的人。";
-const demoScreenplayTags = <String>['悬疑', '亲情', '小城', 'demo'];
+    "暴雨肆虐的孤岛灯塔上，守塔人从螺旋阶梯坠亡。刑侦队长陆霆与法医苏晚深夜登岛，发现死者手中攥着一枚被磨去编号的旧警徽，而通往陆地的唯一浮桥已被巨浪彻底冲毁。孤立无援的黑夜里，每一个被困在灯塔中的幸存者，都在掩盖一个无法见光的秘密。";
+const demoScreenplayTags = <String>['悬疑', '刑侦', '犯罪', '短剧', 'demo'];
 const demoScreenplayCategory = '悬疑';
 
 class DemoScreenplayBehaviorTagSeed {

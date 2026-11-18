@@ -139,6 +139,7 @@ class AiProviderInitializer {
           streamHttpClientFactory: _createStreamHttpClient,
           traceHeadersProvider: _traceHeadersProvider,
         );
+      case AiProviderType.metaapi:
       case AiProviderType.openrouter:
       case AiProviderType.atlascloud:
       case AiProviderType.openai_compatible:

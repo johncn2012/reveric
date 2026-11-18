@@ -10,7 +10,7 @@
 
 ```text
 Run {"command":"themes","subcommand":"list","options":{}}
-Run {"command":"themes","subcommand":"read","options":{"id":"builtin:reveric"}}
+Run {"command":"themes","subcommand":"read","options":{"id":"builtin:metaarc"}}
 ```
 
 list 返回 entries、activeId、themeMode。read 返回主题信息、最终 lightColors / darkColors、editableColors；自定义主题还返回 baseTheme、lightOverrides、darkOverrides、revision。
@@ -18,10 +18,10 @@ list 返回 entries、activeId、themeMode。read 返回主题信息、最终 li
 ## 创建
 
 ```text
-Run {"command":"themes","subcommand":"create","options":{"name":"森林书房","baseTheme":"reveric","lightOverrides":{"accent":"#245C42","onAccent":"#FFFFFF"},"darkOverrides":{"accent":"#A4CBA6","onAccent":"#172118"}}}
+Run {"command":"themes","subcommand":"create","options":{"name":"森林书房","baseTheme":"metaarc","lightOverrides":{"accent":"#245C42","onAccent":"#FFFFFF"},"darkOverrides":{"accent":"#A4CBA6","onAccent":"#172118"}}}
 ```
 
-- name 必填，1–100 字符。baseTheme 必填，只能是内置主题名称：reveric、classic、ivory。这里使用名称，不带 `builtin:` 前缀；不能继承自定义主题。
+- name 必填，1–100 字符。baseTheme 必填，只能是内置主题名称：metaarc、classic、ivory。这里使用名称，不带 `builtin:` 前缀；不能继承自定义主题。
 - lightOverrides / darkOverrides 可省略；只提交需要修改的颜色，其余继承 baseTheme 的对应明暗配色。内置配色后续更新会影响继承的颜色。
 - 颜色为不透明 `#RRGGBB`。editableColors 是允许修改的字段；成功、错误、警告和增删状态色保持内置值。
 - 背景使用 canvas / surface / surfaceDim / surfaceContainer / surfaceContainerHigh；文字使用 textPrimary / textSecondary / textMuted / textSubtle / textTertiary；主色使用 accent 及其前景 onAccent，其他装饰强调色使用 accentWarm / accentAmber；边框使用 border / borderSubtle / borderInput / blockquoteBorder；交互背景使用 selected / hover。
@@ -43,7 +43,7 @@ id、revision 必填。可改 name、baseTheme、lightOverrides、darkOverrides�
 
 ```text
 Run {"command":"themes","subcommand":"apply","options":{"id":"<create 返回的 id>","themeMode":"system"}}
-Run {"command":"themes","subcommand":"apply","options":{"id":"builtin:reveric"}}
+Run {"command":"themes","subcommand":"apply","options":{"id":"builtin:metaarc"}}
 ```
 
 id 必填；themeMode 可选 light / dark / system，省略则保持原有模式。恢复内置主题使用 apply，不必删除自定义主题。用户未要求改变明暗模式时保持原值。

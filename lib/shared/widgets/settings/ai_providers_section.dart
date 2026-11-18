@@ -96,7 +96,49 @@ class _DesktopProviders extends HookConsumerWidget {
     final saving = useState(false);
     // 丢弃草稿后回到新建前选中的供应商。
     final returnTo = useRef<String?>(null);
-    final allConfigs = settings.aiSettings.allConfigs;
+    final rawConfigs = settings.aiSettings.allConfigs
+        .where((c) =>
+            c.type == 'metaapi' ||
+            c.id == 'metaarc_ai_hub' ||
+            c.name.contains('MetaArc') ||
+            c.name.contains('MetaAPI'))
+        .toList();
+    final allConfigs = rawConfigs.isNotEmpty
+        ? rawConfigs
+        : [
+            AiProvider(
+              id: 'metaarc_ai_hub',
+              name: 'MetaArc 官方算力 (MetaAPI)',
+              builtin: true,
+              type: 'metaapi',
+              enabled: true,
+              apiKey: '',
+              baseUrl: 'https://api.metaarc.com.cn/v1',
+              models: const [
+                'deepseek-chat',
+                'deepseek-reasoner',
+                'gpt-4o',
+                'gpt-4o-mini',
+                'claude-3-5-sonnet',
+                'qwen-max',
+              ],
+              imageModels: const ['dall-e-3', 'flux-schnell'],
+              audioModels: const ['tts-1'],
+              videoModels: const ['kling-v1'],
+              embeddingModels: const ['text-embedding-3-small'],
+              temperature: 0.7,
+              maxTurns: 512,
+              reasoningEffort: null,
+              proxyUrl: '',
+              proxyUsername: '',
+              proxyPassword: '',
+              accessKeyId: null,
+              secretAccessKey: null,
+              assetProjectName: null,
+              updatedAt: DateTime.now(),
+              deletedAt: DateTime.fromMillisecondsSinceEpoch(0),
+            ),
+          ];
     final currentDraft = draft.value;
 
     final effectiveSelectedId =
@@ -248,8 +290,52 @@ class _MobileProviders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rawConfigs = settings.aiSettings.allConfigs
+        .where((c) =>
+            c.type == 'metaapi' ||
+            c.id == 'metaarc_ai_hub' ||
+            c.name.contains('MetaArc') ||
+            c.name.contains('MetaAPI'))
+        .toList();
+    final effectiveConfigs = rawConfigs.isNotEmpty
+        ? rawConfigs
+        : [
+            AiProvider(
+              id: 'metaarc_ai_hub',
+              name: 'MetaArc 官方算力 (MetaAPI)',
+              builtin: true,
+              type: 'metaapi',
+              enabled: true,
+              apiKey: '',
+              baseUrl: 'https://api.metaarc.com.cn/v1',
+              models: const [
+                'deepseek-chat',
+                'deepseek-reasoner',
+                'gpt-4o',
+                'gpt-4o-mini',
+                'claude-3-5-sonnet',
+                'qwen-max',
+              ],
+              imageModels: const ['dall-e-3', 'flux-schnell'],
+              audioModels: const ['tts-1'],
+              videoModels: const ['kling-v1'],
+              embeddingModels: const ['text-embedding-3-small'],
+              temperature: 0.7,
+              maxTurns: 512,
+              reasoningEffort: null,
+              proxyUrl: '',
+              proxyUsername: '',
+              proxyPassword: '',
+              accessKeyId: null,
+              secretAccessKey: null,
+              assetProjectName: null,
+              updatedAt: DateTime.now(),
+              deletedAt: DateTime.fromMillisecondsSinceEpoch(0),
+            ),
+          ];
+
     return MobileProviderList(
-      configs: settings.aiSettings.allConfigs,
+      configs: effectiveConfigs,
 
       selectedId: null,
 

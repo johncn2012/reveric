@@ -30,6 +30,7 @@ export '../database/app_database.dart'
 // ==================== 枚举与配置类型 ====================
 
 enum AiProviderType {
+  metaapi,
   openai,
   codex,
   openai_compatible,
@@ -101,6 +102,15 @@ const Set<AiModelKind> _chatEmbeddingKinds = {
 };
 
 const Map<AiProviderType, AiProviderTypeConfig> aiProviderTypeConfigs = {
+  AiProviderType.metaapi: AiProviderTypeConfig(
+    displayName: 'MetaArc (MetaAPI)',
+    modelIdSource: ModelIdSource.open,
+    textModelKinds: _chatEmbeddingKinds,
+    imageProtocol: ImageProtocol.new_api_images,
+    videoProtocol: VideoProtocol.new_api_video,
+    audioProtocol: AudioProtocol.new_api_speech,
+    fixedBaseUrl: true,
+  ),
   AiProviderType.atlascloud: AiProviderTypeConfig(
     displayName: 'AtlasCloud',
     modelIdSource: ModelIdSource.registered,
@@ -233,11 +243,12 @@ final Map<AiProviderType, String> aiProviderTypeDisplayNames = {
     entry.key: entry.value.displayName,
 };
 
-final List<AiProviderType> customAiProviderTypes = List.unmodifiable(
-  AiProviderType.values,
-);
+final List<AiProviderType> customAiProviderTypes = List.unmodifiable([
+  AiProviderType.metaapi,
+]);
 
 String aiProviderFixedBaseUrl(AiProviderType type) => switch (type) {
+  AiProviderType.metaapi => 'https://api.metaarc.com.cn/v1',
   AiProviderType.metaso => 'https://metaso.cn/api/minimax',
   AiProviderType.api88 => 'https://api.88api.ai/v1',
   AiProviderType.atlascloud => 'https://api.atlascloud.ai/v1',
