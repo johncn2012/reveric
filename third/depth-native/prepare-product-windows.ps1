@@ -21,7 +21,7 @@ if (!(Test-Path $depthArchive)) {
         break
       }
     } catch {
-      Write-Warning "Failed to download or verify from $url: $_"
+      Write-Warning ("Failed to download or verify from " + $url)
     }
   }
   if (!$success) {
