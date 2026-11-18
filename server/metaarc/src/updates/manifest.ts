@@ -172,7 +172,8 @@ function readManifest(manifestPath: string): unknown {
     return null;
   }
   try {
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const raw = fs.readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, '');
+    return JSON.parse(raw);
   } catch {
     return null;
   }
