@@ -9,6 +9,8 @@
 //   lib/shared/logger/startup_failure_reporter.dart
 import 'dart:async';
 
+import 'package:drift/drift.dart';
+
 import '../logger/app_logger.dart';
 import '../logger/startup_failure_reporter.dart';
 import '../database/app_database.dart';
@@ -63,7 +65,7 @@ List<AppInitializationTask> defaultAppInitializationTasks() {
 Future<void> _seedDemoWorks(AppDatabase database) async {
   // 1. 软删除历史旧版示例（若存在）
   final oldNovels = await (database.select(database.novels)
-        ..where((t) => t.title.equals('潮汐邮局') | t.title.equals('末班船的证人')))
+        ..where((t) => t.title.isIn(const ['潮汐邮局', '末班船的证人'])))
       .get();
   for (final old in oldNovels) {
     await database.novelDao.softDelete(old.id);

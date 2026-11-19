@@ -691,3 +691,10 @@ String _dialogFailureText(Object error, String fallback) {
   }
   return fallback;
 }
+
+Future<void> showMetaArcAuthDialog(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    builder: (_) => const MetaArcAuthDialog(),
+  );
+}

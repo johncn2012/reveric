@@ -17,7 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../components/reveric_badge.dart';
 import '../../components/reveric_button.dart';
-import '../../components/reveric_card.dart';
+import '../../components/reveric_surfaces.dart';
 import '../../models/metaarc_account.dart';
 import '../../providers/metaarc_providers.dart';
 import '../../theme/theme.dart';

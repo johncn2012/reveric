@@ -275,11 +275,13 @@ Future<String> createDemoNovel(
     };
     await insertEntity(
       ShortEntityIdType.chapter,
-      'chapters',
-      (id) async => contentDatabase.into(contentDatabase.chapters).insert(
+      'chapter_nodes',
+      (id) async => contentDatabase.chapterDao.insert(
         ChaptersCompanion.insert(
           id: id,
-          chapterNum: i,
+          type: nodeTypeChapter,
+          parentId: const Value(null),
+          siblingOrder: i,
           title: Value(_demoChapterTitles[i - 1]),
           outline: Value(_demoChapterOutlines[i - 1]),
           content: Value(content),
@@ -422,7 +424,7 @@ Future<String> createDemoNovel(
             description: const Value(
               '位于太阳系最边缘的时空扭曲区域，微型引力泡在此撕裂，漂浮着来自三百年后的母舰未来残骸，周围环绕着刺骨的暗物质碎屑。',
             ),
-            type: const Value(locationTypeWilderness),
+            type: const Value(locationTypeLandmark),
             tags: const Value('深空,黑洞,未来残骸'),
             sortOrder: const Value(1),
             createdAt: Value(now),
@@ -431,19 +433,21 @@ Future<String> createDemoNovel(
         ),
   );
 
-  // 世界观设定 Worldview Settings
+  // 世界观设定 Lore Documents
   await insertEntity(
-    ShortEntityIdType.worldview,
-    'worldview_settings',
+    ShortEntityIdType.loreDocument,
+    'documents',
     (id) async => contentDatabase
-        .into(contentDatabase.worldviewSettings)
+        .into(contentDatabase.documents)
         .insert(
-          WorldviewSettingsCompanion.insert(
+          DocumentsCompanion.insert(
             id: id,
-            category: '物理学与科技',
+            type: documentTypeLore,
             title: '量子引力信标与曲率泡',
-            content:
-                '基于普朗克尺度下的空间微扰技术，能在不借由光速限制的情况下，通过引力涟漪直接在时空薄膜上压印信息，是高维文明跨越因果律光锥传递警告的唯一载体。',
+            content: const Value(
+              '## 物理学与科技\n基于普朗克尺度下的空间微扰技术，能在不借由光速限制的情况下，通过引力涟漪直接在时空薄膜上压印信息，是高维文明跨越因果律光锥传递警告的唯一载体。',
+            ),
+            status: const Value(documentStatusActive),
             sortOrder: const Value(0),
             createdAt: Value(now),
             updatedAt: Value(now),
@@ -452,17 +456,19 @@ Future<String> createDemoNovel(
   );
 
   await insertEntity(
-    ShortEntityIdType.worldview,
-    'worldview_settings',
+    ShortEntityIdType.loreDocument,
+    'documents',
     (id) async => contentDatabase
-        .into(contentDatabase.worldviewSettings)
+        .into(contentDatabase.documents)
         .insert(
-          WorldviewSettingsCompanion.insert(
+          DocumentsCompanion.insert(
             id: id,
-            category: '地缘政治与法典',
+            type: documentTypeLore,
             title: '深空漂流公约与火种协议',
-            content:
-                '联合国深空远征最高法典，规定在全舰进入不可逆绝境时，指挥官与物理学首席必须共同开启火种表决，优先保证文明数据与胚胎库跨越视界延续。',
+            content: const Value(
+              '## 地缘政治与法典\n联合国深空远征最高法典，规定在全舰进入不可逆绝境时，指挥官与物理学首席必须共同开启火种表决，优先保证文明数据与胚胎库跨越视界延续。',
+            ),
+            status: const Value(documentStatusActive),
             sortOrder: const Value(1),
             createdAt: Value(now),
             updatedAt: Value(now),
