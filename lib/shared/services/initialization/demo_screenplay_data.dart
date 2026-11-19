@@ -6,8 +6,8 @@
 const demoScreenplayTitle = "雨夜迷局：重构之眼";
 const demoScreenplaySeasonTitle = "雨夜迷局：重构之眼·第一季";
 const demoScreenplayDescription =
-    "暴雨肆虐的孤岛灯塔上，守塔人从螺旋阶梯坠亡。刑侦队长陆霆与法医苏晚深夜登岛，发现死者手中攥着一枚被磨去编号的旧警徽，而通往陆地的唯一浮桥已被巨浪彻底冲毁。孤立无援的黑夜里，每一个被困在灯塔中的幸存者，都在掩盖一个无法见光的秘密。";
-const demoScreenplayTags = <String>['悬疑', '刑侦', '犯罪', '短剧', 'demo'];
+    "【官方示范短剧】暴雨肆虐的孤岛灯塔上，守塔人从螺旋阶梯坠亡。刑侦队长陆霆与法医苏晚深夜登岛，发现死者手中攥着一枚被磨去编号的旧警徽，而通往陆地的唯一浮桥已被巨浪彻底冲毁。孤立无援的黑夜里，每一个被困在灯塔中的幸存者，都在掩盖一个无法见光的秘密。";
+const demoScreenplayTags = <String>['短剧示范', '视听成片', '悬疑', '短剧', 'demo'];
 const demoScreenplayCategory = '悬疑';
 
 class DemoScreenplayBehaviorTagSeed {

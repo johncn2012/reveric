@@ -22,6 +22,7 @@ import 'image_library_service.dart';
 import 'initialization/agent_seeds.dart';
 import 'initialization/collection_seeds.dart';
 import 'initialization/demo_screenplay.dart';
+import 'initialization/demo_screenplay_data.dart';
 import 'initialization/shortcut_action_seeds.dart';
 import 'initialization/task.dart';
 import 'initialization/provider_seeds.dart';
@@ -63,7 +64,7 @@ List<AppInitializationTask> defaultAppInitializationTasks() {
     ),
     AppInitializationTask(id: 'demo_works_v3', run: _seedDemoWorks),
     AppInitializationTask(
-      id: 'metaarc_v064_brand_cleanup_v3',
+      id: 'metaarc_v064_brand_cleanup_v4',
       run: _cleanupMetaArcBrand,
     ),
   ];
@@ -190,7 +191,11 @@ Future<void> _cleanupMetaArcBrand(AppDatabase database) async {
       await (database.update(database.novels)
             ..where((t) => t.id.equals(screenplay.id)))
           .write(
-        NovelsCompanion(coverAssetId: Value(newSpAsset.id)),
+        NovelsCompanion(
+          coverAssetId: Value(newSpAsset.id),
+          description: const Value(demoScreenplayDescription),
+          tags: const Value(demoScreenplayTags),
+        ),
       );
     }
   } catch (e) {

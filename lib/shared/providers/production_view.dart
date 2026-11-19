@@ -7,6 +7,7 @@
 // 遵循的 Rules:
 //   .agents/rules/state-management.md
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'production_view.g.dart';
@@ -52,3 +53,29 @@ class ProductionSubpage extends _$ProductionSubpage {
     }
   }
 }
+
+/// 当前剧本工程是否正处于多轨视频剪辑台视图（true = 剪辑台；false = 分镜制作）。
+class ScreenplayEditingOpenNotifier extends Notifier<bool> {
+  ScreenplayEditingOpenNotifier(this.databasePath);
+
+  final String databasePath;
+
+  @override
+  bool build() => false;
+
+  void open() {
+    if (state != true) state = true;
+  }
+
+  void close() {
+    if (state != false) state = false;
+  }
+
+  void toggle() => state = !state;
+}
+
+final screenplayEditingOpenProvider =
+    NotifierProvider.family<ScreenplayEditingOpenNotifier, bool, String>(
+  ScreenplayEditingOpenNotifier.new,
+);
+

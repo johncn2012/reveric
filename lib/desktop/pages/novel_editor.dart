@@ -21,6 +21,8 @@
 //   assets/translations/zh-CN/ai.json
 //   assets/translations/en/common.json
 //   assets/translations/zh-CN/common.json
+//   assets/translations/en/editor.json
+//   assets/translations/zh-CN/editor.json
 //   assets/translations/en/library.json
 //   assets/translations/zh-CN/library.json
 //   assets/translations/en/agent_shortcut.json
@@ -221,6 +223,7 @@ import '../widgets/sidebar/sidebar.dart';
 import '../features/council/panel.dart';
 import '../features/monologue/panel.dart';
 import '../widgets/novel_form_dialog.dart';
+import '../../shared/models/novel_form_prefill.dart';
 import '../features/roleplay/panel.dart';
 import '../features/theater/panel.dart';
 import '../../shared/providers/ai_mode_processing.dart';
@@ -1452,6 +1455,117 @@ class NovelEditorPage extends HookConsumerWidget {
                   removeCover: removeCover,
                   tags: tags,
                 ),
+          ),
+        ),
+      );
+    }
+
+    Future<bool> createAdaptedScreenplay({
+      required BuildContext feedbackContext,
+      required String title,
+      required String authorName,
+      required String description,
+      required String category,
+      required String type,
+      required String contentKind,
+      required int? plannedEpisodeCount,
+      required String? sourceNovelId,
+      required String? coverSourcePath,
+      required bool removeCover,
+      required List<String> tags,
+    }) async {
+      final actions = ref.read(novelActionsProvider);
+      final messenger = ScaffoldMessenger.of(feedbackContext);
+      final navigator = Navigator.of(context);
+      try {
+        final novelId = await actions.createNovel(
+          title: title,
+          authorName: authorName,
+          description: description,
+          category: category,
+          type: type,
+          contentKind: contentKind,
+          plannedEpisodeCount: plannedEpisodeCount,
+          sourceNovelId: sourceNovelId,
+          coverSourcePath: coverSourcePath,
+          tags: tags,
+        );
+        if (!context.mounted) return true;
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          navigator.pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => WorkspaceEditorPage(
+                novelId: novelId,
+                openChatOnEntry: false,
+              ),
+            ),
+          );
+        }
+        return true;
+      } on NovelTitleConflictException catch (error) {
+        _log.error('createNovel title conflict', error: error);
+        if (!feedbackContext.mounted) return false;
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              context.t(
+                LocaleKeys.libraryDuplicateName,
+                namedArgs: {'name': error.title},
+              ),
+            ),
+          ),
+        );
+        return false;
+      } catch (error) {
+        _log.error('caught error=$error', error: error);
+        if (!feedbackContext.mounted) return false;
+        messenger.showSnackBar(
+          SnackBar(content: Text(context.t(LocaleKeys.editorSaveNovelFailed))),
+        );
+        return false;
+      }
+    }
+
+    void openAdaptNovelDialog(Novel novel) {
+      showRevericDialog<void>(
+        context: context,
+        builder: (_) => DialogFeedback.scope(
+          builder: (dialogContext) => NovelFormDialog.create(
+            initialContentKind: contentKindScreenplay,
+            prefill: NovelFormPrefill.adaptationOf(
+              novel,
+              title: context.t(
+                LocaleKeys.libraryAdaptationTitle,
+                namedArgs: {'title': novel.title},
+              ),
+            ),
+            onSubmit: ({
+              required title,
+              required authorName,
+              required description,
+              required category,
+              required type,
+              required contentKind,
+              required plannedEpisodeCount,
+              required sourceNovelId,
+              required coverSourcePath,
+              required removeCover,
+              required tags,
+            }) => createAdaptedScreenplay(
+              feedbackContext: dialogContext,
+              title: title,
+              authorName: authorName,
+              description: description,
+              category: category,
+              type: type,
+              contentKind: contentKind,
+              plannedEpisodeCount: plannedEpisodeCount,
+              sourceNovelId: sourceNovelId,
+              coverSourcePath: coverSourcePath,
+              removeCover: removeCover,
+              tags: tags,
+            ),
           ),
         ),
       );
@@ -4561,6 +4675,7 @@ class NovelEditorPage extends HookConsumerWidget {
                   coverThumbnailKey: coverThumbnailKey,
                   coverMenuTrigger: coverMenuTrigger,
                   onEditNovel: () => openEditNovelDialog(novel),
+                  onAdaptNovel: () => openAdaptNovelDialog(novel),
                   canOpenCoverStudio: ref.watch(canOpenCoverStudioProvider),
                   isImageGenerationConfigured: ref.watch(
                     isImageGenerationConfiguredProvider,

@@ -36,6 +36,7 @@ import '../../../shared/models/outline.dart';
 import '../../../shared/models/subagent.dart';
 import '../../../shared/providers/novel_providers.dart';
 import '../../../shared/providers/novel_workspace_state_provider.dart';
+import '../../../shared/providers/production_view.dart';
 import '../../../shared/providers/screenplay_providers.dart';
 import '../../../shared/providers/settings_providers.dart';
 import '../../../shared/providers/subagent_providers.dart';
@@ -312,6 +313,8 @@ const String _iconUsersFour = 'assets/icons/phosphor/users-four.svg';
 const String _iconArticle = 'assets/icons/phosphor/article.svg';
 const String _iconPath = 'assets/icons/phosphor/path.svg';
 const String _iconSquaresFour = 'assets/icons/phosphor/squares-four.svg';
+const String _iconVideoCamera = 'assets/icons/phosphor/video-camera.svg';
+const String _iconFilmSlate = 'assets/icons/phosphor/film-slate.svg';
 
 void _noopVoidCallback() {}
 

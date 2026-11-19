@@ -64,6 +64,11 @@ final class _RailCompendiumTarget extends _RailTarget {
   const _RailCompendiumTarget();
 }
 
+/// 视频剪辑台入口：挂载在剧本工程的制片/剪辑工作区下，激活时直接展示多轨时间线。
+final class _RailEditingTarget extends _RailTarget {
+  const _RailEditingTarget();
+}
+
 /// Rail 单行入口。[labelKey] 同时用作 tooltip 与展开态标签。
 class _RailEntry {
   const _RailEntry({
@@ -188,9 +193,14 @@ const _RailGroup _writingGroupScreenplay = _RailGroup(
       target: _RailContentTarget(NovelWorkspaceSection.screenplay_scenes),
     ),
     _RailEntry(
-      icon: _iconSquaresFour,
+      icon: _iconVideoCamera,
       labelKey: LocaleKeys.productionTitle,
       target: _RailContentTarget(NovelWorkspaceSection.storyboard),
+    ),
+    _RailEntry(
+      icon: _iconFilmSlate,
+      labelKey: LocaleKeys.editingTitle,
+      target: _RailEditingTarget(),
     ),
     _RailEntry(
       icon: _iconFolderSimpleStar,
@@ -305,7 +315,15 @@ extension _LeftSidebarRail on _LeftSidebarState {
       _RailContentTarget(:final section) =>
         !hasExclusiveMain &&
             _panelMode == _PanelMode.content &&
-            selectionSection == section,
+            selectionSection == section &&
+            (section != NovelWorkspaceSection.storyboard ||
+                widget.databasePath == null ||
+                !ref.watch(screenplayEditingOpenProvider(widget.databasePath!))),
+      _RailEditingTarget() =>
+        !hasExclusiveMain &&
+            selectionSection == NovelWorkspaceSection.storyboard &&
+            widget.databasePath != null &&
+            ref.watch(screenplayEditingOpenProvider(widget.databasePath!)),
       _RailSystemTarget(:final section) =>
         !hasExclusiveMain && selectionSection == section,
       _RailCompendiumTarget() =>
@@ -323,7 +341,20 @@ extension _LeftSidebarRail on _LeftSidebarState {
   void _activateRailTarget(_RailTarget target) {
     switch (target) {
       case _RailContentTarget(:final section):
+        if (section == NovelWorkspaceSection.storyboard &&
+            widget.databasePath != null) {
+          ref
+              .read(screenplayEditingOpenProvider(widget.databasePath!).notifier)
+              .close();
+        }
         _activateContentSection(section);
+      case _RailEditingTarget():
+        _activateContentSection(NovelWorkspaceSection.storyboard);
+        if (widget.databasePath != null) {
+          ref
+              .read(screenplayEditingOpenProvider(widget.databasePath!).notifier)
+              .open();
+        }
       case _RailSystemTarget(:final section):
         _activateSystemSection(section);
       case _RailCompendiumTarget():

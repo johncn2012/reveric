@@ -26,8 +26,9 @@ class ScreenplayKindMark extends StatelessWidget {
         vertical: 1,
       ),
       decoration: BoxDecoration(
-        color: colors.surfaceDim,
+        color: colors.accentWarm.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(RevericRadius.small),
+        border: Border.all(color: colors.accentWarm.withValues(alpha: 0.3)),
       ),
       // 单行富文本而不是 Row：宽度受限时整体省略，不会溢出。
       child: Text.rich(
@@ -40,7 +41,7 @@ class ScreenplayKindMark extends StatelessWidget {
                 child: RevericIcon(
                   RevericIcons.movie_outlined,
                   size: 11,
-                  color: colors.textMuted,
+                  color: colors.accentWarm,
                 ),
               ),
             ),
@@ -49,7 +50,7 @@ class ScreenplayKindMark extends StatelessWidget {
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: typo.uiTinySemibold.copyWith(color: colors.textMuted),
+        style: typo.uiTinySemibold.copyWith(color: colors.accentWarm),
       ),
     );
   }

@@ -171,6 +171,7 @@ class NovelWorkspacePanel extends ConsumerWidget {
     required this.coverThumbnailKey,
     required this.coverMenuTrigger,
     this.onEditNovel,
+    this.onAdaptNovel,
     required this.isImageGenerationConfigured,
     required this.canOpenCoverStudio,
     required this.onViewPendingChanges,
@@ -259,6 +260,7 @@ class NovelWorkspacePanel extends ConsumerWidget {
   final GlobalKey coverThumbnailKey;
   final ValueNotifier<int> coverMenuTrigger;
   final VoidCallback? onEditNovel;
+  final VoidCallback? onAdaptNovel;
 
   /// 剧本正文区挂载时交回它的落盘函数，宿主页在切走前调用；卸载时传 null。
   final ValueChanged<Future<void> Function()?>? onRegisterScreenplaySceneFlush;
@@ -523,6 +525,7 @@ class NovelWorkspacePanel extends ConsumerWidget {
           onUploadCover: onUploadCover,
           onSelectionChanged: onSelectionChanged,
           onEditNovel: onEditNovel,
+          onAdaptNovel: onAdaptNovel,
           coverThumbnailKey: coverThumbnailKey,
           coverMenuTrigger: coverMenuTrigger,
         );

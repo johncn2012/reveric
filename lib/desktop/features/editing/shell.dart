@@ -12,6 +12,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'region.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../shared/providers/novel_providers.dart';
+import '../../../shared/providers/production_view.dart';
 import '../../../shared/services/production/editing_orchestrator.dart';
 import '../../../shared/localization/app_localization.dart';
 import '../../../shared/localization/locale_keys.dart';
@@ -45,14 +46,11 @@ class EditingShell extends HookConsumerWidget {
         [db, identity],
       ),
     );
-    final opened = useState(false);
+    final isEditingOpen =
+        ref.watch(screenplayEditingOpenProvider(identity.path));
     final productionFlush = useRef<Future<void> Function()?>(null);
     final editingFlush = useRef<Future<void> Function()?>(null);
     final registration = useRef(registerFlush)..value = registerFlush;
-    useEffect(() {
-      opened.value = false;
-      return null;
-    }, [identity]);
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
@@ -74,22 +72,26 @@ class EditingShell extends HookConsumerWidget {
       fit: StackFit.expand,
       children: [
         ExcludeFocus(
-          excluding: opened.value,
+          excluding: isEditingOpen,
           child: Offstage(
-            offstage: opened.value,
+            offstage: isEditingOpen,
             child: builder(
-              () => opened.value = true,
+              () => ref
+                  .read(screenplayEditingOpenProvider(identity.path).notifier)
+                  .open(),
               (flush) => productionFlush.value = flush,
             ),
           ),
         ),
-        if (opened.value)
+        if (isEditingOpen)
           EditingRegion(
             key: ValueKey(identity),
             novelId: novelId,
             identity: identity,
             editingId: editing.data!.editing.id,
-            onClose: () => opened.value = false,
+            onClose: () => ref
+                .read(screenplayEditingOpenProvider(identity.path).notifier)
+                .close(),
             registerFlush: (flush) => editingFlush.value = flush,
           ),
       ],

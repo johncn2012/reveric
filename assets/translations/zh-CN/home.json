@@ -36,8 +36,8 @@
   "home.filter_and_sort": "筛选与排序",
   "home.create_card_title": "新建作品",
   "home.create_card_subtitle": "从一个想法开始\n你的新故事",
-  "home.create_screenplay_card_title": "新建剧本",
-  "home.create_screenplay_card_subtitle": "从第一季第一集开始",
+  "home.create_screenplay_card_title": "新建短剧剧本",
+  "home.create_screenplay_card_subtitle": "分镜视听、AI成片与剪辑",
   "home.filter_draft": "草稿",
   "home.today_stats_title": "今日概览",
   "home.today_active_works": "创作中",
@@ -48,5 +48,5 @@
   "home.resume_eyebrow": "继续写",
   "home.resume_recent": "最近",
   "home.resume_last_written": "上次写于 {time}",
-  "home.create_work_card_subtitle": "小说或剧本\n从一个想法开始"
+  "home.create_work_card_subtitle": "小说或短剧\n从一个想法开始"
 }

@@ -10,6 +10,8 @@
 //   assets/translations/zh-CN/editor.json
 //   assets/translations/en/common.json
 //   assets/translations/zh-CN/common.json
+//   assets/translations/en/library.json
+//   assets/translations/zh-CN/library.json
 // 遵循的 Rules:
 //   .agents/rules/design-system.md
 //   .agents/rules/hooks.md
@@ -23,11 +25,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../../../shared/components/reveric_surfaces.dart';
+import '../../../shared/components/reveric_button.dart';
 import '../../../shared/components/reveric_context_menu.dart';
 import '../../../shared/database/app_database.dart';
 import '../../../shared/database/novel_content_database.dart';
 import '../../../shared/localization/app_localization.dart';
 import '../../../shared/localization/locale_keys.dart';
+import '../../../shared/models/content_kind.dart';
 import '../../../shared/models/content_status.dart';
 import '../../../shared/models/novel_workspace.dart';
 import '../../../shared/theme/theme.dart';
@@ -53,6 +57,7 @@ class NovelOverview extends StatelessWidget {
     required this.onSelectionChanged,
     required this.onContinueWriting,
     this.onEditNovel,
+    this.onAdaptNovel,
     required this.coverThumbnailKey,
     required this.coverMenuTrigger,
   });
@@ -69,6 +74,7 @@ class NovelOverview extends StatelessWidget {
   final ValueSetter<WorkspaceSelection> onSelectionChanged;
   final ValueChanged<String> onContinueWriting;
   final VoidCallback? onEditNovel;
+  final VoidCallback? onAdaptNovel;
   final GlobalKey coverThumbnailKey;
   final ValueNotifier<int> coverMenuTrigger;
 
@@ -82,7 +88,11 @@ class NovelOverview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _TitleSection(novel: novel, onEditNovel: onEditNovel),
+          _TitleSection(
+            novel: novel,
+            onEditNovel: onEditNovel,
+            onAdaptNovel: onAdaptNovel,
+          ),
           const SizedBox(height: RevericSpacing.x4l),
           ContinueWritingHero(
             onContinueWriting: onContinueWriting,
@@ -116,10 +126,15 @@ class NovelOverview extends StatelessWidget {
 // Title section: 大标题 + 编辑按钮 + 标签 + 状态徽章
 // =============================================================================
 class _TitleSection extends StatelessWidget {
-  const _TitleSection({required this.novel, this.onEditNovel});
+  const _TitleSection({
+    required this.novel,
+    this.onEditNovel,
+    this.onAdaptNovel,
+  });
 
   final Novel novel;
   final VoidCallback? onEditNovel;
+  final VoidCallback? onAdaptNovel;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +165,16 @@ class _TitleSection extends StatelessWidget {
                 color: colors.textMuted,
               ),
             ),
+            if (novel.contentKind != contentKindScreenplay &&
+                onAdaptNovel != null) ...[
+              const SizedBox(width: RevericSpacing.sm),
+              RevericButton.secondary(
+                size: RevericButtonSize.compact,
+                icon: RevericIcons.movie_outlined,
+                label: context.t(LocaleKeys.libraryActionAdapt),
+                onPressed: onAdaptNovel,
+              ),
+            ],
           ],
         ),
         const SizedBox(height: RevericSpacing.md),
