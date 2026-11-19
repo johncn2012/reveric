@@ -10,12 +10,15 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/services.dart';
 
 import '../logger/app_logger.dart';
 import '../logger/startup_failure_reporter.dart';
 import '../database/app_database.dart';
+import '../models/asset_purpose.dart';
 import '../models/app_settings_aggregate_data.dart';
 import 'demo_novel.dart';
+import 'image_library_service.dart';
 import 'initialization/agent_seeds.dart';
 import 'initialization/collection_seeds.dart';
 import 'initialization/demo_screenplay.dart';
@@ -60,7 +63,7 @@ List<AppInitializationTask> defaultAppInitializationTasks() {
     ),
     AppInitializationTask(id: 'demo_works_v3', run: _seedDemoWorks),
     AppInitializationTask(
-      id: 'metaarc_v064_brand_cleanup_v2',
+      id: 'metaarc_v064_brand_cleanup_v3',
       run: _cleanupMetaArcBrand,
     ),
   ];
@@ -145,6 +148,53 @@ Future<void> _cleanupMetaArcBrand(AppDatabase database) async {
     }
   } catch (e) {
     _log.warning('Failed to cleanup old demo works: $e');
+  }
+
+  // 4. 为现有官方示范作品刷新全新高质量专属封面
+  try {
+    final tansop = await (database.select(database.novels)
+          ..where((t) =>
+              t.id.equals('nov_TANSOP') |
+              t.title.equals('深空编年史：最后的光锥')))
+        .getSingleOrNull();
+    if (tansop != null) {
+      final novelCoverData =
+          await rootBundle.load('assets/images/demo/novel_cover.webp');
+      final newCoverAsset = await buildImageLibraryService(database).importBytes(
+        novelCoverData.buffer.asUint8List(),
+        name: 'novel_cover.webp',
+        novelId: tansop.id,
+        purpose: AssetPurpose.cover,
+      );
+      await (database.update(database.novels)
+            ..where((t) => t.id.equals(tansop.id)))
+          .write(
+        NovelsCompanion(coverAssetId: Value(newCoverAsset.id)),
+      );
+    }
+
+    final screenplay = await (database.select(database.novels)
+          ..where((t) =>
+              t.id.equals('scr_5CEBDY') |
+              t.title.equals('雨夜迷局：重构之眼')))
+        .getSingleOrNull();
+    if (screenplay != null) {
+      final spCoverData =
+          await rootBundle.load('assets/images/demo/screenplay_cover.webp');
+      final newSpAsset = await buildImageLibraryService(database).importBytes(
+        spCoverData.buffer.asUint8List(),
+        name: 'screenplay_cover.webp',
+        novelId: screenplay.id,
+        purpose: AssetPurpose.cover,
+      );
+      await (database.update(database.novels)
+            ..where((t) => t.id.equals(screenplay.id)))
+          .write(
+        NovelsCompanion(coverAssetId: Value(newSpAsset.id)),
+      );
+    }
+  } catch (e) {
+    _log.warning('Failed to refresh demo covers: $e');
   }
 }
 
