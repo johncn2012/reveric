@@ -375,7 +375,7 @@ class AccountSubscriptionSection extends HookConsumerWidget {
             children: [
               Text(
                 remainingQuota.toStringAsFixed(1),
-                style: typo.heading1.copyWith(
+                style: typo.display.copyWith(
                   color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
