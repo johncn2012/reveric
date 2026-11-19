@@ -220,7 +220,7 @@ class StorageSettingsSection extends HookConsumerWidget {
                       ),
                       alignment: Alignment.center,
                       child: RevericIcon(
-                        RevericIcons.cloud_done,
+                        RevericIcons.cloud,
                         size: 20,
                         color: colors.success,
                       ),

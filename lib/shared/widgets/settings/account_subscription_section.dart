@@ -113,6 +113,7 @@ class AccountSubscriptionSection extends HookConsumerWidget {
     RevericTypography typo,
   ) {
     return RevericElevatedCard(
+      fallback: colors.surface,
       padding: const EdgeInsets.all(RevericSpacing.x3l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,6 +194,7 @@ class AccountSubscriptionSection extends HookConsumerWidget {
     final contact = account.email ?? account.phone ?? '';
 
     return RevericElevatedCard(
+      fallback: colors.surface,
       padding: const EdgeInsets.all(RevericSpacing.x3l),
       child: Row(
         children: [
@@ -270,6 +272,7 @@ class AccountSubscriptionSection extends HookConsumerWidget {
     }
 
     return RevericElevatedCard(
+      fallback: colors.surface,
       padding: const EdgeInsets.all(RevericSpacing.x3l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,6 +346,7 @@ class AccountSubscriptionSection extends HookConsumerWidget {
     final ratio = (remainingQuota / totalQuota).clamp(0.0, 1.0);
 
     return RevericElevatedCard(
+      fallback: colors.surface,
       padding: const EdgeInsets.all(RevericSpacing.x3l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
