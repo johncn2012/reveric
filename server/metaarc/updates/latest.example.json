@@ -7,8 +7,8 @@
       "arch": "x64",
       "version": "0.6.4",
       "download_url": "https://assets.metaarc.com.cn/downloads/MetaArc-0.6.4-windows-setup.exe",
-      "file_size": 100254649,
-      "release_notes": "MetaArc 0.6.4 Windows 正式版发布：全面升级品牌纯正化与系统级版权标识，内置高性能深度视觉推理引擎，优化更新检测与 CDN 加速分发链路。",
+      "file_size": 100269827,
+      "release_notes": "MetaArc 0.6.4 正式版发布：彻底升级 AI 助手视觉与专属创作者定位、消除历史昵称残留、内置官方全新示范作品（科幻长篇与影视标准剧本），并全面优化升级分发通道。",
       "signed": true,
       "channel": "stable"
     },
