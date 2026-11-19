@@ -13,7 +13,7 @@ import '../utils/storage_paths.dart';
 const _agentAvatarAssetBase = 'assets/images/agent_avatars';
 
 const _builtinAvatarAssetNames = {
-  'orchestrator': 'viber.webp',
+  'orchestrator': 'metaarc_avatar.png',
   'planner': 'planner.webp',
   'writer': 'writer.webp',
   'artist': 'designer.webp',
@@ -36,6 +36,9 @@ String? builtinAvatarAssetForSlug(
   String slug, {
   Brightness brightness = Brightness.dark,
 }) {
+  if (slug == 'orchestrator' || slug == 'viber') {
+    return 'assets/logo/metaarc_mark_512.png';
+  }
   final assetName = _builtinAvatarAssetNames[slug];
   if (assetName == null) {
     return null;
@@ -71,7 +74,7 @@ class AgentAvatar extends StatelessWidget {
     // 1) User-uploaded image
     // 存储值可能是相对路径或旧沙盒容器的绝对路径，统一过 resolveStored 兜底。
     final resolvedAvatar = RevericPaths.resolveStored(avatarPath);
-    if (resolvedAvatar != null) {
+    if (resolvedAvatar != null && !resolvedAvatar.contains('viber')) {
       return _imageContainer(
         bgColor: bgColor,
         image: Image.file(
@@ -88,21 +91,20 @@ class AgentAvatar extends StatelessWidget {
 
   Widget _buildBuiltinOrEmoji(BuildContext context, Color bgColor) {
     // 2) Built-in asset image
-    if (slug != null) {
-      final assetPath = builtinAvatarAssetForSlug(
-        slug!,
-        brightness: RevericTheme.colorsOf(context).brightness,
+    final effectiveSlug = slug ?? 'orchestrator';
+    final assetPath = builtinAvatarAssetForSlug(
+      effectiveSlug,
+      brightness: RevericTheme.colorsOf(context).brightness,
+    );
+    if (assetPath != null) {
+      return _imageContainer(
+        bgColor: bgColor,
+        image: Image.asset(
+          assetPath,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _emojiFallback(bgColor),
+        ),
       );
-      if (assetPath != null) {
-        return _imageContainer(
-          bgColor: bgColor,
-          image: Image.asset(
-            assetPath,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => _emojiFallback(bgColor),
-          ),
-        );
-      }
     }
 
     return _emojiFallback(bgColor);

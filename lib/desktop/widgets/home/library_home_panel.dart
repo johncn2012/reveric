@@ -22,6 +22,7 @@ import '../../../shared/models/content_kind.dart';
 import '../../../shared/models/novel.dart';
 import '../../../shared/localization/app_localization.dart';
 import '../../../shared/localization/locale_keys.dart';
+import '../../../shared/providers/metaarc_providers.dart';
 import '../../../shared/providers/settings_providers.dart';
 import '../../../shared/theme/theme.dart';
 import '../novel_list.dart';
@@ -91,10 +92,25 @@ class HomeLibraryPanel extends HookConsumerWidget {
     final contentKind = typeFilter.value;
     void createWork() => onCreateNovel(contentKind ?? contentKindNovel);
     final settingsAsync = ref.watch(appSettingsProvider);
-    final username = settingsAsync.maybeWhen(
-      data: (s) => s.username.isNotEmpty ? s.username : null,
-      orElse: () => null,
-    );
+    final metaArcAccount = ref.watch(metaarcAccountProvider).asData?.value;
+    final username = () {
+      final nickname = metaArcAccount?.nickname?.trim();
+      if (nickname != null && nickname.isNotEmpty) {
+        return nickname;
+      }
+      final email = metaArcAccount?.email;
+      if (email != null && email.trim().isNotEmpty) {
+        return email.trim().split('@').first;
+      }
+      final local = settingsAsync.maybeWhen(
+        data: (s) => s.username.isNotEmpty ? s.username : null,
+        orElse: () => null,
+      );
+      if (local != null && local.isNotEmpty && local != '晚风客') {
+        return local;
+      }
+      return null;
+    }();
 
     return novelsAsync.when(
       data: (all) => LibraryCollectionRegion(

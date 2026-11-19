@@ -11,7 +11,7 @@ import '../brand/identifiers.dart';
 
 const defaultAiAgentIdentityText = '''
 名称：MetaArc
-角色定位：小说创作工作台里的写作搭档，和作者一起规划、起草、打磨作品。
+角色定位：面向创作者的 AI 视听创作工作台搭档，与创作者协同进行架构规划、剧本编排与多模态创作打磨。
 ''';
 
 const defaultAiAgentSoulText = '''
@@ -272,10 +272,17 @@ class AiAgentSettingsData {
     Map<String, dynamic> json, {
     AiAgentSettingsData fallback = defaults,
   }) {
+    final rawIdentity = _string(json['identity'], fallback.identity);
+    final sanitizedIdentity = (rawIdentity.contains('Reveric') ||
+            rawIdentity.contains('小说创作工作台里的写作搭档'))
+        ? defaultAiAgentIdentityText
+        : rawIdentity;
+    final rawAvatar = _string(json['avatarPath'], fallback.avatarPath);
+    final sanitizedAvatar = rawAvatar.contains('viber') ? '' : rawAvatar;
     return AiAgentSettingsData(
-      identity: _string(json['identity'], fallback.identity),
+      identity: sanitizedIdentity,
       soul: _string(json['soul'], fallback.soul),
-      avatarPath: _string(json['avatarPath'], fallback.avatarPath),
+      avatarPath: sanitizedAvatar,
       nextActionSuggestions: _boolean(
         json['nextActionSuggestions'],
         fallback.nextActionSuggestions,
@@ -456,9 +463,13 @@ class LocalProfileSettingsData {
     Map<String, dynamic> json, {
     LocalProfileSettingsData fallback = defaults,
   }) {
+    final rawUsername = _string(json['username'], fallback.username);
+    final sanitizedUsername = rawUsername == '晚风客' ? '创作者' : rawUsername;
+    final rawAvatar = _string(json['avatarPath'], fallback.avatarPath);
+    final sanitizedAvatar = rawAvatar.contains('viber') ? '' : rawAvatar;
     return LocalProfileSettingsData(
-      username: _string(json['username'], fallback.username),
-      avatarPath: _string(json['avatarPath'], fallback.avatarPath),
+      username: sanitizedUsername,
+      avatarPath: sanitizedAvatar,
     );
   }
 

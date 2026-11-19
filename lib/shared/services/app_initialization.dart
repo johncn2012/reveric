@@ -14,6 +14,7 @@ import 'package:drift/drift.dart';
 import '../logger/app_logger.dart';
 import '../logger/startup_failure_reporter.dart';
 import '../database/app_database.dart';
+import '../models/app_settings_aggregate_data.dart';
 import 'demo_novel.dart';
 import 'initialization/agent_seeds.dart';
 import 'initialization/collection_seeds.dart';
@@ -57,7 +58,11 @@ List<AppInitializationTask> defaultAppInitializationTasks() {
       id: 'default_ai_shortcut_actions_v1',
       run: seedDefaultAiShortcutActions,
     ),
-    AppInitializationTask(id: 'demo_works_v2', run: _seedDemoWorks),
+    AppInitializationTask(id: 'demo_works_v3', run: _seedDemoWorks),
+    AppInitializationTask(
+      id: 'metaarc_v064_brand_cleanup_v2',
+      run: _cleanupMetaArcBrand,
+    ),
   ];
 }
 
@@ -65,7 +70,9 @@ List<AppInitializationTask> defaultAppInitializationTasks() {
 Future<void> _seedDemoWorks(AppDatabase database) async {
   // 1. 软删除历史旧版示例（若存在）
   final oldNovels = await (database.select(database.novels)
-        ..where((t) => t.title.isIn(const ['潮汐邮局', '末班船的证人'])))
+        ..where((t) =>
+            t.title.isIn(const ['潮汐邮局', '末班船的证人']) |
+            t.id.isIn(const ['nov_IFQ4NO', 'scr_NA9MBX'])))
       .get();
   for (final old in oldNovels) {
     await database.novelDao.softDelete(old.id);
@@ -73,6 +80,72 @@ Future<void> _seedDemoWorks(AppDatabase database) async {
   // 2. 注入全新高质量示范作品（1部科幻长篇小说 + 1部悬疑标准剧本）
   await createDemoNovel(database);
   await seedDemoScreenplay(database);
+}
+
+/// 0.6.4 升级迁移：清理历史 SQLite 中的残留品牌标识、旧头像与默认称呼「晚风客」
+Future<void> _cleanupMetaArcBrand(AppDatabase database) async {
+  // 1. 清理本地 profile 中的旧随机称呼「晚风客」
+  try {
+    final profileRaw = await database.appSettingsDao.get(
+      LocalProfileSettingsData.appSettingsKey,
+    );
+    if (profileRaw != null) {
+      final profile = LocalProfileSettingsData.decode(profileRaw);
+      if (profile.username == '晚风客') {
+        final updated = LocalProfileSettingsData(
+          username: '创作者',
+          avatarPath: profile.avatarPath.contains('viber') ? '' : profile.avatarPath,
+        );
+        await database.appSettingsDao.set(
+          key: LocalProfileSettingsData.appSettingsKey,
+          value: updated.encode(),
+        );
+      }
+    }
+  } catch (e) {
+    _log.warning('Failed to cleanup local profile: $e');
+  }
+
+  // 2. 清理 AI 助手设置中的旧品牌信息与旧头像
+  try {
+    final aiAgentRaw = await database.appSettingsDao.get(
+      AiAgentSettingsData.appSettingsKey,
+    );
+    if (aiAgentRaw != null) {
+      final aiSettings = AiAgentSettingsData.decode(aiAgentRaw);
+      final needsIdentityFix = aiSettings.identity.contains('Reveric') ||
+          aiSettings.identity.contains('小说创作工作台里的写作搭档');
+      final needsAvatarFix = aiSettings.avatarPath.contains('viber');
+      if (needsIdentityFix || needsAvatarFix) {
+        final updated = AiAgentSettingsData(
+          identity: needsIdentityFix ? defaultAiAgentIdentityText : aiSettings.identity,
+          soul: aiSettings.soul,
+          avatarPath: needsAvatarFix ? '' : aiSettings.avatarPath,
+          nextActionSuggestions: aiSettings.nextActionSuggestions,
+        );
+        await database.appSettingsDao.set(
+          key: AiAgentSettingsData.appSettingsKey,
+          value: updated.encode(),
+        );
+      }
+    }
+  } catch (e) {
+    _log.warning('Failed to cleanup AI agent settings: $e');
+  }
+
+  // 3. 彻底软删除历史旧版示例（潮汐邮局、末班船的证人）
+  try {
+    final oldNovels = await (database.select(database.novels)
+          ..where((t) =>
+              t.title.isIn(const ['潮汐邮局', '末班船的证人']) |
+              t.id.isIn(const ['nov_IFQ4NO', 'scr_NA9MBX'])))
+        .get();
+    for (final old in oldNovels) {
+      await database.novelDao.softDelete(old.id);
+    }
+  } catch (e) {
+    _log.warning('Failed to cleanup old demo works: $e');
+  }
 }
 
 Future<void> ensureAppInitializationTasks({

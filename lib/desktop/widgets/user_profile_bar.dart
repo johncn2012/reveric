@@ -55,9 +55,20 @@ class UserProfileBar extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
       data: (settings) {
-        final username = settings.username.isNotEmpty
-            ? settings.username
-            : context.t(LocaleKeys.accountLocalNameEmpty);
+        final username = () {
+          final nickname = metaArcAccount?.nickname?.trim();
+          if (nickname != null && nickname.isNotEmpty) {
+            return nickname;
+          }
+          final email = metaArcAccount?.email;
+          if (email != null && email.trim().isNotEmpty) {
+            return email.trim().split('@').first;
+          }
+          if (settings.username.isNotEmpty && settings.username != '晚风客') {
+            return settings.username;
+          }
+          return context.t(LocaleKeys.accountLocalNameEmpty);
+        }();
         final accountStatus = _accountStatusLabel(context, metaArcAccount);
         final resolvedAvatar = RevericPaths.resolveStored(settings.avatarPath);
 

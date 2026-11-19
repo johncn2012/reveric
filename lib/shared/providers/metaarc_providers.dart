@@ -15,6 +15,7 @@ import '../models/metaarc_account.dart';
 import '../services/remote/metaarc_auth_service.dart';
 import '../services/remote/metaarc_sync_service.dart';
 import 'novel_providers.dart';
+import 'settings_providers.dart';
 
 final _log = AppLogger.forModule('MetaArcAccount');
 
@@ -53,6 +54,7 @@ class MetaArcAccountNotifier extends AsyncNotifier<MetaArcAccount?> {
         password: password,
       );
       state = AsyncValue.data(user);
+      _syncUsernameToSettings(user);
       return user;
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
@@ -77,6 +79,7 @@ class MetaArcAccountNotifier extends AsyncNotifier<MetaArcAccount?> {
         nickname: nickname,
       );
       state = AsyncValue.data(user);
+      _syncUsernameToSettings(user);
       return user;
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
@@ -94,6 +97,7 @@ class MetaArcAccountNotifier extends AsyncNotifier<MetaArcAccount?> {
       final service = ref.read(metaarcAuthServiceProvider);
       final updated = await service.fetchProfile(current);
       state = AsyncValue.data(updated);
+      _syncUsernameToSettings(updated);
       return true;
     } catch (e, stack) {
       _log.error(
@@ -114,6 +118,20 @@ class MetaArcAccountNotifier extends AsyncNotifier<MetaArcAccount?> {
     } finally {
       state = const AsyncValue.data(null);
     }
+  }
+
+  void _syncUsernameToSettings(MetaArcAccount user) {
+    try {
+      final nickname = user.nickname?.trim();
+      if (nickname != null && nickname.isNotEmpty) {
+        ref.read(appSettingsProvider.notifier).setUsername(nickname);
+        return;
+      }
+      final email = user.email?.trim();
+      if (email != null && email.isNotEmpty) {
+        ref.read(appSettingsProvider.notifier).setUsername(email.split('@').first);
+      }
+    } catch (_) {}
   }
 }
 

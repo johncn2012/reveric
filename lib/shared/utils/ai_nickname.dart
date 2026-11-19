@@ -5,20 +5,19 @@ import 'dart:math';
 import 'dart:ui';
 
 const _zhPrefixes = [
-  '听雨',
-  '晚风',
-  '南山',
   '星河',
   '云间',
+  '南山',
+  '青木',
+  '远山',
+  '晨曦',
+  '灵犀',
   '竹林',
   '墨池',
-  '松间',
   '白露',
   '秋水',
-  '青灯',
-  '远山',
 ];
-const _zhSuffixes = ['客', '君', '行者'];
+const _zhSuffixes = ['君', '作者', '生'];
 
 const _enAdjectives = [
   'Quiet',

@@ -88,9 +88,10 @@ OnboardingSetup useOnboardingSetup(WidgetRef ref) {
         return;
       }
       if (nameController.text.isEmpty) {
-        nameController.text = settings.username.isNotEmpty
-            ? settings.username
-            : randomAiNickname(Localizations.localeOf(context));
+        nameController.text =
+            (settings.username.isNotEmpty && settings.username != '晚风客')
+                ? settings.username
+                : randomAiNickname(Localizations.localeOf(context));
       }
       if (avatarPath.value == null && settings.avatarPath.isNotEmpty) {
         avatarPath.value = settings.avatarPath;

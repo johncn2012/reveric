@@ -203,7 +203,7 @@ class _AiAgentAvatarRow extends HookConsumerWidget {
                 border: Border.all(color: colors.borderSubtle),
               ),
               child: ClipOval(
-                child: resolvedLocal != null
+                child: resolvedLocal != null && !resolvedLocal.contains('viber')
                     ? Image.file(
                         File(resolvedLocal),
                         width: 56,
